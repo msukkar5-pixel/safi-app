@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wallet with a coin and a check mark, centered in the 66dp safe zone -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M34,38h40a6,6 0,0 1,6 6v26a6,6 0,0 1,-6 6h-40a6,6 0,0 1,-6 -6v-26a6,6 0,0 1,6 -6z" />
+    <path
+        android:fillColor="#FFE3F2EE"
+        android:pathData="M62,50h18v14h-18a7,7 0,0 1,0 -14z" />
+    <path
+        android:fillColor="#FF0F6E5C"
+        android:pathData="M65,57m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FF0F6E5C"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M37,57l6,6l10,-12" />
+    <path
+        android:fillColor="#FFF2C14E"
+        android:pathData="M40,34a8,8 0,1 1,16 0z" />
+</vector>

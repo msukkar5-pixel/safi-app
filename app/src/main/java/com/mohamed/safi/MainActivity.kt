@@ -1,0 +1,202 @@
+package com.mohamed.safi
+
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.mohamed.safi.data.Fx
+import com.mohamed.safi.ui.*
+import com.mohamed.safi.ui.screens.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+class MainActivity : FragmentActivity() {
+
+    private var unlocked = mutableStateOf(false)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        unlocked.value = !SafiApp.prefs.lockOn
+        intent?.getStringExtra("route")?.let { UiBus.pendingRoute.value = it }
+        setContent {
+            SafiTheme {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    if (unlocked.value) AppRoot() else LockScreen { authenticate() }
+                }
+            }
+        }
+        if (!unlocked.value) authenticate()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra("route")?.let { UiBus.pendingRoute.value = it }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (SafiApp.prefs.lockOn && !isChangingConfigurations) unlocked.value = false
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!unlocked.value && SafiApp.prefs.lockOn) authenticate()
+    }
+
+    private var prompting = false
+
+    private fun authenticate() {
+        if (prompting) return
+        val authenticators = if (Build.VERSION.SDK_INT >= 30) {
+            BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        } else {
+            BiometricManager.Authenticators.BIOMETRIC_WEAK
+        }
+        if (BiometricManager.from(this).canAuthenticate(authenticators) != BiometricManager.BIOMETRIC_SUCCESS) {
+            unlocked.value = true
+            return
+        }
+        prompting = true
+        val prompt = BiometricPrompt(
+            this, ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    prompting = false
+                    unlocked.value = true
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    prompting = false
+                }
+            },
+        )
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("صافي")
+            .setSubtitle("افتح بالبصمة")
+            .setAllowedAuthenticators(authenticators)
+            .apply { if (Build.VERSION.SDK_INT < 30) setNegativeButtonText("إلغاء") }
+            .build()
+        prompt.authenticate(info)
+    }
+}
+
+@Composable
+private fun LockScreen(onUnlock: () -> Unit) {
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(Icons.Default.Lock, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(16.dp))
+            Text("صافي مقفول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onUnlock) {
+                Icon(Icons.Default.Fingerprint, null)
+                Spacer(Modifier.width(8.dp))
+                Text("افتح")
+            }
+        }
+    }
+}
+
+private data class Tab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+
+private val tabs = listOf(
+    Tab("home", "الرئيسية", Icons.Default.Home),
+    Tab("expenses", "المصاريف", Icons.Default.Receipt),
+    Tab("assistant", "صافي", Icons.Default.Mic),
+    Tab("schedule", "المواعيد", Icons.Default.Event),
+    Tab("more", "المزيد", Icons.Default.GridView),
+)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun AppRoot() {
+    val nav = rememberNavController()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val entry by nav.currentBackStackEntryAsState()
+    val current = entry?.destination?.route
+    val pendingRoute by UiBus.pendingRoute.collectAsState()
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            if (System.currentTimeMillis() - SafiApp.prefs.rateUpdated > 6 * 3_600_000L) Fx.refresh()
+        }
+        if (SafiApp.prefs.locationOn) runCatching { com.mohamed.safi.location.LocationService.start(ctx) }
+    }
+    LaunchedEffect(pendingRoute) {
+        pendingRoute?.let { r ->
+            UiBus.pendingRoute.value = null
+            runCatching { go(nav, r) }
+        }
+    }
+
+    Scaffold(
+        bottomBar = {
+            if (current in tabs.map { it.route }) {
+                NavigationBar {
+                    tabs.forEach { t ->
+                        NavigationBarItem(
+                            selected = current == t.route,
+                            onClick = { go(nav, t.route) },
+                            icon = { Icon(t.icon, t.label) },
+                            label = { Text(t.label) },
+                        )
+                    }
+                }
+            }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+    ) { pad ->
+        val back: () -> Unit = { nav.popBackStack() }
+        val open: (String) -> Unit = { nav.navigate(it) }
+        NavHost(nav, startDestination = if (SafiApp.prefs.onboarded) "home" else "welcome", modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
+            composable("welcome") { WelcomeScreen { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
+            composable("home") { HomeScreen(open) }
+            composable("expenses") { ExpensesScreen() }
+            composable("assistant") { AssistantScreen() }
+            composable("schedule") { ScheduleScreen() }
+            composable("more") { MoreScreen(open) }
+            composable("transfers") { TransfersScreen(back) }
+            composable("bills") { BillsScreen(back) }
+            composable("debts") { DebtsScreen(back) }
+            composable("car") { CarScreen(back) }
+            composable("places") { PlacesScreen(back) }
+            composable("reports") { ReportsScreen(back) }
+            composable("settings") { SettingsScreen(back) }
+        }
+    }
+}
+
+private fun go(nav: NavHostController, route: String) {
+    if (route in tabs.map { it.route }) {
+        nav.navigate(route) {
+            popUpTo("home") { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    } else {
+        nav.navigate(route) { launchSingleTop = true }
+    }
+}
