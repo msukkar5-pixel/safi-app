@@ -44,6 +44,8 @@ object UiBus {
     val pendingVoice = MutableStateFlow<String?>(null)
     /** Route requested by a notification tap. */
     val pendingRoute = MutableStateFlow<String?>(null)
+    /** Bank message(s) shared into the app from Messages. */
+    val pendingShare = MutableStateFlow<String?>(null)
 }
 
 fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()

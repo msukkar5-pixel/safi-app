@@ -49,18 +49,20 @@ fun ExpensesScreen() {
         actions = {
             IconButton(onClick = { searching = !searching; if (!searching) query = "" }) { Icon(Icons.Default.Search, "بحث") }
             IconButton(onClick = {
-                if (!SmsProcessor.hasReadPermission(ctx)) {
-                    toast(ctx, "اسمح بقراءة الرسايل من الإعدادات الأول")
+                val clip = (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                    .primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()
+                if (clip.isNullOrBlank()) {
+                    toast(ctx, "انسخ رسالة البنك (أو كذا رسالة) الأول، وبعدين دوس هنا")
                 } else {
                     importing = true
                     scope.launch {
-                        val n = withContext(Dispatchers.IO) { SmsProcessor.importInbox(ctx, 120, useClaude = com.mohamed.safi.ai.Claude.hasKey) }
+                        val r = withContext(Dispatchers.IO) { SmsProcessor.processText(ctx, clip) }
                         importing = false
-                        toast(ctx, if (n > 0) "اتضاف $n عملية جديدة من رسايل البنك" else "مفيش عمليات جديدة")
+                        toast(ctx, if (r.added.isNotEmpty()) "اتسجل ${r.added.size} عملية" else "مفيش عمليات جديدة في اللي نسخته")
                     }
                 }
             }) {
-                if (importing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) else Icon(Icons.Default.Sms, "استيراد من الرسايل")
+                if (importing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) else Icon(Icons.Default.ContentPaste, "الصق رسايل البنك")
             }
         },
         fab = {

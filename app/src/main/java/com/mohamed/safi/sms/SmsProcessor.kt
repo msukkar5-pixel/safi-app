@@ -1,12 +1,6 @@
 package com.mohamed.safi.sms
 
-import android.Manifest
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.provider.Telephony
-import androidx.core.content.ContextCompat
 import com.mohamed.safi.SafiApp
 import com.mohamed.safi.ai.Claude
 import com.mohamed.safi.data.Categorizer
@@ -17,10 +11,6 @@ import com.mohamed.safi.data.money
 import com.mohamed.safi.location.LocationLogger
 import com.mohamed.safi.notify.Brief
 import com.mohamed.safi.notify.Notifier
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import java.security.MessageDigest
 
 object SmsProcessor {
@@ -61,11 +51,11 @@ object SmsProcessor {
      * Turns a bank SMS into an Expense (or income). Returns the saved expense or null.
      * Safe to call twice with the same message: duplicates are ignored.
      */
-    suspend fun process(ctx: Context, sender: String, body: String, time: Long, notify: Boolean, useClaude: Boolean = true): Expense? {
+    suspend fun process(ctx: Context, sender: String, body: String, time: Long, notify: Boolean, useClaude: Boolean = true, trusted: Boolean = false): Expense? {
         val dao = SafiApp.db.dao()
         val h = hash(sender, body)
         if (dao.countHash(h) > 0) return null
-        val bank = BankSmsParser.bankFor(sender, body) ?: return null
+        val bank = BankSmsParser.bankFor(sender, body) ?: (if (trusted) "" else return null)
         val ruleParsed: BankSmsParser.Parsed? = BankSmsParser.parse(bank, body)
         val first: BankSmsParser.Parsed = ruleParsed
             ?: (if (useClaude && BankSmsParser.looksTransactional(body)) claudeParse(bank, body) else null)
@@ -89,7 +79,7 @@ object SmsProcessor {
             category = category,
             merchant = p.merchant,
             method = if (p.isCash) "cash" else "card",
-            bank = p.bank + (p.card?.let { " •$it" } ?: ""),
+            bank = (p.bank + (p.card?.let { " •$it" } ?: "")).trim(),
             time = time,
             lat = place?.lat,
             lng = place?.lng,
@@ -116,58 +106,51 @@ object SmsProcessor {
         return saved
     }
 
-    fun hasReadPermission(ctx: Context) =
-        ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+    private val months = mapOf(
+        "jan" to 1, "feb" to 2, "mar" to 3, "apr" to 4, "may" to 5, "jun" to 6,
+        "jul" to 7, "aug" to 8, "sep" to 9, "oct" to 10, "nov" to 11, "dec" to 12,
+    )
+    private val dNum = Regex("\\b(\\d{1,2})[/\\-.](\\d{1,2})[/\\-.](\\d{2,4})(?:[ ,T]+(\\d{1,2}):(\\d{2}))?")
+    private val dMon = Regex("\\b(\\d{1,2})[ \\-]?([A-Za-z]{3})[A-Za-z]*[ \\-,]?(\\d{2,4})(?:[ ,T]+(\\d{1,2}):(\\d{2}))?")
+    private val dIso = Regex("\\b(\\d{4})-(\\d{2})-(\\d{2})(?:[ T](\\d{1,2}):(\\d{2}))?")
 
-    /** Import bank messages from the inbox (first run or manual re-import). */
-    suspend fun importInbox(ctx: Context, days: Int = 90, useClaude: Boolean = false): Int {
-        if (!hasReadPermission(ctx)) return 0
-        val since = System.currentTimeMillis() - days * 86_400_000L
-        var count = 0
-        val cursor = ctx.contentResolver.query(
-            Telephony.Sms.Inbox.CONTENT_URI,
-            arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
-            "${Telephony.Sms.DATE} > ?",
-            arrayOf(since.toString()),
-            "${Telephony.Sms.DATE} ASC",
-        ) ?: return 0
-        val rows = mutableListOf<Triple<String, String, Long>>()
-        cursor.use { c ->
-            while (c.moveToNext()) {
-                val addr = c.getString(0) ?: continue
-                val body = c.getString(1) ?: continue
-                rows += Triple(addr, body, c.getLong(2))
+    /** Date written inside the bank message, if any (UAE banks use day/month order). */
+    fun dateIn(body: String): Long? {
+        fun build(y: Int, m: Int, d: Int, h: String?, mi: String?): Long? = runCatching {
+            val year = if (y < 100) 2000 + y else y
+            java.time.LocalDateTime.of(year, m, d, h?.toIntOrNull() ?: 12, mi?.toIntOrNull() ?: 0)
+                .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }.getOrNull()
+        val now = System.currentTimeMillis()
+        val t = dIso.find(body)?.let { m -> build(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt(), m.groupValues[4].ifEmpty { null }, m.groupValues[5].ifEmpty { null }) }
+            ?: dNum.find(body)?.let { m -> build(m.groupValues[3].toInt(), m.groupValues[2].toInt(), m.groupValues[1].toInt(), m.groupValues[4].ifEmpty { null }, m.groupValues[5].ifEmpty { null }) }
+            ?: dMon.find(body)?.let { m ->
+                val mon = months[m.groupValues[2].lowercase()] ?: return@let null
+                build(m.groupValues[3].toInt(), mon, m.groupValues[1].toInt(), m.groupValues[4].ifEmpty { null }, m.groupValues[5].ifEmpty { null })
             }
-        }
-        for ((addr, body, date) in rows) {
-            if (process(ctx, addr, body, date, notify = false, useClaude = useClaude) != null) count++
-        }
-        SafiApp.prefs.smsImported = true
-        return count
+        return t?.takeIf { it <= now + 86_400_000L && it > now - 400L * 86_400_000L }
     }
-}
 
-private val smsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Split pasted text into separate bank messages. */
+    fun split(text: String): List<String> {
+        val blocks = text.split(Regex("\\n\\s*\\n")).map { it.trim() }.filter { it.isNotEmpty() }
+        if (blocks.size > 1) return blocks
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val txLines = lines.filter { BankSmsParser.looksTransactional(it) }
+        return if (txLines.size > 1) txLines else listOf(text.trim())
+    }
 
-class SmsReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-        if (!SafiApp.prefs.smsOn) return
-        val msgs = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
-        if (msgs.isEmpty()) return
-        // Multi-part messages arrive as several parts from the same sender
-        val grouped = msgs.groupBy { it.originatingAddress ?: "" }
-        val pr = goAsync()
-        smsScope.launch {
-            try {
-                for ((sender, parts) in grouped) {
-                    val body = parts.joinToString("") { it.messageBody ?: "" }
-                    val time = System.currentTimeMillis()
-                    runCatching { SmsProcessor.process(context, sender, body, time, notify = true) }
-                }
-            } finally {
-                pr.finish()
-            }
+    data class ImportResult(val added: List<Expense>, val skipped: Int)
+
+    /** Messages Mohamed shared or pasted into the app. */
+    suspend fun processText(ctx: Context, text: String, useClaude: Boolean = Claude.hasKey): ImportResult {
+        val added = mutableListOf<Expense>()
+        var skipped = 0
+        for (msg in split(text)) {
+            val time = dateIn(msg) ?: System.currentTimeMillis()
+            val e = runCatching { process(ctx, "shared", msg, time, notify = false, useClaude = useClaude, trusted = true) }.getOrNull()
+            if (e != null) added += e else skipped++
         }
+        return ImportResult(added, skipped)
     }
 }

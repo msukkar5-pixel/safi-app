@@ -20,7 +20,6 @@ import com.mohamed.safi.data.Fx
 import com.mohamed.safi.data.dateTimeStr
 import com.mohamed.safi.location.LocationService
 import com.mohamed.safi.notify.DailyWorker
-import com.mohamed.safi.sms.SmsProcessor
 import com.mohamed.safi.ui.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,9 +42,6 @@ fun SettingsScreen(onBack: () -> Unit) {
     var rateAuto by remember { mutableStateOf(prefs.rateAuto) }
     var rateUpdated by remember { mutableLongStateOf(prefs.rateUpdated) }
     var cats by remember { mutableStateOf(prefs.transferCats.joinToString("، ")) }
-    var senders by remember { mutableStateOf(prefs.extraSenders) }
-    var smsOn by remember { mutableStateOf(prefs.smsOn) }
-    var importing by remember { mutableStateOf(false) }
     var lockOn by remember { mutableStateOf(prefs.lockOn) }
     var briefHour by remember { mutableIntStateOf(prefs.briefHour) }
     var interval by remember { mutableIntStateOf(prefs.locationIntervalMin) }
@@ -137,33 +133,12 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             SectionTitle("رسايل البنك")
             AppCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("سجّل المصاريف من الرسايل")
-                        Text("Emirates NBD • ADCB • ADIB", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                    }
-                    Switch(smsOn, { smsOn = it; prefs.smsOn = it })
-                }
-                OutlinedTextField(
-                    senders, { senders = it }, label = { Text("أسماء مرسلين إضافية (اختياري)") },
-                    placeholder = { Text("مثلاً: Mashreq, FAB") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { prefs.extraSenders = senders; toast(ctx, "اتحفظ") }) { Text("حفظ") }
-                    OutlinedButton(onClick = {
-                        prefs.extraSenders = senders
-                        importing = true
-                        scope.launch {
-                            val n = withContext(Dispatchers.IO) { SmsProcessor.importInbox(ctx, 180, useClaude = Claude.hasKey) }
-                            importing = false
-                            toast(ctx, "اتضاف $n عملية")
-                        }
-                    }, enabled = !importing) {
-                        if (importing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("اقرا آخر 6 شهور")
-                    }
-                }
-                Text("الرسايل مش بتطلع برا تليفونك. لو رسالة صيغتها غريبة وفيه مفتاح Claude، بتتبعت لـ Claude بس علشان يقراها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text("تليفونك بيمنع أي تطبيق برا المتجر يقرا الرسايل، فالتسجيل بيتم بطريقتين:", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(6.dp))
+                Text("• رسالة واحدة: في تطبيق الرسايل دوس مطوّل على رسالة البنك ← مشاركة ← صافي.", style = MaterialTheme.typography.bodyMedium)
+                Text("• كذا رسالة مرة واحدة: انسخهم، وفي شاشة المصاريف دوس زرار اللصق فوق.", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(6.dp))
+                Text("بيتعرف على Emirates NBD وADCB وADIB وأي بنك تاني. نفس الرسالة مش بتتسجل مرتين. لو صيغتها غريبة وفيه مفتاح Claude، Claude بيقراها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
 
             SectionTitle("عام")

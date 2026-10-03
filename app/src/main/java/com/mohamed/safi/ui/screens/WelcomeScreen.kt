@@ -29,7 +29,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.mohamed.safi.SafiApp
 import com.mohamed.safi.location.LocationService
 import com.mohamed.safi.notify.ReminderScheduler
-import com.mohamed.safi.sms.SmsProcessor
 import com.mohamed.safi.ui.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,18 +40,16 @@ fun ignoringBattery(ctx: Context): Boolean =
 
 data class PermState(
     val notifications: Boolean,
-    val sms: Boolean,
     val location: Boolean,
     val bgLocation: Boolean,
     val exact: Boolean,
     val battery: Boolean,
 ) {
-    val essentialsOk get() = notifications && sms && exact
+    val essentialsOk get() = notifications && exact
 }
 
 fun permState(ctx: Context) = PermState(
     notifications = Build.VERSION.SDK_INT < 33 || granted(ctx, Manifest.permission.POST_NOTIFICATIONS),
-    sms = granted(ctx, Manifest.permission.RECEIVE_SMS) && granted(ctx, Manifest.permission.READ_SMS),
     location = granted(ctx, Manifest.permission.ACCESS_FINE_LOCATION),
     bgLocation = Build.VERSION.SDK_INT < 29 || granted(ctx, Manifest.permission.ACCESS_BACKGROUND_LOCATION),
     exact = ReminderScheduler.canExact(ctx),
@@ -80,23 +77,12 @@ fun PermissionsList(onChanged: () -> Unit = {}) {
     val state = remember(st, refresh) { permState(ctx) }
 
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++; onChanged() }
-    val smsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { res ->
-        refresh++
-        onChanged()
-        if (res.values.all { it }) {
-            scope.launch(Dispatchers.IO) { SmsProcessor.importInbox(ctx, 90) }
-            toast(ctx, "بقرا رسايل البنك آخر 3 شهور…")
-        }
-    }
     val locLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { refresh++; onChanged() }
     val bgLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++; onChanged() }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PermRow(Icons.Default.Notifications, "الإشعارات", "للتذكيرات والفواتير وملخص الصبح", state.notifications) {
             if (Build.VERSION.SDK_INT >= 33) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        PermRow(Icons.Default.Sms, "رسايل البنك", "يسجل مصاريف البطاقة لوحده من رسايل Emirates NBD وADCB وADIB", state.sms) {
-            smsLauncher.launch(arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS))
         }
         PermRow(Icons.Default.Alarm, "المنبهات في ميعادها بالظبط", "علشان التذكير ميتأخرش", state.exact) {
             if (Build.VERSION.SDK_INT >= 31) {
@@ -148,7 +134,7 @@ fun WelcomeScreen(onDone: () -> Unit) {
         Text("أهلاً بيك في صافي 👋", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(
-            "مساعدك الشخصي: مصاريفك من رسايل البنك، تحويلات مصر، الفواتير، السلف، المواعيد، المنبهات، العربية والأماكن. كله على تليفونك انت بس.",
+            "مساعدك الشخصي: مصاريفك، تحويلات مصر، الفواتير، السلف، المواعيد، المنبهات، العربية والأماكن. كله على تليفونك انت بس.\n\nرسايل البنك: من تطبيق الرسايل دوس مطوّل على الرسالة ← مشاركة ← صافي، وهتتسجل لوحدها.",
             color = MaterialTheme.colorScheme.outline,
         )
         Spacer(Modifier.height(16.dp))

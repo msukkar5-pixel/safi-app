@@ -197,7 +197,7 @@ fun HomeScreen(open: (String) -> Unit) {
 
         item { SectionTitle("آخر المصاريف") { TextButton(onClick = { open("expenses") }) { Text("الكل") } } }
         if (recent.isEmpty()) {
-            item { EmptyState(Icons.Default.Receipt, "لسه مفيش مصاريف. أول رسالة بنك هتتسجل لوحدها.") }
+            item { EmptyState(Icons.Default.Receipt, "لسه مفيش مصاريف. شارك رسالة البنك لصافي من تطبيق الرسايل.") }
         }
         items(recent, key = { "e" + it.id }) { e -> ExpenseRow(e) { editing = e } }
         item { Spacer(Modifier.height(24.dp)) }

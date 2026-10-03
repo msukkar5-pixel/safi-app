@@ -40,7 +40,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         unlocked.value = !SafiApp.prefs.lockOn
-        intent?.getStringExtra("route")?.let { UiBus.pendingRoute.value = it }
+        handleIntent(intent)
         setContent {
             SafiTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -53,7 +53,15 @@ class MainActivity : FragmentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent ?: return
         intent.getStringExtra("route")?.let { UiBus.pendingRoute.value = it }
+        if (intent.action == Intent.ACTION_SEND) {
+            intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { UiBus.pendingShare.value = it }
+        }
     }
 
     override fun onStop() {
@@ -144,6 +152,26 @@ fun AppRoot() {
             if (System.currentTimeMillis() - SafiApp.prefs.rateUpdated > 6 * 3_600_000L) Fx.refresh()
         }
         if (SafiApp.prefs.locationOn) runCatching { com.mohamed.safi.location.LocationService.start(ctx) }
+    }
+    val pendingShare by UiBus.pendingShare.collectAsState()
+    LaunchedEffect(pendingShare) {
+        val text = pendingShare ?: return@LaunchedEffect
+        UiBus.pendingShare.value = null
+        val res = withContext(Dispatchers.IO) { com.mohamed.safi.sms.SmsProcessor.processText(ctx, text) }
+        if (res.added.isNotEmpty()) {
+            val e = res.added.first()
+            toast(
+                ctx,
+                if (res.added.size == 1) "اتسجل: ${com.mohamed.safi.data.money(e.amount, e.currency)} — ${e.category}"
+                else "اتسجل ${res.added.size} عملية" + if (res.skipped > 0) " (${res.skipped} مش عمليات)" else "",
+            )
+            runCatching { go(nav, "expenses") }
+        } else if (com.mohamed.safi.ai.Claude.hasKey) {
+            UiBus.pendingVoice.value = text
+            runCatching { go(nav, "assistant") }
+        } else {
+            toast(ctx, "مقدرتش ألاقي مبلغ في الرسالة دي")
+        }
     }
     LaunchedEffect(pendingRoute) {
         pendingRoute?.let { r ->
