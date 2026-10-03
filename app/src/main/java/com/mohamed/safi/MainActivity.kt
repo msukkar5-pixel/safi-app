@@ -58,7 +58,12 @@ class MainActivity : FragmentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         intent ?: return
-        intent.getStringExtra("route")?.let { UiBus.pendingRoute.value = it }
+        intent.getStringExtra("route")?.let {
+            if (it == "voice") {
+                UiBus.listenNow.value = true
+                UiBus.pendingRoute.value = "assistant"
+            } else UiBus.pendingRoute.value = it
+        }
         if (intent.action == Intent.ACTION_SEND) {
             intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { UiBus.pendingShare.value = it }
         }
@@ -213,6 +218,8 @@ fun AppRoot() {
             composable("places") { PlacesScreen(back) }
             composable("reports") { ReportsScreen(back) }
             composable("settings") { SettingsScreen(back) }
+            composable("carpool") { CarpoolScreen(back) }
+            composable("fitness") { FitnessScreen(back) }
         }
     }
 }

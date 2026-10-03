@@ -192,6 +192,7 @@ class BootReceiver : BroadcastReceiver() {
             try {
                 ReminderScheduler.rescheduleAll(context)
                 DailyWorker.schedule(context, replace = false)
+                runCatching { com.mohamed.safi.data.Carpool.schedule(context) }
                 if (SafiApp.prefs.locationOn) {
                     runCatching { com.mohamed.safi.location.LocationService.start(context) }
                 }

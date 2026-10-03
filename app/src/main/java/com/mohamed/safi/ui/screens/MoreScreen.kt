@@ -19,6 +19,8 @@ import com.mohamed.safi.ui.*
 private data class Entry(val route: String, val title: String, val desc: String, val icon: ImageVector, val color: Color)
 
 private val entries = listOf(
+    Entry("fitness", "الجيم والصحة", "أكل، تمارين، وزن، الساعة", Icons.Default.FitnessCenter, Color(0xFF1B998B)),
+    Entry("carpool", "دور السواقة", "مين هيسوق بكرة", Icons.Default.DirectionsCar, Color(0xFFD98A1C)),
     Entry("transfers", "تحويلات مصر", "ماما، البيت، الدروس…", Icons.Default.SwapHoriz, Warn),
     Entry("bills", "الفواتير والالتزامات", "إيجار، كهرباء، اتصالات", Icons.Default.Payments, Brand),
     Entry("debts", "السلف والديون", "ليك وعليك ومواعيدها", Icons.Default.People, Danger),

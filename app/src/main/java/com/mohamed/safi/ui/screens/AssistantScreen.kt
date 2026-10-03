@@ -35,6 +35,11 @@ private val suggestions = listOf(
     "صرفت كام على البنزين الشهر ده؟",
     "صحيني كل يوم الساعة 6 ونص ما عدا الجمعة",
     "الإيجار 4500 درهم كل شهر يوم 1",
+    "وديني دبي مول",
+    "شغّل عمرو دياب على أنغامي",
+    "مين اللي هيسوق بكرة؟",
+    "فطرت 3 بيضات وتوست",
+    "وزني النهارده 92.5",
 )
 
 @Composable
@@ -48,6 +53,9 @@ fun AssistantScreen() {
     var confirmClear by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val pending by UiBus.pendingVoice.collectAsState()
+    var tts by remember { mutableStateOf(com.mohamed.safi.apps.Apps.ttsOn(ctx)) }
+    LaunchedEffect(tts) { if (tts) com.mohamed.safi.ai.Speaker.init(ctx) }
+    val listenNow by UiBus.listenNow.collectAsState()
 
     fun send(text: String) {
         val t = text.trim()
@@ -59,12 +67,19 @@ fun AssistantScreen() {
         input = ""
         busy = true
         scope.launch {
-            Assistant.ask(ctx, t)
+            val r = Assistant.ask(ctx, t)
+            if (tts) com.mohamed.safi.ai.Speaker.say(r.reply)
             busy = false
         }
     }
 
     val voice = rememberVoiceInput { send(it) }
+    LaunchedEffect(listenNow) {
+        if (listenNow) {
+            UiBus.listenNow.value = false
+            voice()
+        }
+    }
 
     LaunchedEffect(pending) {
         pending?.let {
@@ -80,6 +95,12 @@ fun AssistantScreen() {
     ScreenScaffold(
         "صافي",
         actions = {
+            IconButton(onClick = {
+                tts = !tts
+                com.mohamed.safi.apps.Apps.setTts(ctx, tts)
+                if (!tts) com.mohamed.safi.ai.Speaker.stop()
+                toast(ctx, if (tts) "صافي هيرد بالصوت" else "الرد بالصوت اتقفل")
+            }) { Icon(if (tts) Icons.Default.VolumeUp else Icons.Default.VolumeOff, "الرد بالصوت") }
             if (messages.isNotEmpty()) IconButton(onClick = { confirmClear = true }) { Icon(Icons.Default.DeleteSweep, "مسح المحادثة") }
         },
     ) { pad ->

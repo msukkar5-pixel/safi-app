@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="voice"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_mic"
+        android:shortcutShortLabel="@string/sc_voice"
+        android:shortcutLongLabel="@string/sc_voice">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.mohamed.safi"
+            android:targetClass="com.mohamed.safi.MainActivity">
+            <extra android:name="route" android:value="voice" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="expense"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_add"
+        android:shortcutShortLabel="@string/sc_expense"
+        android:shortcutLongLabel="@string/sc_expense">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.mohamed.safi"
+            android:targetClass="com.mohamed.safi.MainActivity">
+            <extra android:name="route" android:value="expenses" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="gym"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_gym"
+        android:shortcutShortLabel="@string/sc_gym"
+        android:shortcutLongLabel="@string/sc_gym">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.mohamed.safi"
+            android:targetClass="com.mohamed.safi.MainActivity">
+            <extra android:name="route" android:value="fitness" />
+        </intent>
+    </shortcut>
+</shortcuts>

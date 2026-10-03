@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.AlarmClock
 import com.mohamed.safi.SafiApp
+import com.mohamed.safi.apps.Apps
 import com.mohamed.safi.data.Bill
 import com.mohamed.safi.data.Categorizer
 import com.mohamed.safi.data.Cats
@@ -93,6 +94,13 @@ object Assistant {
             reminders.forEach { appendLine("#${it.id} | ${isoLocal(it.time)} | ${it.kind} | ${it.title} | repeat ${it.repeat} | ${it.location}") }
             appendLine()
             appendLine("CAR: odometer ${prefs.odometer} km")
+            val cp = com.mohamed.safi.data.Carpool.load()
+            if (cp.members.isNotEmpty()) {
+                val d0 = LocalDate.now(zone)
+                appendLine("CARPOOL (me = ${cp.myName}, members ${cp.members.joinToString()}): " +
+                    (0 until 14).map { d0.plusDays(it.toLong()) }.mapNotNull { d -> cp.driverFor(d)?.let { "$d ${d.dayOfWeek.toString().take(3)}=$it" } }.joinToString("; "))
+            }
+            runCatching { appendLine(com.mohamed.safi.fitness.Coach.assistantContext(com.mohamed.safi.SafiApp.instance)) }
             val today = Brief.todayLines()
             if (today.isNotEmpty()) appendLine("DUE SOON:\n" + today.joinToString("\n"))
         }
@@ -121,8 +129,23 @@ Available actions (use exact keys; omit optional keys you don't know):
   (for monthly money to family in Egypt use kind "transfer", currency "EGP" and an EGYPT TRANSFER CATEGORY)
 - {"type":"pay_bill","id":1,"amount":0}   (amount optional, defaults to bill amount)
 - {"type":"set_odometer","km":0}
+- {"type":"navigate","destination":"place name or address, keep Arabic/English as said, add city if obvious e.g. 'Dubai Mall, Dubai'","app":"waze|google (optional)"}
+- {"type":"play_music","query":"song / artist / playlist","app":"anghami|spotify|youtube (optional)"}
+- {"type":"open_app","name":"app name as installed, e.g. WhatsApp, Instagram, Careem"}
+- {"type":"call","number":"phone number"}
+- {"type":"whatsapp","number":"phone number or empty","text":"message text"}
+- {"type":"web_search","query":""}
+- {"type":"log_food","meal":"فطار|غدا|عشا|سناك|قبل التمرين|بعد التمرين","text":"what he ate with grams","kcal":0,"protein":0,"carbs":0,"fat":0}  (estimate the numbers yourself)
+- {"type":"log_weight","kg":0}
+- {"type":"log_water","cups":1}   (1 cup = 250 ml; a 500 ml bottle = 2)
+- {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
+- {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
+- {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
 
 Rules:
+- For navigate / play_music / open_app / call / whatsapp: just do it, reply in a few words. You cannot pick a contact by name: if he says "كلم أحمد" without a number, ask for the number.
+- Fitness questions: use FITNESS PROFILE and targets. You are not a doctor; for medical issues advise a doctor.
+- Carpool: answer who drives from CARPOOL; "بدّلت مع أحمد يوم الخميس" = carpool_set for that date with the new driver (and the other date if he mentions it).
 - "استلفت من X" = i_owe. "سلفت X" / "X مستلف مني" = owed_to_me. Create a reminder automatically comes with add_debt when there is a due date (the app does it).
 - Relative dates ("بكرة", "الخميس الجاي", "آخر الشهر", "كمان ساعتين") must be converted using NOW. If no time given for a reminder, use 09:00.
 - If he says he paid something in cash, method "cash". Guess the best category yourself.
@@ -328,6 +351,60 @@ Rules:
                     "set_odometer" -> {
                         prefs.odometer = a.optInt("km", prefs.odometer)
                         done += "✓ عداد العربية: ${prefs.odometer} كم"
+                    }
+                    "navigate" -> {
+                        val dest = a.str("destination")
+                        if (dest.isNotBlank()) done += "✓ ${Apps.navigate(ctx, dest, a.str("app").ifBlank { null })}: $dest"
+                    }
+                    "play_music" -> {
+                        val q = a.str("query")
+                        if (q.isNotBlank()) done += "✓ ${Apps.playMusic(ctx, q, a.str("app").ifBlank { null })}: $q"
+                    }
+                    "open_app" -> {
+                        val name = a.str("name")
+                        done += Apps.open(ctx, name)?.let { "✓ فتحت $it" } ?: "✗ مش لاقي تطبيق اسمه $name"
+                    }
+                    "call" -> if (Apps.dial(ctx, a.str("number"))) done += "✓ اتصال ${a.str("number")}"
+                    "whatsapp" -> if (Apps.whatsapp(ctx, a.str("number"), a.str("text"))) done += "✓ واتساب جاهز، دوس إرسال"
+                    "web_search" -> if (Apps.webSearch(ctx, a.str("query"))) done += "✓ بحث: ${a.str("query")}"
+                    "log_food" -> {
+                        val f = com.mohamed.safi.fitness.FoodEntry(
+                            meal = a.str("meal"), text = a.str("text").ifBlank { "أكل" },
+                            kcal = a.dbl("kcal") ?: 0.0, protein = a.dbl("protein") ?: 0.0,
+                            carbs = a.dbl("carbs") ?: 0.0, fat = a.dbl("fat") ?: 0.0,
+                        )
+                        com.mohamed.safi.fitness.Fit.dao.insertFood(f)
+                        done += "✓ أكل: ${f.text} — ${f.kcal.toInt()} سعر، ${f.protein.toInt()} بروتين"
+                    }
+                    "log_weight" -> {
+                        val kg = a.dbl("kg") ?: return@runCatching
+                        com.mohamed.safi.fitness.Fit.dao.insertWeight(com.mohamed.safi.fitness.WeightEntry(kg = kg))
+                        done += "✓ الوزن: ${fmt(kg)} كجم"
+                    }
+                    "log_water" -> {
+                        val day = LocalDate.now(zone).toString()
+                        val cur = com.mohamed.safi.fitness.Fit.dao.waterNow(day)?.cups ?: 0
+                        val n = (cur + a.optInt("cups", 1)).coerceAtLeast(0)
+                        com.mohamed.safi.fitness.Fit.dao.setWater(com.mohamed.safi.fitness.WaterDay(day, n))
+                        done += "✓ المية: $n/${com.mohamed.safi.fitness.Fit.prefs.waterTarget} كوباية"
+                    }
+                    "add_supplement" -> {
+                        val name = a.str("name")
+                        if (name.isNotBlank()) {
+                            com.mohamed.safi.fitness.Supps.save(ctx, com.mohamed.safi.fitness.Supplement(name = name, dose = a.str("dose"), times = a.str("times"), note = a.str("note")))
+                            done += "✓ مكمل: $name ${a.str("times")}"
+                        }
+                    }
+                    "carpool_set", "carpool_off" -> {
+                        val d = runCatching { LocalDate.parse(a.str("date").take(10)) }.getOrNull() ?: return@runCatching
+                        val cp = com.mohamed.safi.data.Carpool.load(ctx)
+                        val updated = if (a.str("type") == "carpool_off") cp.copy(skips = cp.skips + d, overrides = cp.overrides - d)
+                        else {
+                            val who = cp.members.firstOrNull { it == a.str("driver") } ?: cp.members.firstOrNull { it.contains(a.str("driver")) || a.str("driver").contains(it) } ?: a.str("driver")
+                            cp.copy(overrides = cp.overrides + (d to who), skips = cp.skips - d)
+                        }
+                        com.mohamed.safi.data.Carpool.save(ctx, updated)
+                        done += if (a.str("type") == "carpool_off") "✓ $d إجازة" else "✓ $d: ${updated.overrides[d]} هيسوق"
                     }
                     else -> {}
                 }

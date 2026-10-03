@@ -55,6 +55,13 @@ object ReceiptReader {
         return Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
     }
 
+    /** Scaled JPEG of any image, base64-encoded for Claude. */
+    suspend fun base64(ctx: Context, uri: Uri): String = withContext(Dispatchers.IO) {
+        val bmp = loadScaled(ctx, uri, 1200) ?: throw ClaudeException("مش قادر أفتح الصورة")
+        val bytes = ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
+        Base64.encodeToString(bytes, Base64.NO_WRAP)
+    }
+
     suspend fun read(ctx: Context, uri: Uri): ReceiptResult = withContext(Dispatchers.IO) {
         val bmp = loadScaled(ctx, uri) ?: throw ClaudeException("مش قادر أفتح الصورة")
         val dir = File(ctx.filesDir, "receipts").apply { mkdirs() }

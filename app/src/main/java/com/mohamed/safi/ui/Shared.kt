@@ -46,6 +46,8 @@ object UiBus {
     val pendingRoute = MutableStateFlow<String?>(null)
     /** Bank message(s) shared into the app from Messages. */
     val pendingShare = MutableStateFlow<String?>(null)
+    /** Open the mic as soon as the assistant screen shows (from the launcher shortcut). */
+    val listenNow = MutableStateFlow(false)
 }
 
 fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()

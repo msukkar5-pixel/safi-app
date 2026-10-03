@@ -129,6 +129,8 @@ fun HomeScreen(open: (String) -> Unit) {
             }
         }
 
+        item { CarpoolCard(open) }
+
         // Quick actions
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

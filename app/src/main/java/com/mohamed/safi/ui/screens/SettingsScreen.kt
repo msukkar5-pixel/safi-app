@@ -141,6 +141,25 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Text("بيتعرف على Emirates NBD وADCB وADIB وأي بنك تاني. نفس الرسالة مش بتتسجل مرتين. لو صيغتها غريبة وفيه مفتاح Claude، Claude بيقراها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
 
+            SectionTitle("التطبيقات المربوطة")
+            AppCard {
+                var maps by remember { mutableStateOf(com.mohamed.safi.apps.Apps.mapsApp(ctx)) }
+                var music by remember { mutableStateOf(com.mohamed.safi.apps.Apps.musicApp(ctx)) }
+                val A = com.mohamed.safi.apps.Apps
+                ChoiceField("الخرائط", maps, listOf(A.WAZE, A.GMAPS), display = { A.appLabel(it) + if (!A.installed(ctx, it)) " (مش متثبت)" else "" }) {
+                    maps = it; A.setMapsApp(ctx, it)
+                }
+                Spacer(Modifier.height(8.dp))
+                ChoiceField("المزيكا", music, listOf(A.ANGHAMI, A.SPOTIFY, A.YTMUSIC), display = { A.appLabel(it) + if (!A.installed(ctx, it)) " (مش متثبت)" else "" }) {
+                    music = it; A.setMusicApp(ctx, it)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "قول لصافي: \"وديني دبي مول\"، \"شغّل فيروز\"، \"افتح كريم\"، \"ابعت واتساب لـ 050…\". أي تطبيق متثبت على تليفونك يقدر يفتحه بالاسم.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+                )
+            }
+
             SectionTitle("عام")
             AppCard {
                 OutlinedTextField(name, { name = it }, label = { Text("اسمك") }, singleLine = true, modifier = Modifier.fillMaxWidth())
