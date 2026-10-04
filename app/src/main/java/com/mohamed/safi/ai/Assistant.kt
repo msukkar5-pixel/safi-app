@@ -102,6 +102,12 @@ object Assistant {
             }
             runCatching { appendLine(com.mohamed.safi.fitness.Coach.assistantContext(com.mohamed.safi.SafiApp.instance)) }
             runCatching {
+                val meds = com.mohamed.safi.health.HealthDb.dao.medsNow()
+                if (meds.isNotEmpty()) appendLine("MEDICATIONS: " + meds.joinToString("; ") { "${it.name} ${it.dose} at ${it.times} ${it.withFood}" })
+                val w = com.mohamed.safi.faith.Wird
+                appendLine("QURAN WIRD: ${w.pagesPerDay} pages/day, today pages ${w.todayRange().first}-${w.todayRange().last}, done today: ${w.doneToday}, streak ${w.streak}")
+            }
+            runCatching {
                 appendLine("PRAYER TIMES TODAY (${com.mohamed.safi.faith.Prayer.city}): " + com.mohamed.safi.faith.Prayer.today().times.joinToString(", ") { "${it.first} ${it.second.toLocalTime()}" })
                 appendLine("QIBLA: ${com.mohamed.safi.faith.Prayer.qiblaBearing().toInt()}° from north")
             }
@@ -121,7 +127,7 @@ object Assistant {
 
     private val SYSTEM = """
 You are "${com.mohamed.safi.AppName.v}", the personal assistant inside the user's own Android app. The user (name: ${com.mohamed.safi.SafiApp.prefs.userName.ifBlank { "unknown" }}) is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
-Speak Egyptian Arabic, short and direct, warm but no fluff. Use Western digits for numbers.
+Reply in the same language/dialect the user used (Egyptian Arabic by default; English, Hindi, Urdu, French… if he writes in them). Short and direct, warm but no fluff. Use Western digits for numbers.
 
 You can read his data (given below) and take actions. ALWAYS answer with ONE JSON object only, no text outside it:
 {"reply": "what you say to Mohamed", "actions": [ ... ]}
@@ -154,9 +160,12 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
 - {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
 - {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
-- {"type":"open_screen","screen":"quran|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"open_screen","screen":"quran|wird|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
 - {"type":"add_diary","text":"the diary text exactly as he said it, cleaned punctuation only","mood":"one emoji or empty"}   (when he says سجّل في مذكراتي / اكتب في المذكرات)
 - {"type":"add_document","title":"","owner":"","expiry":"YYYY-MM-DD"}
+- {"type":"add_medication","name":"","dose":"","times":"08:00, 20:00","with_food":"قبل الأكل|بعد الأكل|مع الأكل|","reason":"","end":"YYYY-MM-DD or empty"}
+- {"type":"wird_done"}   (he finished today's Quran wird)
+- {"type":"shaarawy","query":"surah or topic"}   (open Sheikh Shaarawy videos on YouTube)
 - {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
 
 Rules:
@@ -415,6 +424,18 @@ Rules:
                     "open_screen" -> {
                         val sc = a.str("screen")
                         if (sc.isNotBlank()) { com.mohamed.safi.ui.UiBus.pendingRoute.value = sc; done += "✓ فتحت" }
+                    }
+                    "add_medication" -> {
+                        val n = a.str("name")
+                        if (n.isNotBlank()) {
+                            com.mohamed.safi.health.Meds.save(ctx, com.mohamed.safi.health.Medication(name = n, dose = a.str("dose"), times = a.str("times"), withFood = a.str("with_food"), reason = a.str("reason"), endDate = parseIso(a.str("end"))))
+                            done += "✓ دوا: $n ${a.str("times")}"
+                        }
+                    }
+                    "wird_done" -> { com.mohamed.safi.faith.Wird.markDone(); done += "✓ الورد اتسجل، ربنا يتقبل" }
+                    "shaarawy" -> {
+                        val q = a.str("query")
+                        if (q.isNotBlank()) { com.mohamed.safi.faith.Shaarawy.open(ctx, com.mohamed.safi.faith.Shaarawy.topicSearch(q)); done += "✓ الشعراوي: $q" }
                     }
                     "add_diary" -> {
                         val t = a.str("text")

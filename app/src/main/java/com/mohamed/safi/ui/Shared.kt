@@ -52,27 +52,6 @@ object UiBus {
 
 fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
 
-@Composable
-fun rememberVoiceInput(onText: (String) -> Unit): () -> Unit {
-    val ctx = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-        val text = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        if (!text.isNullOrBlank()) onText(text)
-    }
-    return {
-        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-EG")
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ar-EG")
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, "قول اللي عايزه… مثلاً: صرفت 40 درهم كاش على الغدا")
-        try {
-            launcher.launch(i)
-        } catch (e: ActivityNotFoundException) {
-            toast(ctx, "التعرف على الصوت مش متاح، نزّل تطبيق Google")
-        }
-    }
-}
-
 fun openFile(ctx: Context, path: String) {
     runCatching {
         val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", File(path))

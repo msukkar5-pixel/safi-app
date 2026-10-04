@@ -52,6 +52,9 @@ fun SettingsScreen(onBack: () -> Unit) {
             SectionTitle("الذكاء الاصطناعي")
             AiSettingsCard()
 
+            SectionTitle("الصوت")
+            VoiceSettingsCard()
+
             SectionTitle("اسم التطبيق")
             AppNameCard()
 
@@ -307,5 +310,39 @@ private fun AppNameCard() {
             "أندرويد مش بيسمح بتغيير اسم الأيقونة الأصلية، فزرار \"أيقونة بالاسم ده\" بيحط أيقونة جديدة على الشاشة الرئيسية بالاسم اللي اخترته.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
+    }
+}
+
+
+@Composable
+private fun VoiceSettingsCard() {
+    var lang by remember { mutableStateOf(com.mohamed.safi.ui.VoicePrefs.lang) }
+    var engine by remember { mutableStateOf(com.mohamed.safi.ui.VoicePrefs.engine) }
+    val canAi = com.mohamed.safi.ui.VoicePrefs.aiCanTranscribe()
+    AppCard {
+        ChoiceField("لغة الكلام", lang, com.mohamed.safi.ui.VoicePrefs.languages.keys.toList(), display = { com.mohamed.safi.ui.VoicePrefs.languages[it] ?: it }) {
+            lang = it; com.mohamed.safi.ui.VoicePrefs.lang = it
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("طريقة تحويل الكلام", fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(engine == "google", { engine = "google"; com.mohamed.safi.ui.VoicePrefs.engine = "google" })
+            Column(Modifier.weight(1f)) {
+                Text("صوت التليفون (مجاني)")
+                Text("بتشوف الكلام وانت بتتكلم، وبيفضل يسمع لحد ما تدوس خلصت", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(engine == "ai", { engine = "ai"; com.mohamed.safi.ui.VoicePrefs.engine = "ai" }, enabled = canAi)
+            Column(Modifier.weight(1f)) {
+                Text("بالذكاء الاصطناعي (أدق)")
+                Text(
+                    if (canAi) "بيسجّل كلامك كله وبعدين يحوّله. أدق في اللهجات والجمل الطويلة، وبيتحسب من رصيد الـ API."
+                    else "متاح مع OpenAI أو Gemini أو Groq بس. اختار واحد منهم من قسم الذكاء الاصطناعي.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+                )
+            }
+        }
+        Text("المساعد بيرد بنفس اللغة اللي بتكلمه بيها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
     }
 }

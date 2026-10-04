@@ -23,14 +23,15 @@ import java.util.zip.ZipOutputStream
  * The Claude API key is never written to the backup.
  */
 object Backup {
-    private val dbNames = listOf("safi.db", "safi_life.db", "safi_extra.db", "safi_diary.db")
-    private val folders = listOf("receipts", "docs")
+    private val dbNames = listOf("safi.db", "safi_life.db", "safi_extra.db", "safi_diary.db", "safi_health.db")
+    private val folders = listOf("receipts", "docs", "labs")
 
     private fun checkpoint() {
         runCatching { SafiApp.db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
         runCatching { LifeDb.get(SafiApp.instance).openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
         runCatching { ExtraDb.get().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
         runCatching { com.mohamed.safi.diary.DiaryDb.get().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
+        runCatching { com.mohamed.safi.health.HealthDb.get().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
     }
 
     private fun stripKey(xml: String) = xml.replace(Regex("<string name=\"(apiKey|key_[a-z]+)\">.*?</string>", RegexOption.DOT_MATCHES_ALL), "")
@@ -99,6 +100,7 @@ object Backup {
             runCatching { LifeDb.closeAll() }
             runCatching { ExtraDb.closeAll() }
             runCatching { com.mohamed.safi.diary.DiaryDb.closeAll() }
+            runCatching { com.mohamed.safi.health.HealthDb.closeAll() }
             for (db in dbNames) {
                 val f = ctx.getDatabasePath(db)
                 File(f.path + "-wal").delete(); File(f.path + "-shm").delete()

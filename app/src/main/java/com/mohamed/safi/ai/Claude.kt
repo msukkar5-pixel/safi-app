@@ -7,6 +7,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -198,6 +199,63 @@ object Claude {
         return Request.Builder().url(baseUrl(p) + "/models/" + model + ":generateContent")
             .addHeader("x-goog-api-key", key)
             .post(body.toString().toRequestBody(JSON)).build()
+    }
+
+    /** Speech-to-text with the current provider (OpenAI, Groq: transcription API; Gemini: audio understanding). */
+    suspend fun transcribe(audio: java.io.File, lang: String): String = withContext(Dispatchers.IO) {
+        val p = Providers.current
+        val key = SafiApp.prefs.apiKey
+        val iso = lang.substringBefore('-')
+        try {
+            when (p.id) {
+                "gemini" -> {
+                    val b64 = android.util.Base64.encodeToString(audio.readBytes(), android.util.Base64.NO_WRAP)
+                    val body = JSONObject().put(
+                        "contents",
+                        JSONArray().put(
+                            JSONObject().put("role", "user").put(
+                                "parts",
+                                JSONArray()
+                                    .put(JSONObject().put("inline_data", JSONObject().put("mime_type", "audio/aac").put("data", b64)))
+                                    .put(JSONObject().put("text", "Transcribe this audio exactly as spoken, in the same language and dialect (expected: $lang). Add punctuation. Output only the transcript.")),
+                            ),
+                        ),
+                    ).put("generationConfig", JSONObject().put("maxOutputTokens", 8000))
+                    val req = Request.Builder().url(baseUrl(p) + "/models/" + SafiApp.prefs.fastModel + ":generateContent")
+                        .addHeader("x-goog-api-key", key).post(body.toString().toRequestBody(JSON)).build()
+                    http.newCall(req).execute().use { r ->
+                        val s = r.body?.string() ?: ""
+                        if (!r.isSuccessful) throw ClaudeException(errorText(r.code, s, p))
+                        val parts = JSONObject(s).optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts") ?: JSONArray()
+                        (0 until parts.length()).map { parts.getJSONObject(it) }.filter { !it.optBoolean("thought") }.joinToString("") { it.optString("text") }.trim()
+                    }
+                }
+                "openai", "groq" -> {
+                    val models = if (p.id == "groq") listOf("whisper-large-v3-turbo", "whisper-large-v3") else listOf("gpt-transcribe", "gpt-4o-transcribe", "whisper-1")
+                    var last: ClaudeException? = null
+                    for (m in models) {
+                        val mb = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
+                            .addFormDataPart("model", m)
+                            .addFormDataPart("file", audio.name, audio.asRequestBody("audio/mp4".toMediaType()))
+                        if (m.startsWith("whisper")) mb.addFormDataPart("language", iso)
+                        val req = Request.Builder().url(baseUrl(p) + "/audio/transcriptions")
+                            .addHeader("Authorization", "Bearer $key").post(mb.build()).build()
+                        val result = http.newCall(req).execute().use { r ->
+                            val s = r.body?.string() ?: ""
+                            if (r.isSuccessful) JSONObject(s).optString("text").trim()
+                            else { last = ClaudeException(errorText(r.code, s, p)); if (r.code == 400 || r.code == 404) null else throw last!! }
+                        }
+                        if (result != null) return@withContext result
+                    }
+                    throw last ?: ClaudeException("التحويل فشل")
+                }
+                else -> throw ClaudeException("${p.label} مش بيحوّل صوت لكتابة. استخدم صوت التليفون أو اختار OpenAI أو Gemini أو Groq.")
+            }
+        } catch (e: ClaudeException) {
+            throw e
+        } catch (e: java.io.IOException) {
+            throw ClaudeException("مفيش اتصال بالإنترنت")
+        }
     }
 
     /** Models the provider offers for this key (for the picker in Settings). */

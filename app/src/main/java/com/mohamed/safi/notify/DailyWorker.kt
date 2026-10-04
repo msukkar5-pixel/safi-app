@@ -97,6 +97,7 @@ object Brief {
                     (if (dueByDate != null) " — ميعاده ${dueByDate.dayOfMonth}/${dueByDate.monthValue}" else "")
             }
         }
+        runCatching { lines += com.mohamed.safi.health.Meds.dailyCheck(com.mohamed.safi.SafiApp.instance) }
         runCatching {
             for (d in com.mohamed.safi.extra.ExtraDb.dao.docsNow()) {
                 val e = d.expiry ?: continue

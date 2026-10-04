@@ -133,7 +133,7 @@ class ReminderReceiver : BroadcastReceiver() {
                     context, nid,
                     if (r.alarm) Notifier.CH_ALARM else Notifier.CH_REMIND,
                     (if (r.kind == "appointment") "📅 " else "⏰ ") + r.title,
-                    text, route = if (r.refType == "azkar") "azkar" else "schedule", actions = actions, fullScreen = r.alarm,
+                    text, route = when (r.refType) { "azkar" -> "azkar"; "wird" -> "wird"; "med" -> "healthrecords"; else -> "schedule" }, actions = actions, fullScreen = r.alarm,
                 )
                 if (!snoozed && r.repeat != "none") {
                     ReminderScheduler.nextTime(r.time, r.repeat)?.let { next ->
@@ -174,7 +174,9 @@ class ActionReceiver : BroadcastReceiver() {
                     DONE -> if (r.repeat == "none") {
                         dao.upsertReminder(r.copy(done = true))
                         ReminderScheduler.cancel(context, id)
-                    } else Unit
+                    } else {
+                        if (r.refType == "med" && r.refId != null) com.mohamed.safi.health.Meds.taken(r.refId)
+                    }
                     SNOOZE -> ReminderScheduler.snooze(context, r)
                     else -> Unit
                 }

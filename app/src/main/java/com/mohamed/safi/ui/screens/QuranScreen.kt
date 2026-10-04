@@ -147,6 +147,7 @@ private fun QuranReader(surahs: List<Surah>, surahNo: Int, startAyah: Int, onBac
         Quran.lastAyah = (state.firstVisibleItemIndex).coerceIn(1, s.ayahs.size)
     }
     val accent = MaterialTheme.colorScheme.primary
+    var sheetAyah by remember { mutableStateOf<Int?>(null) }
 
     ScreenScaffold(
         s.name, onBack = onBack,
@@ -175,11 +176,7 @@ private fun QuranReader(surahs: List<Surah>, surahNo: Int, startAyah: Int, onBac
                 val marked = key in marks
                 Column(
                     Modifier.fillMaxWidth()
-                        .clickable {
-                            marks = if (marked) marks - key else marks + key
-                            Quran.bookmarks = marks
-                            toast(ctx, if (marked) "اتشالت العلامة" else "اتحطت علامة 🔖")
-                        }
+                        .clickable { sheetAyah = a.n }
                         .background(if (marked) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f) else androidx.compose.ui.graphics.Color.Transparent)
                         .padding(vertical = 8.dp),
                 ) {
@@ -201,8 +198,70 @@ private fun QuranReader(surahs: List<Surah>, surahNo: Int, startAyah: Int, onBac
                     if (current > 1) OutlinedButton(onClick = { current -= 1 }) { Text("السورة اللي قبلها") } else Spacer(Modifier)
                     if (current < 114) Button(onClick = { current += 1 }) { Text("السورة اللي بعدها") }
                 }
-                Text("دوس على أي آية علشان تحط عليها علامة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text("دوس على أي آية علشان تقرا تفسيرها أو تحط عليها علامة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                OutlinedButton(onClick = { com.mohamed.safi.faith.Shaarawy.open(ctx, com.mohamed.safi.faith.Shaarawy.surahSearch(s.name)) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    Icon(Icons.Default.PlayCircle, null); Spacer(Modifier.width(6.dp)); Text("خواطر الشعراوي عن ${s.name}")
+                }
             }
+        }
+    }
+
+    sheetAyah?.let { n ->
+        val a = s.ayahs.first { it.n == n }
+        AyahSheet(s, a, family, size, key = "${s.number}:${a.n}", marked = "${s.number}:${a.n}" in marks,
+            onToggleMark = {
+                val k = "${s.number}:${a.n}"
+                marks = if (k in marks) marks - k else marks + k
+                Quran.bookmarks = marks
+            },
+            onDismiss = { sheetAyah = null })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AyahSheet(
+    s: Surah, a: com.mohamed.safi.faith.Ayah, family: FontFamily, size: Int, key: String, marked: Boolean,
+    onToggleMark: () -> Unit, onDismiss: () -> Unit,
+) {
+    val ctx = LocalContext.current
+    var edition by remember { mutableStateOf(com.mohamed.safi.faith.Tafsir.editions.first().first) }
+    var text by remember { mutableStateOf<String?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    LaunchedEffect(edition) {
+        text = null; failed = false
+        text = com.mohamed.safi.faith.Tafsir.of(edition, s.number, a.n)
+        if (text == null) failed = true
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text("${s.name} • آية ${a.n}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(6.dp))
+            Text(a.text, fontFamily = family, fontSize = (size - 2).sp, lineHeight = ((size - 2) * 1.8).sp)
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.mohamed.safi.faith.Tafsir.editions.forEach { (id, title) ->
+                    FilterChip(edition == id, { edition = id }, label = { Text(title) })
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            when {
+                text != null -> Text(text!!, style = MaterialTheme.typography.bodyLarge, lineHeight = 30.sp)
+                failed -> Text("التفسير محتاج إنترنت أول مرة علشان يتحمّل", color = MaterialTheme.colorScheme.outline)
+                else -> CircularProgressIndicator(Modifier.size(24.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = onToggleMark) {
+                    Icon(if (marked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, null)
+                    Spacer(Modifier.width(4.dp)); Text(if (marked) "شيل العلامة" else "علامة")
+                }
+                OutlinedButton(onClick = {
+                    val share = "${a.text}\n[${s.name}: ${a.n}]" + (text?.let { "\n\n${com.mohamed.safi.faith.Tafsir.editions.first { it.first == edition }.second}: $it" } ?: "")
+                    ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, share), "شارك").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(4.dp)); Text("شارك") }
+            }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

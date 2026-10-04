@@ -19,11 +19,14 @@ import com.mohamed.safi.ui.*
 private data class Entry(val route: String, val title: String, val desc: String, val icon: ImageVector, val color: Color)
 
 private val entries = listOf(
-    Entry("quran", "القرآن الكريم", "المصحف كامل وعلامات", Icons.Default.MenuBook, Color(0xFF0F6E5C)),
+    Entry("quran", "القرآن الكريم", "المصحف والتفسير والعلامات", Icons.Default.MenuBook, Color(0xFF0F6E5C)),
+    Entry("wird", "الورد اليومي", "صفحات كل يوم وختمة وتذكير", Icons.Default.AutoStories, Color(0xFF1B5E20)),
+    Entry("shaarawy", "الشيخ الشعراوي", "خواطر بالسورة والموضوع", Icons.Default.VideoLibrary, Color(0xFFC62828)),
     Entry("azkar", "الأذكار والأدعية", "الصباح والمساء والسبحة", Icons.Default.Favorite, Color(0xFF00897B)),
     Entry("hadith", "الأحاديث الصحيحة", "البخاري ومسلم", Icons.Default.LibraryBooks, Color(0xFF9C6644)),
     Entry("diary", "مذكراتي", "بالصوت وتحليل يومك وشخصيتك", Icons.Default.EditNote, Color(0xFFAD1457)),
     Entry("prayer", "الصلاة والقبلة", "المواعيد والأذان والبوصلة", Icons.Default.Mosque, Color(0xFF2E7DBA)),
+    Entry("healthrecords", "حالتي الصحية", "أدوية، تحاليل، دكاترة", Icons.Default.MonitorHeart, Color(0xFFD32F2F)),
     Entry("fitness", "الجيم والصحة", "أكل، تمارين، وزن، الساعة", Icons.Default.FitnessCenter, Color(0xFF1B998B)),
     Entry("carpool", "دور السواقة", "مين هيسوق بكرة", Icons.Default.DirectionsCar, Color(0xFFD98A1C)),
     Entry("transfers", "تحويلات مصر", "ماما، البيت، الدروس…", Icons.Default.SwapHoriz, Warn),

@@ -51,6 +51,7 @@ fun AssistantScreen() {
     var input by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
+    var handoff by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val pending by UiBus.pendingVoice.collectAsState()
     var tts by remember { mutableStateOf(com.mohamed.safi.apps.Apps.ttsOn(ctx)) }
@@ -95,6 +96,7 @@ fun AssistantScreen() {
     ScreenScaffold(
         "${com.mohamed.safi.AppName.v}",
         actions = {
+            IconButton(onClick = { handoff = true }) { Icon(Icons.Default.OpenInNew, "اسأل في تطبيق اشتراكك") }
             IconButton(onClick = {
                 tts = !tts
                 com.mohamed.safi.apps.Apps.setTts(ctx, tts)
@@ -166,6 +168,47 @@ fun AssistantScreen() {
                 }
             }
         }
+    }
+
+    if (handoff) {
+        val apps = listOf(
+            "com.anthropic.claude" to "Claude",
+            "com.openai.chatgpt" to "ChatGPT",
+            "com.google.android.apps.bard" to "Gemini",
+            "com.microsoft.copilot" to "Copilot",
+            "com.deepseek.chat" to "DeepSeek",
+        ).filter { com.mohamed.safi.apps.Apps.installed(ctx, it.first) }
+        val question = input.ifBlank { messages.lastOrNull { it.role == "user" }?.text ?: "" }
+        AlertDialog(
+            onDismissRequest = { handoff = false },
+            title = { Text("اسأل في تطبيق اشتراكك") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "الاشتراك الشهري (Claude Pro أو ChatGPT Plus أو Gemini Advanced) بيشتغل جوه تطبيقهم بس، ومش بيدّي تطبيقات تانية صلاحية تستخدمه. هنا تقدر تبعت سؤالك لتطبيقهم وتاخد الرد هناك.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (question.isBlank()) Text("اكتب سؤالك في الخانة الأول.", color = Warn)
+                    if (apps.isEmpty()) Text("مش لاقي تطبيق Claude أو ChatGPT أو Gemini على تليفونك.", color = MaterialTheme.colorScheme.outline)
+                    apps.forEach { (pkg, label) ->
+                        OutlinedButton(onClick = {
+                            val i = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                .putExtra(android.content.Intent.EXTRA_TEXT, question).setPackage(pkg)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            val ok = runCatching { ctx.startActivity(i) }.isSuccess
+                            if (!ok) {
+                                (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                                    .setPrimaryClip(android.content.ClipData.newPlainText("q", question))
+                                ctx.packageManager.getLaunchIntentForPackage(pkg)?.let { ctx.startActivity(it) }
+                                toast(ctx, "السؤال اتنسخ، الصقه في $label")
+                            }
+                            handoff = false
+                        }, enabled = question.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("افتح في $label") }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { handoff = false }) { Text("إغلاق") } },
+        )
     }
 
     if (confirmClear) {

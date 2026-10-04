@@ -29,6 +29,8 @@ object Speaker {
         val clean = text.replace(Regex("[*#_`•✓✗⚠️]"), " ").replace(Regex("\\s+"), " ").trim().take(800)
         if (clean.isEmpty()) return
         if (!ready) { pending = clean; return }
+        val arabic = clean.count { it in '\u0600'..'\u06FF' } > clean.length / 4
+        runCatching { tts?.setLanguage(if (arabic) Locale("ar", "EG") else Locale.forLanguageTag(com.mohamed.safi.ui.VoicePrefs.lang.takeIf { !it.startsWith("ar") } ?: "en-US")) }
         tts?.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "safi")
     }
 

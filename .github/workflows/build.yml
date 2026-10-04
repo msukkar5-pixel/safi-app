@@ -32,6 +32,12 @@ jobs:
           curl -sfL --retry 3 https://github.com/google/fonts/raw/main/ofl/amiriquran/AmiriQuran-Regular.ttf -o app/src/main/assets/fonts/quran.ttf \
             || curl -sfL --retry 3 https://github.com/google/fonts/raw/main/ofl/amiri/Amiri-Regular.ttf -o app/src/main/assets/fonts/quran.ttf \
             || { echo "font download failed"; rm -f app/src/main/assets/fonts/quran.ttf; }
+          mkdir -p app/src/main/assets/tafsir
+          for t in muyassar jalalayn; do
+            curl -sfL --retry 3 https://api.alquran.cloud/v1/quran/ar.$t -o app/src/main/assets/tafsir/$t.json \
+              && python3 -c "import json;d=json.load(open('app/src/main/assets/tafsir/$t.json'));print('$t',sum(len(s['ayahs']) for s in d['data']['surahs']))" \
+              || { echo "tafsir $t download failed"; rm -f app/src/main/assets/tafsir/$t.json; }
+          done
           mkdir -p app/src/main/assets/hadith
           for b in bukhari muslim; do
             curl -sfL --retry 3 https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-$b.min.json -o app/src/main/assets/hadith/$b.json \

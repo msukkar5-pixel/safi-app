@@ -233,6 +233,10 @@ fun AppRoot() {
             composable("azkar") { AzkarScreen(back) }
             composable("hadith") { HadithScreen(back) }
             composable("diary") { DiaryScreen(back) }
+            composable("tafsir") { QuranScreen(back) }
+            composable("shaarawy") { ShaarawyScreen(back) }
+            composable("healthrecords") { HealthRecordsScreen(back) }
+            composable("wird") { WirdScreen(back) }
         }
     }
 }

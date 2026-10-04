@@ -33,25 +33,6 @@ import kotlinx.coroutines.launch
 
 private val moods = listOf("😄", "🙂", "😐", "😔", "😢", "😠", "😴", "🤒", "🙏")
 
-/** Longer dictation: keeps listening through short pauses (where the phone allows it). */
-@Composable
-private fun rememberDictation(onText: (String) -> Unit): () -> Unit {
-    val ctx = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-        res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let(onText)
-    }
-    return {
-        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ar-EG")
-            .putExtra(RecognizerIntent.EXTRA_PROMPT, "احكي… ولما تخلص اسكت ثانيتين")
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
-            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 15000L)
-        try { launcher.launch(i) } catch (e: ActivityNotFoundException) { toast(ctx, "التعرف على الصوت مش متاح، نزّل تطبيق Google") }
-    }
-}
-
 @Composable
 fun DiaryScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -149,7 +130,7 @@ private fun DiaryEditor(existing: DiaryEntry?, onDone: (DiaryEntry?) -> Unit) {
     var mood by remember { mutableStateOf(existing?.mood ?: "") }
     var time by remember { mutableLongStateOf(existing?.time ?: System.currentTimeMillis()) }
     var tidying by remember { mutableStateOf(false) }
-    val dictate = rememberDictation { said -> text = if (text.isBlank()) said else text.trimEnd() + " " + said }
+    val dictate = rememberVoiceInput { said -> text = if (text.isBlank()) said else text.trimEnd() + " " + said }
 
     Dialog(onDismissRequest = { onDone(null) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
