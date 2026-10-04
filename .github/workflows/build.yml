@@ -35,7 +35,7 @@ jobs:
           mkdir -p app/src/main/assets/hadith
           for b in bukhari muslim; do
             curl -sfL --retry 3 https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-$b.min.json -o app/src/main/assets/hadith/$b.json \
-              && python3 -c "import json;d=json.load(open('app/src/main/assets/hadith/$b.json'));print('$b',len(d['hadiths']),'sections',len(d['metadata']['section']));print(list(d['metadata']['section'].items())[:5])" \
+              && python3 -c "import json;d=json.load(open('app/src/main/assets/hadith/$b.json'));m=d['metadata'];print('$b',len(d['hadiths']),list(m.keys()))" \
               || { echo "hadith $b download failed"; rm -f app/src/main/assets/hadith/$b.json; }
           done
           ls -la app/src/main/assets app/src/main/assets/fonts app/src/main/assets/hadith

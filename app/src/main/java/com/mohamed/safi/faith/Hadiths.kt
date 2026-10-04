@@ -72,8 +72,8 @@ object Hadiths {
                 }
             val j = JSONObject(text)
             val meta = j.getJSONObject("metadata")
-            val sec = meta.optJSONObject("section") ?: JSONObject()
-            val det = meta.optJSONObject("section_detail") ?: JSONObject()
+            val sec = meta.optJSONObject("sections") ?: meta.optJSONObject("section") ?: JSONObject()
+            val det = meta.optJSONObject("section_details") ?: meta.optJSONObject("section_detail") ?: JSONObject()
             val keys = sec.keys().asSequence().mapNotNull { it.toIntOrNull() }.toList()
             val maxKey = keys.maxOrNull() ?: 0
             val sections = keys.sorted().mapNotNull { n ->
