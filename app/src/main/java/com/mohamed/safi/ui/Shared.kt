@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,7 +58,7 @@ object UiBus {
     val pendingHadith = MutableStateFlow<String?>(null)
 }
 
-fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
+fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, tr(msg), Toast.LENGTH_SHORT).show()
 
 fun openFile(ctx: Context, path: String) {
     runCatching {

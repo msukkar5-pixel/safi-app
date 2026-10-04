@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,6 +47,16 @@ fun SettingsScreen(onBack: () -> Unit) {
             Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            SectionTitle("لغة التطبيق")
+            AppCard {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    I18n.languages.forEach { (code, label) ->
+                        FilterChip(I18n.lang.value == code, { I18n.set(ctx, code) }, label = { androidx.compose.material3.Text(label) })
+                    }
+                }
+                Text("القرآن والأذكار والأحاديث والكتب بتفضل بلغتها الأصلية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+
             SectionTitle("الصلاحيات")
             PermissionsList()
 

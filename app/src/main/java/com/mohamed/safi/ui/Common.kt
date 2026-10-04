@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -327,5 +328,17 @@ fun BarRow(label: String, value: String, fraction: Float, color: Color, icon: Im
             )
             if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         }
+    }
+}
+
+/** Calm card with a thin gold frame, for spiritual content. */
+@Composable
+fun GoldCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+    val border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = 0.55f))
+    val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    if (onClick != null) Card(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, colors = colors, border = border) {
+        Column(Modifier.padding(18.dp), content = content)
+    } else Card(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, colors = colors, border = border) {
+        Column(Modifier.padding(18.dp), content = content)
     }
 }

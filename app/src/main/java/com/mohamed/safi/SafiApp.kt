@@ -11,6 +11,7 @@ class SafiApp : Application() {
         super.onCreate()
         instance = this
         CrashLog.install(this)
+        com.mohamed.safi.ui.I18n.init(this)
         Notifier.createChannels(this)
         DailyWorker.schedule(this, replace = false)
     }

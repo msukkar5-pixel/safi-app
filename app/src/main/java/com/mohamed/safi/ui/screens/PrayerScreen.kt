@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +35,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private fun t12(t: LocalDateTime) = t.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)).replace("AM", "ص").replace("PM", "م")
+fun t12(t: LocalDateTime) = t.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)).replace("AM", "ص").replace("PM", "م")
 
 @Composable
 fun PrayerCard(open: (String) -> Unit) {
@@ -48,7 +49,7 @@ fun PrayerCard(open: (String) -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text("${next.first} ${t12(next.second)}", fontWeight = FontWeight.Bold)
-                Text("باقي ${left.toHours()} ساعة و ${(left.toMinutes() % 60)} دقيقة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text(leftText(left), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
     }

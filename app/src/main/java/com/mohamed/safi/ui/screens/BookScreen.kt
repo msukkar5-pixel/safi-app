@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -236,7 +237,7 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
                 }
                 val obit = p.startsWith("◆")
                 Text(
-                    p, fontSize = size.sp, lineHeight = (size * 1.75).sp, textAlign = TextAlign.Justify,
+                    p, fontSize = size.sp, lineHeight = (size * 1.95).sp, textAlign = TextAlign.Justify, fontFamily = Amiri,
                     fontWeight = if (obit) FontWeight.Bold else FontWeight.Normal,
                     color = if (obit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
