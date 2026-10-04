@@ -57,7 +57,7 @@ object Quran {
                     revelation = s.optString("revelationType"),
                     ayahs = (0 until ay.length()).map { k ->
                         val a = ay.getJSONObject(k)
-                        var t = a.getString("text")
+                        var t = a.getString("text").replace("\uFEFF", "")
                         // The first verse of each surah (except Al-Fatiha and At-Tawba) starts with the basmala in this edition
                         if (k == 0 && num != 1 && num != 9) t = stripBasmala(t)
                         Ayah(a.getInt("numberInSurah"), t.trim(), a.optInt("juz"), a.optInt("page"), a.opt("sajda").let { it is JSONObject || it == true })
