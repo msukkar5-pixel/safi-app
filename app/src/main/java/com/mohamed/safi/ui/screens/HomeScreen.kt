@@ -170,7 +170,7 @@ private fun WirdHomeCard(open: (String) -> Unit) {
             Text("✓ خلّصت وردك النهارده، ربنا يتقبل", color = onP, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
             Text("بكرة من صفحة ${w.nextPage}", color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
         } else {
-            Text("صفحة ${r.first} ← ${r.last}", color = onP, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text("من صفحة ${r.first} لـ ${r.last}", color = onP, fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Text("${r.last - r.first + 1} صفحات من المصحف", color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(10.dp))

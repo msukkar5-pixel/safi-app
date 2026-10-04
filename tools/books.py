@@ -177,20 +177,40 @@ def part_no(title):
 
 
 # ---------------- web pages ----------------
+JUNK = re.compile(r"(Most Recent|Related|Read more|Share|أخبار ذات صلة|آخر الأخبار|اقرأ أيضا|روابط|تابعونا|شارك|القائمة|الرئيسية\s*>|حكومة دولة الامارات)", re.I)
+
 def web_sections(url, vol):
     h = get(url).decode("utf-8", "replace")
-    title = html.unescape(re.search(r"<title[^>]*>(.*?)</title>", h, re.S).group(1)).strip() if "<title" in h else url
-    title = re.split(r"\s[|\-–]\s", title)[0].strip()
     main = re.search(r"<main.*?>(.*)</main>", h, re.S)
     body = main.group(1) if main else (re.search(r"<body.*?>(.*)</body>", h, re.S) or [None, h])[1]
-    blocks = [b for b in html_blocks(body) if len(b[1]) > 1]
-    # keep only substantial text; drop menus / short UI strings
-    keep = [b for b in blocks if b[0][0] == "h" or len(b[1]) >= 60]
+    blocks = [b for b in html_blocks(body) if len(b[1]) > 1 and " > " not in b[1]]
+    keep = []
+    for tag, t in blocks:
+        latin = sum(c.isascii() and c.isalpha() for c in t) / max(1, len(t))
+        if latin > 0.5:
+            continue
+        if tag[0] == "h":
+            if JUNK.search(t) and len(t) < 60:
+                continue
+            keep.append((tag, t))
+        elif len(t) >= 60:
+            keep.append((tag, t))
+    # drop a trailing heading block that only lists other news (short paragraphs after a junk heading were removed above)
+    title = next((t for tag, t in keep if tag == "h1"), None)
+    if not title:
+        m = re.search(r"<title[^>]*>(.*?)</title>", h, re.S)
+        title = re.split(r"\s[|\-–]\s", html.unescape(m.group(1)).strip())[0] if m else url
+    keep = [k for k in keep if not (k[0] == "h1" and k[1] == title)]
     secs = sections_from_blocks(keep, vol, 2, title)
     total = sum(len(" ".join(s["paras"])) for s in secs)
     if total < 400:
         raise RuntimeError(f"too little text ({total})")
-    return [{"v": vol, "p": 0, "l": 1, "t": title, "paras": [f"المصدر: {url}"]}] + secs
+    secs = [s for s in secs if s["paras"]]
+    secs[0]["l"] = 1
+    if secs[0]["t"] == "…":
+        secs[0]["t"] = title
+    secs[-1]["paras"].append(f"المصدر الرسمي: {url}")
+    return secs
 
 
 def build(b):
@@ -240,6 +260,10 @@ def build(b):
             secs += [{"v": n, "p": 0, "l": 1, "t": title, "paras": []}] + s2
         os.makedirs(out, exist_ok=True)
         return [(b, out, openiti.write(secs, out))]
+    if t == "hindawi_book":
+        s2 = epub_sections(hindawi_epub(b["bid"]), 1)
+        os.makedirs(out, exist_ok=True)
+        return [(b, out, openiti.write(s2, out))]
     if t == "hindawi_each":
         res = []
         for bid in hindawi_list(b["contributor"]):

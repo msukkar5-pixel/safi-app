@@ -91,10 +91,20 @@ def tap_text(text, exact=False, tries=3):
     return False
 
 
+def pass_splash():
+    """If the dedication screen is up (new activity), wait for آمين and tap it."""
+    time.sleep(1.5)
+    if find("المرحوم"):
+        time.sleep(6.5)
+        tap_text("آمين", exact=True)
+        time.sleep(1.5)
+
+
 def run_step(s):
     k = s[0]
     if k == "route":
         sh(f"am start -n {PKG}/.MainActivity --es route {s[1]}")
+        pass_splash()
     elif k == "launch":
         sh(f"am start -W -n {PKG}/.MainActivity")
     elif k == "stop":
@@ -107,6 +117,8 @@ def run_step(s):
         sh("input text " + s[1].replace(" ", "%s"))
     elif k == "back":
         sh("input keyevent 4")
+    elif k == "hidekb":
+        sh("input keyevent 111")
     elif k == "scroll":
         sh(f"input swipe {W // 2} {int(H * 0.75)} {W // 2} {int(H * 0.3)} 400")
     elif k == "wait":
