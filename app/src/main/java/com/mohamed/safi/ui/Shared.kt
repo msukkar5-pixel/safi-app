@@ -48,6 +48,10 @@ object UiBus {
     val pendingShare = MutableStateFlow<String?>(null)
     /** Open the mic as soon as the assistant screen shows (from the launcher shortcut). */
     val listenNow = MutableStateFlow(false)
+    /** Open the mushaf at (surah, ayah). */
+    val pendingQuran = MutableStateFlow<Pair<Int, Int>?>(null)
+    /** Open the hadith library searching this text. */
+    val pendingHadith = MutableStateFlow<String?>(null)
 }
 
 fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()

@@ -1,0 +1,121 @@
+package com.mohamed.safi.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mohamed.safi.faith.Era
+import com.mohamed.safi.faith.History
+import com.mohamed.safi.faith.Shaarawy
+import com.mohamed.safi.faith.SourceLink
+import com.mohamed.safi.ui.*
+
+@Composable
+fun HistoryScreen(onBack: () -> Unit, open: (String) -> Unit) {
+    val ctx = LocalContext.current
+    var tab by remember { mutableIntStateOf(0) }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
+    val eras = if (tab == 0) History.egypt else History.uae
+
+    ScreenScaffold("تاريخ مصر والإمارات", onBack = onBack) { pad ->
+        Column(Modifier.fillMaxSize().padding(pad)) {
+            TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
+                Tab(tab == 0, { tab = 0 }, text = { Text("تاريخ مصر") })
+                Tab(tab == 1, { tab = 1 }, text = { Text("تاريخ الإمارات") })
+            }
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (tab == 1) item {
+                    AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Verified, null); Spacer(Modifier.width(8.dp))
+                            Text("المحتوى ده متوافق مع الرواية الرسمية للدولة: البوابة الرسمية u.ae، ووزارة الخارجية، والأرشيف والمكتبة الوطنية.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                if (tab == 1) {
+                    item { SectionTitle("كتب الشيخ محمد بن راشد آل مكتوم") }
+                    items(History.mbrBooks) { b -> SourceCard(b, highlight = b.title.startsWith("علمتني")) }
+                    item {
+                        Text("الكتب دي محفوظة الحقوق، فالتطبيق بيوديك لصفحتها (مكتبة / شراء) بدل ما ينسخ نصها.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    }
+                }
+                item { SectionTitle(if (tab == 0) "من الفراعنة لليوم" else "من العصور القديمة لليوم") }
+                items(eras) { e ->
+                    val k = "$tab:${e.title}"
+                    EraCard(e, k in expanded) { expanded = if (k in expanded) expanded - k else expanded + k }
+                }
+                item { SectionTitle(if (tab == 0) "كتب ومراجع تاريخ مصر" else "المصادر الرسمية المعتمدة") }
+                if (tab == 0) item {
+                    AppCard(onClick = { open("bidaya") }, color = MaterialTheme.colorScheme.secondaryContainer) {
+                        Text("البداية والنهاية — ابن كثير (كامل داخل التطبيق)", fontWeight = FontWeight.Bold)
+                        Text("فيه أخبار مصر في العصور الإسلامية: الفتح، الطولونيين، الإخشيديين، الفاطميين، الأيوبيين، والمماليك لحد ٧٦٨هـ", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                items(if (tab == 0) History.egyptSources else History.uaeSources) { s -> SourceCard(s) }
+                item {
+                    OutlinedButton(onClick = { open("audiobooks") }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Headphones, null); Spacer(Modifier.width(6.dp)); Text("كتب تاريخ مسموعة")
+                    }
+                }
+                item {
+                    OutlinedButton(onClick = {
+                        Shaarawy.open(ctx, if (tab == 0) "وثائقي تاريخ مصر الكامل" else "وثائقي تاريخ الإمارات الأرشيف والمكتبة الوطنية")
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.PlayCircle, null); Spacer(Modifier.width(6.dp)); Text("أفلام وثائقية (يوتيوب)")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EraCard(e: Era, open: Boolean, toggle: () -> Unit) {
+    AppCard(onClick = toggle) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(e.title, fontWeight = FontWeight.Bold)
+                Text(e.period, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            Icon(if (open) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+        }
+        if (open) {
+            Spacer(Modifier.height(8.dp))
+            Text(e.body, style = MaterialTheme.typography.bodyMedium, lineHeight = 26.sp)
+            e.points.forEach { p ->
+                Row(Modifier.padding(top = 4.dp)) {
+                    Text("• ", color = MaterialTheme.colorScheme.primary)
+                    Text(p, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SourceCard(s: SourceLink, highlight: Boolean = false) {
+    val ctx = LocalContext.current
+    AppCard(
+        onClick = { Shaarawy.openUrl(ctx, s.url) },
+        color = if (highlight) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(s.title, fontWeight = FontWeight.Bold)
+                Text(s.by, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                if (s.note.isNotBlank()) Text(s.note, style = MaterialTheme.typography.bodySmall)
+            }
+            Icon(Icons.Default.OpenInNew, null)
+        }
+    }
+}

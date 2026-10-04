@@ -26,10 +26,12 @@ fun HadithScreen(onBack: () -> Unit) {
     var bookId by remember { mutableStateOf<String?>(null) }
     var showFav by remember { mutableStateOf(false) }
     var today by remember { mutableStateOf<Hadith?>(null) }
+    var initialQuery by remember { mutableStateOf(UiBus.pendingHadith.value ?: "") }
+    LaunchedEffect(Unit) { UiBus.pendingHadith.value?.let { bookId = "bukhari"; UiBus.pendingHadith.value = null } }
     LaunchedEffect(Unit) { today = Hadiths.ofTheDay() }
 
     val b = bookId
-    if (b != null) { HadithBookView(b) { bookId = null }; return }
+    if (b != null) { HadithBookView(b, initialQuery) { bookId = null; initialQuery = "" }; return }
     if (showFav) { FavouritesView { showFav = false }; return }
 
     ScreenScaffold("الأحاديث الصحيحة", onBack = onBack) { pad ->
@@ -76,12 +78,13 @@ fun HadithScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun HadithBookView(id: String, onBack: () -> Unit) {
+private fun HadithBookView(id: String, initialQuery: String = "", onBack: () -> Unit) {
     var book by remember { mutableStateOf<HadithBook?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableIntStateOf(0) }
     var section by remember { mutableStateOf<HadithSection?>(null) }
-    var q by remember { mutableStateOf("") }
+    var q by remember { mutableStateOf(initialQuery) }
+    var bookSwitch by remember { mutableStateOf(id) }
     LaunchedEffect(attempt) {
         error = null
         try { book = Hadiths.load(id) } catch (e: Exception) { error = "محتاج إنترنت أول مرة علشان الكتاب يتحمّل" }

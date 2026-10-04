@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -44,6 +45,7 @@ fun QuranScreen(onBack: () -> Unit) {
     LaunchedEffect(attempt) {
         error = null
         try { list = Quran.surahs(ctx) } catch (e: Exception) { error = "المصحف محتاج إنترنت أول مرة بس علشان يتحمّل" }
+        UiBus.pendingQuran.value?.let { open = it; UiBus.pendingQuran.value = null }
     }
 
     val surahs = list

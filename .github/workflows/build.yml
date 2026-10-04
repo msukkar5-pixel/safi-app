@@ -38,6 +38,11 @@ jobs:
               && python3 -c "import json;d=json.load(open('app/src/main/assets/tafsir/$t.json'));print('$t',sum(len(s['ayahs']) for s in d['data']['surahs']))" \
               || { echo "tafsir $t download failed"; rm -f app/src/main/assets/tafsir/$t.json; }
           done
+          # البداية والنهاية لابن كثير (OpenITI, Shamela 4445)
+          ( git clone -q --depth 1 --filter=blob:none --sparse https://github.com/OpenITI/0775AH /tmp/oi \
+            && cd /tmp/oi && git sparse-checkout set data/0774IbnKathir/0774IbnKathir.Bidaya ) \
+            && python3 tools/bidaya.py /tmp/oi/data/0774IbnKathir/0774IbnKathir.Bidaya/0774IbnKathir.Bidaya.Shamela0004445-ara1.completed app/src/main/assets/bidaya \
+            || echo "bidaya conversion failed"
           mkdir -p app/src/main/assets/hadith
           for b in bukhari muslim; do
             curl -sfL --retry 3 https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-$b.min.json -o app/src/main/assets/hadith/$b.json \

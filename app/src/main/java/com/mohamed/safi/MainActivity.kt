@@ -237,6 +237,10 @@ fun AppRoot() {
             composable("shaarawy") { ShaarawyScreen(back) }
             composable("healthrecords") { HealthRecordsScreen(back) }
             composable("wird") { WirdScreen(back) }
+            composable("stories") { StoriesScreen(back, open) }
+            composable("bidaya") { BidayaScreen(back) }
+            composable("history") { HistoryScreen(back, open) }
+            composable("audiobooks") { AudiobooksScreen(back) }
         }
     }
 }
