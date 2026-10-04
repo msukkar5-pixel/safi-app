@@ -177,7 +177,7 @@ def part_no(title):
 
 
 # ---------------- web pages ----------------
-JUNK = re.compile(r"(Most Recent|Related|Read more|Share|أخبار ذات صلة|آخر الأخبار|اقرأ أيضا|روابط|تابعونا|شارك|القائمة|الرئيسية\s*>|حكومة دولة الامارات)", re.I)
+JUNK = re.compile(r"(Most Recent|Related|Read more|Share|أخبار ذات صلة|آخر الأخبار|اقرأ أيضا|المزيد عن|مواضيع ذات صلة|روابط|تابعونا|شارك|القائمة|الرئيسية\s*>|حكومة دولة الامارات)", re.I)
 
 def web_sections(url, vol):
     h = get(url).decode("utf-8", "replace")
