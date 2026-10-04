@@ -111,6 +111,13 @@
         </activity-alias>
 
         <receiver android:name=".data.CarpoolReceiver" android:exported="false" />
+        <receiver android:name=".faith.PrayerReceiver" android:exported="false" />
+        <receiver android:name=".widget.SafiWidget" android:exported="true" android:label="صافي">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />
+        </receiver>
         <receiver android:name=".notify.ReminderReceiver" android:exported="false" />
         <receiver android:name=".notify.ActionReceiver" android:exported="false" />
 

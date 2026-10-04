@@ -51,6 +51,21 @@ fun ReportsScreen(onBack: () -> Unit) {
         ) {
             item { MonthSwitcher(ym) { ym = it } }
             item {
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                var pdfBusy by remember { mutableStateOf(false) }
+                OutlinedButton(onClick = {
+                    pdfBusy = true
+                    scope.launch {
+                        try { com.mohamed.safi.extra.MonthReport.share(ctx, com.mohamed.safi.extra.MonthReport.build(ctx, ym)) }
+                        catch (e: Exception) { com.mohamed.safi.ui.toast(ctx, e.message ?: "فشل") }
+                        pdfBusy = false
+                    }
+                }, enabled = !pdfBusy, modifier = Modifier.fillMaxWidth()) {
+                    if (pdfBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    else { Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(6.dp)); Text("تقرير الشهر PDF") }
+                }
+            }
+            item {
                 AppCard {
                     Row {
                         StatBlock("المصروف", money(spent), Modifier.weight(1f))

@@ -101,6 +101,19 @@ object Assistant {
                     (0 until 14).map { d0.plusDays(it.toLong()) }.mapNotNull { d -> cp.driverFor(d)?.let { "$d ${d.dayOfWeek.toString().take(3)}=$it" } }.joinToString("; "))
             }
             runCatching { appendLine(com.mohamed.safi.fitness.Coach.assistantContext(com.mohamed.safi.SafiApp.instance)) }
+            runCatching {
+                appendLine("PRAYER TIMES TODAY (${com.mohamed.safi.faith.Prayer.city}): " + com.mohamed.safi.faith.Prayer.today().times.joinToString(", ") { "${it.first} ${it.second.toLocalTime()}" })
+                appendLine("QIBLA: ${com.mohamed.safi.faith.Prayer.qiblaBearing().toInt()}° from north")
+            }
+            runCatching {
+                val x = com.mohamed.safi.extra.ExtraDb.dao
+                val docs = x.docsNow()
+                if (docs.isNotEmpty()) appendLine("DOCUMENTS: " + docs.joinToString("; ") { "${it.title} ${it.owner} expires ${it.expiry?.let { e -> isoLocal(e).take(10) } ?: "-"}" })
+                val goals = x.goalsNow()
+                if (goals.isNotEmpty()) appendLine("SAVING GOALS: " + goals.joinToString("; ") { "${it.name} ${fmt(it.saved)}/${fmt(it.target)} ${it.currency}" })
+                val lessons = x.lessonsNow()
+                if (lessons.isNotEmpty()) appendLine("KIDS LESSONS (EGP/month): " + lessons.joinToString("; ") { "${it.child} ${it.subject} ${it.teacher} ${fmt(it.monthlyFeeEgp)}" })
+            }
             val today = Brief.todayLines()
             if (today.isNotEmpty()) appendLine("DUE SOON:\n" + today.joinToString("\n"))
         }
@@ -141,6 +154,9 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
 - {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
 - {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
+- {"type":"open_screen","screen":"quran|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"add_document","title":"","owner":"","expiry":"YYYY-MM-DD"}
+- {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
 
 Rules:
 - For navigate / play_music / open_app / call / whatsapp: just do it, reply in a few words. You cannot pick a contact by name: if he says "كلم أحمد" without a number, ask for the number.
@@ -393,6 +409,26 @@ Rules:
                         if (name.isNotBlank()) {
                             com.mohamed.safi.fitness.Supps.save(ctx, com.mohamed.safi.fitness.Supplement(name = name, dose = a.str("dose"), times = a.str("times"), note = a.str("note")))
                             done += "✓ مكمل: $name ${a.str("times")}"
+                        }
+                    }
+                    "open_screen" -> {
+                        val sc = a.str("screen")
+                        if (sc.isNotBlank()) { com.mohamed.safi.ui.UiBus.pendingRoute.value = sc; done += "✓ فتحت" }
+                    }
+                    "add_document" -> {
+                        val t = a.str("title")
+                        if (t.isNotBlank()) {
+                            com.mohamed.safi.extra.ExtraDb.dao.upsertDoc(com.mohamed.safi.extra.Doc(title = t, owner = a.str("owner"), expiry = parseIso(a.str("expiry"))))
+                            done += "✓ مستند: $t"
+                        }
+                    }
+                    "add_saving" -> {
+                        val goals = com.mohamed.safi.extra.ExtraDb.dao.goalsNow()
+                        val g = goals.firstOrNull { it.name == a.str("goal") } ?: goals.firstOrNull { it.name.contains(a.str("goal")) || a.str("goal").contains(it.name) } ?: goals.singleOrNull()
+                        val amt = a.dbl("amount") ?: 0.0
+                        if (g != null && amt != 0.0) {
+                            com.mohamed.safi.extra.ExtraDb.dao.upsertGoal(g.copy(saved = (g.saved + amt).coerceAtLeast(0.0)))
+                            done += "✓ ${g.name}: ${money(g.saved + amt, g.currency)} من ${money(g.target, g.currency)}"
                         }
                     }
                     "carpool_set", "carpool_off" -> {

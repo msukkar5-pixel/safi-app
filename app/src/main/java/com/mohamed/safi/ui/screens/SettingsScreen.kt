@@ -141,6 +141,9 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Text("بيتعرف على Emirates NBD وADCB وADIB وأي بنك تاني. نفس الرسالة مش بتتسجل مرتين. لو صيغتها غريبة وفيه مفتاح Claude، Claude بيقراها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
 
+            SectionTitle("النسخة الاحتياطية")
+            BackupCard()
+
             SectionTitle("التطبيقات المربوطة")
             AppCard {
                 var maps by remember { mutableStateOf(com.mohamed.safi.apps.Apps.mapsApp(ctx)) }
@@ -189,6 +192,53 @@ fun SettingsScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
             )
+        }
+    }
+}
+
+
+@Composable
+private fun BackupCard() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var confirmUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val create = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri ->
+        if (uri != null) {
+            busy = true
+            scope.launch {
+                val msg = try { com.mohamed.safi.extra.Backup.export(ctx, uri); "النسخة اتحفظت ✓" } catch (e: Exception) { e.message ?: "فشل" }
+                busy = false
+                toast(ctx, msg)
+            }
+        }
+    }
+    val open = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri -> if (uri != null) confirmUri = uri }
+
+    AppCard {
+        Text("احفظ نسخة من كل بياناتك في ملف واحد. وانت بتحفظه اختار Google Drive علشان لو التليفون اتغير ترجّعها.", style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { create.launch("safi-backup-${java.time.LocalDate.now()}.zip") }, enabled = !busy) {
+                if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("احفظ نسخة")
+            }
+            OutlinedButton(onClick = { open.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, enabled = !busy) { Text("رجّع نسخة") }
+        }
+        Text(
+            "وكمان كل جمعة بتتعمل نسخة أوتوماتيك في Downloads/Safi على التليفون. مفتاح Claude مش بيتحفظ في النسخة.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+        )
+    }
+    confirmUri?.let { u ->
+        ConfirmDialog("ترجيع النسخة؟", "كل البيانات الحالية هتتبدل باللي في الملف، والتطبيق هيقفل ويفتح تاني.", "رجّع", { confirmUri = null }) {
+            busy = true
+            scope.launch {
+                try { com.mohamed.safi.extra.Backup.restore(ctx, u) } catch (e: Exception) { busy = false; toast(ctx, e.message ?: "فشل") }
+            }
         }
     }
 }

@@ -121,5 +121,6 @@ abstract class LifeDb : RoomDatabase() {
         fun get(ctx: Context): LifeDb = inst ?: synchronized(this) {
             inst ?: Room.databaseBuilder(ctx.applicationContext, LifeDb::class.java, "safi_life.db").build().also { inst = it }
         }
+        fun closeAll() { inst?.close(); inst = null }
     }
 }

@@ -19,6 +19,8 @@ import com.mohamed.safi.ui.*
 private data class Entry(val route: String, val title: String, val desc: String, val icon: ImageVector, val color: Color)
 
 private val entries = listOf(
+    Entry("quran", "القرآن الكريم", "المصحف كامل وعلامات", Icons.Default.MenuBook, Color(0xFF0F6E5C)),
+    Entry("prayer", "الصلاة والقبلة", "المواعيد والأذان والبوصلة", Icons.Default.Mosque, Color(0xFF2E7DBA)),
     Entry("fitness", "الجيم والصحة", "أكل، تمارين، وزن، الساعة", Icons.Default.FitnessCenter, Color(0xFF1B998B)),
     Entry("carpool", "دور السواقة", "مين هيسوق بكرة", Icons.Default.DirectionsCar, Color(0xFFD98A1C)),
     Entry("transfers", "تحويلات مصر", "ماما، البيت، الدروس…", Icons.Default.SwapHoriz, Warn),
@@ -27,6 +29,10 @@ private val entries = listOf(
     Entry("car", "العربية", "بنزين، صيانة، أوراق", Icons.Default.DirectionsCar, Color2),
     Entry("places", "أماكني", "كل مكان رحته بالوقت", Icons.Default.Place, Color(0xFF8E5BB8)),
     Entry("reports", "التقارير والميزانية", "صرفت إيه وفين", Icons.Default.BarChart, Positive),
+    Entry("documents", "المستندات", "الهوية، الإقامة، الجواز…", Icons.Default.Badge, Color(0xFF5C6BC0)),
+    Entry("savings", "أهداف الادخار", "تحوّش كام كل شهر", Icons.Default.Savings, Color(0xFF3D9970)),
+    Entry("lessons", "دروس الأولاد", "المواد والمدرسين والفلوس", Icons.Default.School, Color(0xFFB5651D)),
+    Entry("zakat", "حاسبة الزكاة", "النصاب والمستحق", Icons.Default.VolunteerActivism, Color(0xFF8D6E63)),
     Entry("settings", "الإعدادات", "المفتاح، الصلاحيات، السعر", Icons.Default.Settings, Color(0xFF6C7A89)),
 )
 

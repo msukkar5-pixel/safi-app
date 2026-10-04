@@ -130,6 +130,7 @@ fun HomeScreen(open: (String) -> Unit) {
         }
 
         item { CarpoolCard(open) }
+        item { PrayerCard(open) }
 
         // Quick actions
         item {

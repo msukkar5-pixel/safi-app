@@ -23,6 +23,7 @@ object Notifier {
     const val CH_MONEY = "money"
     const val CH_DAILY = "daily"
     const val CH_LOC = "location"
+    const val CH_PRAYER = "prayer"
 
     fun createChannels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
@@ -48,6 +49,9 @@ object Notifier {
         )
         nm.createNotificationChannel(
             NotificationChannel(CH_DAILY, "ملخص الصبح والفواتير", NotificationManager.IMPORTANCE_HIGH),
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_PRAYER, "مواعيد الصلاة", NotificationManager.IMPORTANCE_HIGH).apply { enableVibration(true) },
         )
         nm.createNotificationChannel(
             NotificationChannel(CH_LOC, "تسجيل الأماكن", NotificationManager.IMPORTANCE_MIN),

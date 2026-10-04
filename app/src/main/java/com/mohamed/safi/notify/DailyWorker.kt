@@ -29,6 +29,12 @@ class DailyWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
     override suspend fun doWork(): Result {
         runCatching { Fx.refresh() }
         runCatching { Brief.morning(applicationContext) }
+        runCatching { com.mohamed.safi.faith.Prayer.refreshLocation(applicationContext); com.mohamed.safi.faith.Prayer.schedule(applicationContext) }
+        runCatching { com.mohamed.safi.data.Carpool.schedule(applicationContext) }
+        runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(applicationContext) }
+        runCatching {
+            if (java.time.LocalDate.now(zone).dayOfWeek == java.time.DayOfWeek.FRIDAY) com.mohamed.safi.extra.Backup.autoToDownloads(applicationContext)
+        }
         runCatching {
             // keep 6 months of location history
             SafiApp.db.dao().deleteLocationsBefore(System.currentTimeMillis() - 183L * 86_400_000L)
@@ -89,6 +95,16 @@ object Brief {
             if (dateClose || kmClose) {
                 lines += "• العربية: ${c.name}" + (if (kmLeft != null) " (فاضل ${fmt(kmLeft.toDouble())} كم)" else "") +
                     (if (dueByDate != null) " — ميعاده ${dueByDate.dayOfMonth}/${dueByDate.monthValue}" else "")
+            }
+        }
+        runCatching {
+            for (d in com.mohamed.safi.extra.ExtraDb.dao.docsNow()) {
+                val e = d.expiry ?: continue
+                val left = daysUntil(e)
+                if (left <= d.remindDays) {
+                    lines += "• ${d.title}${if (d.owner.isNotBlank()) " (${d.owner})" else ""}: " +
+                        (if (left < 0) "منتهي من ${-left} يوم" else "ينتهي ${shortDate(e)} (${dueText(e)})")
+                }
             }
         }
         listOf(

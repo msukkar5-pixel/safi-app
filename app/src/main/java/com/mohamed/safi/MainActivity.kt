@@ -71,6 +71,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
+        runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(this) }
         if (SafiApp.prefs.lockOn && !isChangingConfigurations) unlocked.value = false
     }
 
@@ -157,6 +158,9 @@ fun AppRoot() {
             if (System.currentTimeMillis() - SafiApp.prefs.rateUpdated > 6 * 3_600_000L) Fx.refresh()
         }
         if (SafiApp.prefs.locationOn) runCatching { com.mohamed.safi.location.LocationService.start(ctx) }
+        runCatching { com.mohamed.safi.data.Carpool.schedule(ctx) }
+        runCatching { com.mohamed.safi.faith.Prayer.schedule(ctx) }
+        runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(ctx) }
     }
     val pendingShare by UiBus.pendingShare.collectAsState()
     LaunchedEffect(pendingShare) {
@@ -220,6 +224,12 @@ fun AppRoot() {
             composable("settings") { SettingsScreen(back) }
             composable("carpool") { CarpoolScreen(back) }
             composable("fitness") { FitnessScreen(back) }
+            composable("quran") { QuranScreen(back) }
+            composable("prayer") { PrayerScreen(back) }
+            composable("documents") { DocumentsScreen(back) }
+            composable("savings") { SavingsScreen(back) }
+            composable("lessons") { LessonsScreen(back) }
+            composable("zakat") { ZakatScreen(back) }
         }
     }
 }
