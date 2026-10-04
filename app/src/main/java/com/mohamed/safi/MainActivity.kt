@@ -35,20 +35,29 @@ import kotlinx.coroutines.withContext
 class MainActivity : FragmentActivity() {
 
     private var unlocked = mutableStateOf(false)
+    private val splash = mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         unlocked.value = !SafiApp.prefs.lockOn
+        splash.value = savedInstanceState == null
         handleIntent(intent)
         setContent {
             SafiTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    if (unlocked.value) AppRoot() else LockScreen { authenticate() }
+                    when {
+                        splash.value -> DedicationSplash {
+                            splash.value = false
+                            if (!unlocked.value) authenticate()
+                        }
+                        unlocked.value -> AppRoot()
+                        else -> LockScreen { authenticate() }
+                    }
                 }
             }
         }
-        if (!unlocked.value) authenticate()
+        if (!unlocked.value && !splash.value) authenticate()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -73,11 +82,15 @@ class MainActivity : FragmentActivity() {
         super.onStop()
         runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(this) }
         if (SafiApp.prefs.lockOn && !isChangingConfigurations) unlocked.value = false
+        if (!isChangingConfigurations) stoppedAt = System.currentTimeMillis()
     }
+
+    private var stoppedAt = 0L
 
     override fun onStart() {
         super.onStart()
-        if (!unlocked.value && SafiApp.prefs.lockOn) authenticate()
+        if (stoppedAt > 0 && System.currentTimeMillis() - stoppedAt > 5 * 60_000) splash.value = true
+        if (!unlocked.value && SafiApp.prefs.lockOn && !splash.value) authenticate()
     }
 
     private var prompting = false
