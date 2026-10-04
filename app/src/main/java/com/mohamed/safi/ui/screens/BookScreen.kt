@@ -31,7 +31,7 @@ fun BidayaScreen(onBack: () -> Unit) = BookScreen("bidaya", onBack)
 @Composable
 fun BookScreen(bookId: String, onBack: () -> Unit, initialQuery: String = "") {
     val meta = remember(bookId) { Books.meta(bookId) }
-    if (!Books.isReady(bookId)) { BookDownload(bookId, meta, onBack); return }
+    if (!Books.isReady(bookId)) { BookDownload(bookId, meta, onBack, initialQuery); return }
     val book = remember(bookId) { Books.data(bookId) }
     var vols by remember { mutableStateOf<List<BVolume>?>(null) }
     var err by remember { mutableStateOf<String?>(null) }
@@ -235,12 +235,12 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
 }
 
 @Composable
-private fun BookDownload(bookId: String, meta: BookMeta?, onBack: () -> Unit) {
+private fun BookDownload(bookId: String, meta: BookMeta?, onBack: () -> Unit, initialQuery: String = "") {
     val scope = rememberCoroutineScope()
     var progress by remember { mutableStateOf<Float?>(null) }
     var err by remember { mutableStateOf<String?>(null) }
     var ready by remember { mutableStateOf(false) }
-    if (ready) { BookScreen(bookId, onBack); return }
+    if (ready) { BookScreen(bookId, onBack, initialQuery); return }
     fun start() {
         err = null; progress = 0f
         scope.launch {
