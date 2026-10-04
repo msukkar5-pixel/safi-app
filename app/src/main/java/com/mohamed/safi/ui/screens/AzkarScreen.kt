@@ -49,7 +49,8 @@ private fun rememberArabicFont(): FontFamily {
 fun AzkarScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val cats = remember { Azkar.all(ctx) }
-    var open by remember { mutableStateOf<ZikrCategory?>(null) }
+    var open by remember { mutableStateOf<ZikrCategory?>(UiBus.pendingAzkar.value?.let { k -> cats.firstOrNull { k in it.name } }) }
+    LaunchedEffect(Unit) { UiBus.pendingAzkar.value = null }
     var tasbeeh by remember { mutableStateOf(false) }
     val o = open
     if (o != null) { ZikrReader(o) { open = null }; return }
@@ -63,8 +64,7 @@ fun AzkarScreen(onBack: () -> Unit) {
     ScreenScaffold("الأذكار والأدعية", onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
-                val h = LocalTime.now().hour
-                val suggested = cats.firstOrNull { if (h in 3..13) "الصباح" in it.name else "المساء" in it.name }
+                val suggested = Azkar.current(ctx)
                 suggested?.let { c ->
                     AppCard(onClick = { open = c }, color = MaterialTheme.colorScheme.primaryContainer) {
                         Text("${Azkar.icon(c.name)} وقت ${c.name}", fontWeight = FontWeight.Bold, fontSize = 18.sp)

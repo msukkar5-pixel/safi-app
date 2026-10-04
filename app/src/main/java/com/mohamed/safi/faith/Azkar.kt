@@ -36,6 +36,24 @@ object Azkar {
         return list
     }
 
+    /** Fajr→Asr: morning, Asr→Isha: evening, Isha→Fajr: sleep. */
+    fun currentKey(): String {
+        val now = java.time.LocalDateTime.now(com.mohamed.safi.data.zone)
+        val t = runCatching { Prayer.today().times.toMap() }.getOrNull()
+        val fajr = t?.get("الفجر"); val asr = t?.get("العصر"); val isha = t?.get("العشاء")
+        if (fajr == null || asr == null || isha == null) {
+            val h = now.hour
+            return if (h in 4..14) "الصباح" else if (h in 15..19) "المساء" else "النوم"
+        }
+        return when {
+            now >= fajr && now < asr -> "الصباح"
+            now >= asr && now < isha -> "المساء"
+            else -> "النوم"
+        }
+    }
+
+    fun current(ctx: Context = SafiApp.instance): ZikrCategory? = all(ctx).firstOrNull { currentKey() in it.name }
+
     fun icon(name: String) = when {
         "الصباح" in name -> "☀️"
         "المساء" in name -> "🌙"

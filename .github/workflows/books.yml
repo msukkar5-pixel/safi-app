@@ -1,0 +1,38 @@
+name: Build books
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, dev]
+    paths: ["tools/books.json", "tools/books.py", "tools/openiti.py"]
+permissions:
+  contents: write
+jobs:
+  books:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Convert books
+        run: python3 tools/books.py 2>&1 | tee books.log
+      - name: Summary
+        run: |
+          ls -la dist | head -100
+          grep -E "FAILED|skip|catalog" books.log || true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: books
+          name: مكتبة صافي (الكتب)
+          prerelease: true
+          make_latest: false
+          body: Converted book files used by the app's in-app library.
+          files: |
+            dist/*.zip
+            dist/catalog.json
+      - name: Save log to ci-results branch
+        if: always()
+        run: |
+          mkdir -p /tmp/b && cp books.log /tmp/b/ && cp dist/catalog.json /tmp/b/ 2>/dev/null || true
+          cd /tmp/b && git init -q && git checkout -q -b ci-books
+          git config user.email ci@safi && git config user.name ci
+          git add -A && git commit -qm "books log ${{ github.run_number }}"
+          git push -qf https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git ci-books

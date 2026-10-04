@@ -48,13 +48,11 @@ fun DedicationSplash(onDone: () -> Unit) {
     LaunchedEffect(Unit) {
         fade.animateTo(1f, tween(900))
     }
-    LaunchedEffect(Unit) { zoom.animateTo(1f, tween(4200, easing = LinearOutSlowInEasing)) }
-    LaunchedEffect(Unit) { delay(4000); finish() }
+    LaunchedEffect(Unit) { zoom.animateTo(1f, tween(6200, easing = LinearOutSlowInEasing)) }
+    var left by remember { mutableIntStateOf(6) }
+    LaunchedEffect(Unit) { while (left > 0) { delay(1000); left-- } }
 
-    Box(
-        Modifier.fillMaxSize().background(Color.Black)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { finish() },
-    ) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (img != null) {
             Image(
                 img, null, contentScale = ContentScale.Crop,
@@ -103,7 +101,16 @@ fun DedicationSplash(onDone: () -> Unit) {
             Spacer(Modifier.height(14.dp))
             Ornament()
             Spacer(Modifier.height(20.dp))
-            Text("المس الشاشة للمتابعة", color = Color.White.copy(alpha = 0.45f), fontSize = 12.sp)
+            Button(
+                onClick = { finish() }, enabled = left == 0,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SplashGold, contentColor = Color.Black,
+                    disabledContainerColor = SplashGold.copy(alpha = 0.25f), disabledContentColor = Color.White.copy(alpha = 0.6f),
+                ),
+                modifier = Modifier.fillMaxWidth(0.6f).height(52.dp),
+            ) {
+                Text(if (left > 0) "آمين ($left)" else "آمين", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
             if (credit != null) {
                 Spacer(Modifier.height(6.dp))
                 Text(credit, color = Color.White.copy(alpha = 0.3f), fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 2)

@@ -101,33 +101,8 @@ fun HomeScreen(open: (String) -> Unit) {
             }
         }
 
-        // Month summary
-        item {
-            AppCard(onClick = { open("reports") }, color = MaterialTheme.colorScheme.primary) {
-                val onP = MaterialTheme.colorScheme.onPrimary
-                Text("صرفت في ${monthName(ym)}", color = onP.copy(alpha = 0.85f))
-                Text(money(spent), color = onP, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                if (prevSpent > 0) {
-                    val diff = spent - prevSpent
-                    Text(
-                        (if (diff >= 0) "▲ أكتر " else "▼ أقل ") + "بـ ${money(kotlin.math.abs(diff))} من نفس الوقت الشهر اللي فات",
-                        color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                Row {
-                    Column(Modifier.weight(1f)) {
-                        Text("تحويلات مصر", color = onP.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
-                        Text(money(sentEgp, "EGP"), color = onP, fontWeight = FontWeight.SemiBold)
-                        Text("≈ ${money(sentAed)}", color = onP.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text("دخل الشهر", color = onP.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
-                        Text(money(income), color = onP, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
+        item { WirdHomeCard(open) }
+        item { NextUpCard(reminders, open) }
 
         item { CarpoolCard(open) }
         item { PrayerCard(open) }
@@ -142,36 +117,6 @@ fun HomeScreen(open: (String) -> Unit) {
             }
         }
 
-        // Obligations this month
-        item {
-            val total = obligations.sumOf { it.amountAed }
-            val overdue = obligations.filter { it.overdue }
-            AppCard(onClick = { open("bills") }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("مطلوب منك الشهر ده", fontWeight = FontWeight.Bold)
-                        Text(
-                            if (obligations.isEmpty()) "ضيف فواتيرك والتزاماتك علشان أفكرك بيها" else "${obligations.size} التزام",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
-                        )
-                    }
-                    Text(money(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                }
-                if (overdue.isNotEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    Pill("${overdue.size} متأخر", Danger)
-                }
-                obligations.filter { it.due >= System.currentTimeMillis() - 86_400_000L || it.overdue }.take(5).forEach { o ->
-                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(o.title, Modifier.weight(1f), maxLines = 1)
-                        Text(dueText(o.due), style = MaterialTheme.typography.bodySmall, color = if (o.overdue) Danger else MaterialTheme.colorScheme.outline)
-                        Spacer(Modifier.width(10.dp))
-                        Text(money(o.amount, o.currency), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
-
         if (soon.isNotEmpty()) {
             item {
                 AppCard(color = MaterialTheme.colorScheme.tertiaryContainer) {
@@ -181,28 +126,7 @@ fun HomeScreen(open: (String) -> Unit) {
             }
         }
 
-        val upcoming = reminders.filter { !it.done && it.time >= System.currentTimeMillis() }.take(3)
-        if (upcoming.isNotEmpty()) {
-            item { SectionTitle("الجاي") { TextButton(onClick = { open("schedule") }) { Text("الكل") } } }
-            items(upcoming, key = { "r" + it.id }) { r ->
-                AppCard(onClick = { open("schedule") }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CatBadge(r.title, 36, if (r.kind == "appointment") Icons.Default.Event else Icons.Default.Alarm, if (r.kind == "appointment") Color2 else Brand)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(r.title, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                            Text(dateTimeStr(r.time) + if (r.location.isNotBlank()) " • ${r.location}" else "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                        }
-                    }
-                }
-            }
-        }
-
-        item { SectionTitle("آخر المصاريف") { TextButton(onClick = { open("expenses") }) { Text("الكل") } } }
-        if (recent.isEmpty()) {
-            item { EmptyState(Icons.Default.Receipt, "لسه مفيش مصاريف. شارك رسالة البنك لـ${com.mohamed.safi.AppName.v} من تطبيق الرسايل.") }
-        }
-        items(recent, key = { "e" + it.id }) { e -> ExpenseRow(e) { editing = e } }
+        item { AzkarHomeCard(open) }
         item { Spacer(Modifier.height(24.dp)) }
     }
 
@@ -225,5 +149,132 @@ private fun QuickAction(icon: ImageVector, label: String, color: Color, modifier
             Spacer(Modifier.height(6.dp))
             Text(label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 2)
         }
+    }
+}
+
+@Composable
+private fun WirdHomeCard(open: (String) -> Unit) {
+    var done by remember { mutableStateOf(com.mohamed.safi.faith.Wird.doneToday) }
+    val w = com.mohamed.safi.faith.Wird
+    val r = w.todayRange()
+    AppCard(onClick = { open("wird") }, color = MaterialTheme.colorScheme.primary) {
+        val onP = MaterialTheme.colorScheme.onPrimary
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.AutoStories, null, tint = onP)
+            Spacer(Modifier.width(8.dp))
+            Text("وردك اليومي", color = onP, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+            if (w.streak > 0) Text("🔥 ${w.streak} يوم", color = onP.copy(alpha = 0.9f), style = MaterialTheme.typography.labelLarge)
+        }
+        Spacer(Modifier.height(8.dp))
+        if (done) {
+            Text("✓ خلّصت وردك النهارده، ربنا يتقبل", color = onP, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text("بكرة من صفحة ${w.nextPage}", color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text("صفحة ${r.first} ← ${r.last}", color = onP, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text("${r.last - r.first + 1} صفحات من المصحف", color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+        }
+        Spacer(Modifier.height(10.dp))
+        LinearProgressIndicator(
+            progress = { ((w.nextPage - 1).toFloat() / com.mohamed.safi.faith.Wird.TOTAL_PAGES).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth(), color = onP, trackColor = onP.copy(alpha = 0.25f),
+        )
+        Text(
+            "الختمة: ${((w.nextPage - 1) * 100 / com.mohamed.safi.faith.Wird.TOTAL_PAGES)}%" + if (w.khatmas > 0) " • ختمت ${w.khatmas} مرة" else "",
+            color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
+        )
+        if (!done) {
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { open("wird") }, colors = ButtonDefaults.buttonColors(containerColor = onP, contentColor = MaterialTheme.colorScheme.primary)) { Text("اقرأ") }
+                OutlinedButton(onClick = { w.markDone(); done = true }, colors = ButtonDefaults.outlinedButtonColors(contentColor = onP)) { Text("قريته ✓") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NextUpCard(reminders: List<Reminder>, open: (String) -> Unit) {
+    val now = System.currentTimeMillis()
+    val next = reminders.filter { !it.done && it.time >= now }.sortedBy { it.time }
+    val first = next.firstOrNull()
+    AppCard(onClick = { open("schedule") }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CatBadge(first?.title ?: "", 40, if (first?.kind == "appointment") Icons.Default.Event else Icons.Default.Alarm, if (first?.kind == "appointment") Color2 else Brand)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(if (first?.kind == "appointment") "موعدك الجاي" else "التنبيه اللي عليه الدور", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                if (first == null) Text("مفيش مواعيد أو تنبيهات جاية", fontWeight = FontWeight.SemiBold)
+                else {
+                    Text(first.title, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 2)
+                    Text(dateTimeStr(first.time) + " • " + untilText(first.time - now) + if (first.location.isNotBlank()) " • ${first.location}" else "",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+        next.drop(1).take(2).forEach { r ->
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Text(r.title, Modifier.weight(1f), maxLines = 1, style = MaterialTheme.typography.bodyMedium)
+                Text(dateTimeStr(r.time), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+        }
+    }
+}
+
+private fun untilText(ms: Long): String {
+    val m = ms / 60_000
+    return when {
+        m < 1 -> "دلوقتي"
+        m < 60 -> "بعد $m دقيقة"
+        m < 24 * 60 -> "بعد ${m / 60} ساعة" + if (m % 60 > 0) " و${m % 60} دقيقة" else ""
+        else -> "بعد ${m / (24 * 60)} يوم"
+    }
+}
+
+@Composable
+private fun AzkarHomeCard(open: (String) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val cat = remember { com.mohamed.safi.faith.Azkar.current(ctx) } ?: return
+    val key = "home_" + java.time.LocalDate.now(zone) + "_" + cat.name
+    val sp = remember { ctx.getSharedPreferences("safi_azkar", android.content.Context.MODE_PRIVATE) }
+    var idx by remember { mutableIntStateOf(sp.getInt(key + "_i", 0)) }
+    var cnt by remember { mutableIntStateOf(sp.getInt(key + "_c", 0)) }
+    fun save() { sp.edit().putInt(key + "_i", idx).putInt(key + "_c", cnt).apply() }
+    val finished = idx >= cat.items.size
+    val z = cat.items.getOrNull(idx)
+    AppCard(
+        onClick = {
+            if (z != null) {
+                cnt++
+                if (cnt >= z.count) { idx++; cnt = 0 }
+                save()
+            }
+        },
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(com.mohamed.safi.faith.Azkar.icon(cat.name), fontSize = 22.sp)
+            Spacer(Modifier.width(8.dp))
+            Text(cat.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+            Text("${minOf(idx + 1, cat.items.size)}/${cat.items.size}", style = MaterialTheme.typography.labelLarge)
+        }
+        Spacer(Modifier.height(8.dp))
+        if (finished || z == null) {
+            Text("✓ خلّصت ${cat.name}، تقبّل الله", fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            TextButton(onClick = { idx = 0; cnt = 0; save() }) { Text("من الأول") }
+        } else {
+            Text(z.text, fontSize = 18.sp, lineHeight = 32.sp, maxLines = 10, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if (z.desc.isNotBlank()) Text(z.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                    Text("${z.count - cnt}", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp,
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Text("دوس على الكارت للعدّ", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                TextButton(onClick = { idx++; cnt = 0; save() }) { Text("التالي") }
+            }
+        }
+        TextButton(onClick = { UiBus.pendingAzkar.value = cat.name; open("azkar") }) { Text("كل الأذكار") }
     }
 }

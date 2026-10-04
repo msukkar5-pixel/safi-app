@@ -44,6 +44,8 @@ object UiBus {
     val pendingVoice = MutableStateFlow<String?>(null)
     /** Route requested by a notification tap. */
     val pendingRoute = MutableStateFlow<String?>(null)
+    val pendingAzkar = MutableStateFlow<String?>(null)
+    val pendingBook = MutableStateFlow<Pair<String, String>?>(null) // bookId to search query
     /** Bank message(s) shared into the app from Messages. */
     val pendingShare = MutableStateFlow<String?>(null)
     /** Open the mic as soon as the assistant screen shows (from the launcher shortcut). */
