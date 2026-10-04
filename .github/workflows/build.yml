@@ -41,7 +41,7 @@ jobs:
           # البداية والنهاية لابن كثير (OpenITI, Shamela 4445)
           ( git clone -q --depth 1 --filter=blob:none --sparse https://github.com/OpenITI/0775AH /tmp/oi \
             && cd /tmp/oi && git sparse-checkout set data/0774IbnKathir/0774IbnKathir.Bidaya ) \
-            && python3 tools/bidaya.py /tmp/oi/data/0774IbnKathir/0774IbnKathir.Bidaya/0774IbnKathir.Bidaya.Shamela0004445-ara1.completed app/src/main/assets/bidaya \
+            && python3 tools/openiti.py /tmp/oi/data/0774IbnKathir/0774IbnKathir.Bidaya/0774IbnKathir.Bidaya.Shamela0004445-ara1.completed app/src/main/assets/bidaya \
             || echo "bidaya conversion failed"
           # صورة الكعبة لشاشة الافتتاح (Wikimedia Commons, free licence only)
           python3 tools/kaaba.py app/src/main/assets/splash || echo "kaaba image failed"
@@ -84,7 +84,11 @@ jobs:
   uitest:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 35]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -98,7 +102,7 @@ jobs:
       - name: Run app on emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: ${{ matrix.api }}
           target: google_apis
           arch: x86_64
           profile: pixel_6
@@ -109,8 +113,8 @@ jobs:
         if: always()
         run: |
           mkdir -p /tmp/r && cp -r results/* /tmp/r/ 2>/dev/null || echo "no results" > /tmp/r/none.txt
-          cd /tmp/r && git init -q && git checkout -q -b ci-results
+          cd /tmp/r && git init -q && git checkout -q -b ci-results-${{ matrix.api }}
           git config user.email ci@safi && git config user.name ci
           echo "${{ github.sha }} run ${{ github.run_number }}" > RUN.txt
           git add -A && git commit -qm "results ${{ github.run_number }}"
-          git push -qf https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git ci-results
+          git push -qf https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git ci-results-${{ matrix.api }}

@@ -10,6 +10,7 @@ class SafiApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        CrashLog.install(this)
         Notifier.createChannels(this)
         DailyWorker.schedule(this, replace = false)
     }
@@ -20,4 +21,27 @@ class SafiApp : Application() {
         val db: AppDatabase by lazy { AppDatabase.build(instance) }
         val prefs: Prefs by lazy { Prefs(instance) }
     }
+}
+
+/** Saves the last crash so the app can show it (and the user can send it) on next launch. */
+object CrashLog {
+    private fun file(ctx: android.content.Context) = java.io.File(ctx.filesDir, "last_crash.txt")
+
+    fun install(ctx: android.content.Context) {
+        val prev = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            runCatching {
+                val sw = java.io.StringWriter()
+                e.printStackTrace(java.io.PrintWriter(sw))
+                val info = "Safi ${runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull()} • " +
+                    "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT}) • ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\n" +
+                    "thread: ${t.name} • ${java.util.Date()}\n\n"
+                file(ctx).writeText(info + sw.toString().take(12000))
+            }
+            prev?.uncaughtException(t, e)
+        }
+    }
+
+    fun pending(ctx: android.content.Context): String? = file(ctx).takeIf { it.exists() }?.readText()
+    fun clear(ctx: android.content.Context) { file(ctx).delete() }
 }

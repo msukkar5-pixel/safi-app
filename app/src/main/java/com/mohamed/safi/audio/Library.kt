@@ -65,6 +65,11 @@ object Library {
         langQ[lang]?.let { parts += "language:$it" }
         val t = esc(text)
         if (t.isNotBlank()) parts += "(title:($t) OR creator:($t) OR subject:($t))"
+        if (source != "librivox") {
+            // real audiobooks only: no Quran recitations, songs or random clips
+            parts += "(subject:(audiobook OR audiobooks OR \"كتاب مسموع\" OR \"كتب مسموعة\" OR \"كتاب صوتي\" OR \"كتب صوتية\" OR librivox) OR title:(\"كتاب مسموع\" OR \"كتاب صوتي\" OR audiobook) OR collection:librivoxaudio)"
+            parts += "NOT subject:(quran OR قرآن OR تلاوة OR نشيد OR اناشيد OR music OR موسيقى)"
+        }
         val url = "https://archive.org/advancedsearch.php".toHttpUrl().newBuilder()
             .addQueryParameter("q", parts.joinToString(" AND "))
             .addQueryParameter("fl[]", "identifier").addQueryParameter("fl[]", "title")

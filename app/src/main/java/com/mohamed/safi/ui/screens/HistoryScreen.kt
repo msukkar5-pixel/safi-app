@@ -37,41 +37,32 @@ fun HistoryScreen(onBack: () -> Unit, open: (String) -> Unit) {
                     AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Verified, null); Spacer(Modifier.width(8.dp))
-                            Text("المحتوى ده متوافق مع الرواية الرسمية للدولة: البوابة الرسمية u.ae، ووزارة الخارجية، والأرشيف والمكتبة الوطنية.", style = MaterialTheme.typography.bodySmall)
+                            Text("كتب الإمارات هنا من مصادر الدولة الرسمية فقط: البوابة الرسمية u.ae، ووزارة الخارجية، ومكتب دبي الإعلامي.", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
-                if (tab == 1) {
-                    item { SectionTitle("كتب الشيخ محمد بن راشد آل مكتوم") }
-                    items(History.mbrBooks) { b -> SourceCard(b, highlight = b.title.startsWith("علمتني")) }
-                    item {
-                        Text("الكتب دي محفوظة الحقوق، فالتطبيق بيوديك لصفحتها (مكتبة / شراء) بدل ما ينسخ نصها.",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                item { SectionTitle("الكتب — تتقرا جوه التطبيق") }
+                item { BookList(if (tab == 0) listOf("egypt") else listOf("uae")) { open("book/$it") } }
+                if (tab == 0) item { BookCard(com.mohamed.safi.faith.Books.bidaya) { open("bidaya") } }
+                if (tab == 1) item {
+                    AppCard(color = MaterialTheme.colorScheme.tertiaryContainer) {
+                        Text("علمتني الحياة — الشيخ محمد بن راشد آل مكتوم", fontWeight = FontWeight.Bold)
+                        Text("الكتاب كامل محفوظ الحقوق ومتاح في المكتبات بس (صدر ٢٥ سبتمبر ٢٠٢٥). اللي في التطبيق هو الإعلان الرسمي والمقتطفات اللي نشرها مكتب دبي الإعلامي.", style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = { open("book/mbr_life") }) { Text("اقرأ المتاح") }
+                            OutlinedButton(onClick = { Shaarawy.openUrl(ctx, "https://www.google.com/search?q=" + android.net.Uri.encode("شراء كتاب علمتني الحياة محمد بن راشد")) }) { Text("اشتريه") }
+                        }
                     }
                 }
-                item { SectionTitle(if (tab == 0) "من الفراعنة لليوم" else "من العصور القديمة لليوم") }
+                item { SectionTitle(if (tab == 0) "خلاصة سريعة: من الفراعنة لليوم" else "خلاصة سريعة: من العصور القديمة لليوم") }
                 items(eras) { e ->
                     val k = "$tab:${e.title}"
                     EraCard(e, k in expanded) { expanded = if (k in expanded) expanded - k else expanded + k }
                 }
-                item { SectionTitle(if (tab == 0) "كتب ومراجع تاريخ مصر" else "المصادر الرسمية المعتمدة") }
-                if (tab == 0) item {
-                    AppCard(onClick = { open("bidaya") }, color = MaterialTheme.colorScheme.secondaryContainer) {
-                        Text("البداية والنهاية — ابن كثير (كامل داخل التطبيق)", fontWeight = FontWeight.Bold)
-                        Text("فيه أخبار مصر في العصور الإسلامية: الفتح، الطولونيين، الإخشيديين، الفاطميين، الأيوبيين، والمماليك لحد ٧٦٨هـ", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-                items(if (tab == 0) History.egyptSources else History.uaeSources) { s -> SourceCard(s) }
                 item {
                     OutlinedButton(onClick = { open("audiobooks") }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Headphones, null); Spacer(Modifier.width(6.dp)); Text("كتب تاريخ مسموعة")
-                    }
-                }
-                item {
-                    OutlinedButton(onClick = {
-                        Shaarawy.open(ctx, if (tab == 0) "وثائقي تاريخ مصر الكامل" else "وثائقي تاريخ الإمارات الأرشيف والمكتبة الوطنية")
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.PlayCircle, null); Spacer(Modifier.width(6.dp)); Text("أفلام وثائقية (يوتيوب)")
                     }
                 }
             }

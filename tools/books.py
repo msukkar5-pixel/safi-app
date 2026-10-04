@@ -122,24 +122,27 @@ def epub_sections(data, vol):
 
 
 def hindawi_list(contributor):
-    h = get(f"https://www.hindawi.org/contributors/{contributor}/").decode("utf-8", "replace")
-    books = []
-    for bid, title in re.findall(r'href="/books/(\d+)/"[^>]*>\s*(?:<[^>]+>\s*)*([^<]{3,200})<', h):
-        title = html.unescape(title).strip()
-        if bid not in [b[0] for b in books] and title:
-            books.append((bid, title))
-    # page may be paginated
-    for page in range(2, 6):
+    """All book ids on a contributor page (follows pagination)."""
+    ids = []
+    for url in [f"https://www.hindawi.org/contributors/{contributor}/"] + \
+               [f"https://www.hindawi.org/contributors/{contributor}/{p}/" for p in range(2, 8)] + \
+               [f"https://www.hindawi.org/contributors/{contributor}/?page={p}" for p in range(2, 8)]:
         try:
-            h2 = get(f"https://www.hindawi.org/contributors/{contributor}/{page}/").decode("utf-8", "replace")
+            h = get(url, tries=1).decode("utf-8", "replace")
         except Exception:
-            break
-        new = [(b, html.unescape(t).strip()) for b, t in re.findall(r'href="/books/(\d+)/"[^>]*>\s*(?:<[^>]+>\s*)*([^<]{3,200})<', h2)]
-        new = [x for x in new if x[0] not in [b[0] for b in books]]
-        if not new:
-            break
-        books += new
-    return books
+            continue
+        new = [b for b in dict.fromkeys(re.findall(r"/books/(\d{6,})/", h)) if b not in ids]
+        print("   list", url, len(new))
+        ids += new
+    return ids
+
+
+def epub_title(data):
+    z = zipfile.ZipFile(io.BytesIO(data))
+    container = z.read("META-INF/container.xml").decode("utf-8", "replace")
+    opf = z.read(re.search(r'full-path="([^"]+)"', container).group(1)).decode("utf-8", "replace")
+    m = re.search(r"<dc:title[^>]*>(.*?)</dc:title>", opf, re.S)
+    return html.unescape(m.group(1)).strip() if m else ""
 
 
 def hindawi_epub(bid):
@@ -215,37 +218,42 @@ def build(b):
         os.makedirs(out, exist_ok=True)
         return [(b, out, openiti.write(secs, out))]
     if t == "hindawi_series":
-        lst = [x for x in hindawi_list(b["contributor"]) if b["match"] in x[1]]
-        lst.sort(key=lambda x: part_no(x[1]))
-        print("  parts", [(part_no(x[1]), x[0]) for x in lst])
-        secs, seen = [], set()
-        for bid, title in lst:
-            n = part_no(title)
-            if n in seen or n == 99:
+        parts = {}
+        for bid in hindawi_list(b["contributor"]):
+            try:
+                data = hindawi_epub(bid)
+            except Exception as e:
+                print("   skip", bid, e); continue
+            title = epub_title(data)
+            if b["match"] not in title:
                 continue
-            seen.add(n)
-            s = epub_sections(hindawi_epub(bid), n)
-            if s:
-                s[0]["t"] = title
-                for x in s:
-                    x["l"] = min(x["l"] + 1, 5)
-                s[0]["l"] = 1
-            secs += s
-            print("   part", n, len(s))
+            n = part_no(title)
+            if n != 99 and n not in parts:
+                parts[n] = (title, data)
+        print("  parts", sorted(parts))
+        secs = []
+        for n in sorted(parts):
+            title, data = parts[n]
+            s2 = epub_sections(data, n)
+            for x in s2:
+                x["l"] = min(x["l"] + 1, 5)
+            secs += [{"v": n, "p": 0, "l": 1, "t": title, "paras": []}] + s2
         os.makedirs(out, exist_ok=True)
         return [(b, out, openiti.write(secs, out))]
     if t == "hindawi_each":
         res = []
-        for bid, title in hindawi_list(b["contributor"]):
+        for bid in hindawi_list(b["contributor"]):
             try:
-                s = epub_sections(hindawi_epub(bid), 1)
+                data = hindawi_epub(bid)
+                title = epub_title(data) or bid
+                s2 = epub_sections(data, 1)
                 o = out + "_" + bid
                 os.makedirs(o, exist_ok=True)
-                info = openiti.write(s, o)
+                info = openiti.write(s2, o)
                 res.append(({**b, "id": f"{b['id']}_{bid}", "title": title, "desc": b["desc"]}, o, info))
                 print("   ", title, info)
             except Exception as e:
-                print("   skip", bid, title, e)
+                print("   skip", bid, e)
         return res
     raise RuntimeError("unknown type " + t)
 

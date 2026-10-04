@@ -33,7 +33,7 @@ fun StoriesScreen(onBack: () -> Unit, open: (String) -> Unit) {
         else -> Triple(Stories.sahaba, Stories.SOURCES_SAHABA, "sahaba")
     }
     val it0 = item
-    if (it0 != null) { StoryDetail(it0, sources, open) { item = null }; return }
+    if (it0 != null) { StoryDetail(it0, sources, tab, open) { item = null }; return }
 
     ScreenScaffold("القصص والسيرة", onBack = onBack) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
@@ -43,9 +43,13 @@ fun StoriesScreen(onBack: () -> Unit, open: (String) -> Unit) {
                 Tab(tab == 2, { tab = 2 }, text = { Text("الصحابة") })
             }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { SectionTitle("الكتب كاملة") }
                 item {
-                    Text(sources, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    BookList(
+                        when (tab) { 0 -> listOf("prophets"); 1 -> listOf("seerah"); else -> listOf("sahaba") },
+                    ) { open("book/$it") }
                 }
+                item { SectionTitle(if (tab == 0) "مختصر قصص الأنبياء" else if (tab == 1) "مختصر السيرة" else "مختصر سير الصحابة") }
                 items(list) { s ->
                     AppCard(onClick = { item = s }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -69,7 +73,8 @@ fun StoriesScreen(onBack: () -> Unit, open: (String) -> Unit) {
 }
 
 @Composable
-private fun StoryDetail(s: StoryItem, sources: String, open: (String) -> Unit, onBack: () -> Unit) {
+private fun StoryDetail(s: StoryItem, sources: String, tab: Int, open: (String) -> Unit, onBack: () -> Unit) {
+    androidx.activity.compose.BackHandler { onBack() }
     val ctx = LocalContext.current
     var surahNames by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     LaunchedEffect(Unit) { surahNames = runCatching { Quran.surahs(ctx).associate { it.number to it.name } }.getOrDefault(emptyMap()) }
@@ -94,12 +99,14 @@ private fun StoryDetail(s: StoryItem, sources: String, open: (String) -> Unit, o
                     Icon(Icons.Default.LibraryBooks, null); Spacer(Modifier.width(6.dp)); Text("أحاديث عن ${s.title.substringBefore(" عليه").substringBefore(" ﷺ")} في صحيح البخاري")
                 }
             }
-            if (s.webQuery.isNotBlank()) {
-                OutlinedButton(onClick = {
-                    Shaarawy.openUrl(ctx, "https://www.google.com/search?q=" + android.net.Uri.encode(s.webQuery + " site:islamweb.net OR site:dorar.net OR site:shamela.ws"))
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Public, null); Spacer(Modifier.width(6.dp)); Text("اقرأ بالتفصيل (إسلام ويب، الدرر السنية، الشاملة)")
-                }
+            val name = s.title.substringBefore(" عليه").substringBefore(" ﷺ").substringBefore(" رضي").substringBefore("(").trim()
+            val bookId = when (tab) { 0 -> "qisas"; 1 -> "sira_hisham"; else -> "usd_ghaba" }
+            val bookName = when (tab) { 0 -> "قصص الأنبياء لابن كثير"; 1 -> "السيرة النبوية لابن هشام"; else -> "أسد الغابة لابن الأثير" }
+            Button(onClick = {
+                UiBus.pendingBook.value = bookId to (if (tab == 1) "" else name)
+                open("book/$bookId")
+            }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.AutoStories, null); Spacer(Modifier.width(6.dp)); Text("اقرأها كاملة في $bookName")
             }
             Text(sources, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         }

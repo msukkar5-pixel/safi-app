@@ -160,6 +160,7 @@ private val tabs = listOf(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppRoot() {
+    CrashReportDialog()
     val nav = rememberNavController()
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val entry by nav.currentBackStackEntryAsState()
@@ -252,6 +253,13 @@ fun AppRoot() {
             composable("wird") { WirdScreen(back) }
             composable("stories") { StoriesScreen(back, open) }
             composable("bidaya") { BidayaScreen(back) }
+            composable("library") { LibraryScreen(back) { nav.navigate("book/$it") } }
+            composable("book/{id}") { e ->
+                val id = e.arguments?.getString("id") ?: "bidaya"
+                val q = remember { UiBus.pendingBook.value?.takeIf { it.first == id }?.second ?: "" }
+                LaunchedEffect(Unit) { UiBus.pendingBook.value = null }
+                BookScreen(id, back, q)
+            }
             composable("history") { HistoryScreen(back, open) }
             composable("audiobooks") { AudiobooksScreen(back) }
         }
@@ -268,4 +276,37 @@ private fun go(nav: NavHostController, route: String) {
     } else {
         nav.navigate(route) { launchSingleTop = true }
     }
+}
+
+@Composable
+private fun CrashReportDialog() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var report by remember { mutableStateOf(CrashLog.pending(ctx)) }
+    val r = report ?: return
+    AlertDialog(
+        onDismissRequest = { CrashLog.clear(ctx); report = null },
+        title = { Text("التطبيق قفل المرة اللي فاتت") },
+        text = {
+            Column {
+                Text("ابعتلي التقرير ده (واتساب أو انسخه والصقه في المحادثة مع Claude) علشان أصلّح السبب بالظبط.")
+                Spacer(Modifier.height(8.dp))
+                Text(r.take(600), style = MaterialTheme.typography.bodySmall, maxLines = 10)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, r)
+                ctx.startActivity(Intent.createChooser(i, "ابعت تقرير القفلة").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                CrashLog.clear(ctx); report = null
+            }) { Text("ابعت التقرير") }
+        },
+        dismissButton = {
+            TextButton(onClick = {
+                (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+                    .setPrimaryClip(android.content.ClipData.newPlainText("crash", r))
+                toast(ctx, "اتنسخ")
+                CrashLog.clear(ctx); report = null
+            }) { Text("انسخ") }
+        },
+    )
 }

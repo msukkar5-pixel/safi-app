@@ -22,6 +22,7 @@ private val entries = listOf(
     Entry("quran", "القرآن الكريم", "المصحف والتفسير والعلامات", Icons.Default.MenuBook, Color(0xFF0F6E5C)),
     Entry("wird", "الورد اليومي", "صفحات كل يوم وختمة وتذكير", Icons.Default.AutoStories, Color(0xFF1B5E20)),
     Entry("shaarawy", "الشيخ الشعراوي", "خواطر بالسورة والموضوع", Icons.Default.VideoLibrary, Color(0xFFC62828)),
+    Entry("library", "المكتبة", "كتب السيرة والصحابة والتاريخ كاملة", Icons.Default.LocalLibrary, Color(0xFF5D4037)),
     Entry("stories", "القصص والسيرة", "الأنبياء، السيرة، الصحابة", Icons.Default.HistoryEdu, Color(0xFF6D4C41)),
     Entry("bidaya", "البداية والنهاية", "ابن كثير كامل ٢٠ مجلد", Icons.Default.Book, Color(0xFF4E342E)),
     Entry("history", "تاريخ مصر والإمارات", "من البداية لليوم + علمتني الحياة", Icons.Default.AccountBalance, Color(0xFF00695C)),
