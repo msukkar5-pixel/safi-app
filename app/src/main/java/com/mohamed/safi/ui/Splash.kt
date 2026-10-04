@@ -58,16 +58,17 @@ fun DedicationSplash(onDone: () -> Unit) {
         if (img != null) {
             Image(
                 img, null, contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().scale(zoom.value),
+                modifier = Modifier.fillMaxWidth().fillMaxHeight(0.58f).align(Alignment.TopCenter).scale(zoom.value),
             )
         }
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.55f),
-                    0.35f to Color.Black.copy(alpha = 0.25f),
-                    0.6f to Color.Black.copy(alpha = 0.7f),
-                    1f to Color.Black.copy(alpha = 0.95f),
+                    0f to Color.Black.copy(alpha = 0.6f),
+                    0.2f to Color.Black.copy(alpha = 0.15f),
+                    0.4f to Color.Black.copy(alpha = 0.1f),
+                    0.58f to Color.Black,
+                    1f to Color.Black,
                 ),
             ),
         )

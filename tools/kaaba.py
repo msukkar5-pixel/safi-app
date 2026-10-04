@@ -6,6 +6,7 @@ out = sys.argv[1]
 os.makedirs(out, exist_ok=True)
 UA = {"User-Agent": "SafiApp-CI/1.0 (personal Android app build; github actions)"}
 CANDIDATES = [
+    "File:Kaaba2.JPG",
     "File:الكعبة المشرفة ليلاً.jpg",
     "File:Kaaba at night.jpg",
     "File:Kaaba, Never still.jpg",
@@ -30,7 +31,7 @@ def search_more():
         return []
 
 for title in CANDIDATES + search_more():
-    q = urllib.parse.urlencode({"action": "query", "titles": title, "prop": "imageinfo", "iiprop": "url|size|extmetadata", "iiurlwidth": 1080, "format": "json"})
+    q = urllib.parse.urlencode({"action": "query", "titles": title, "prop": "imageinfo", "iiprop": "url|size|extmetadata", "iiurlwidth": 1600, "format": "json"})
     try:
         pages = json.loads(get("https://commons.wikimedia.org/w/api.php?" + q))["query"]["pages"]
     except Exception as e:
