@@ -25,10 +25,10 @@ fun ReportsScreen(onBack: () -> Unit) {
     var ym by remember { mutableStateOf(YearMonth.now(zone)) }
     val (from, to) = remember(ym) { monthRange(ym) }
     val (pFrom, pTo) = remember(ym) { monthRange(ym.minusMonths(1)) }
-    val list by dao.expensesBetween(from, to).collectAsState(emptyList())
-    val prev by dao.expensesBetween(pFrom, pTo).collectAsState(emptyList())
-    val transfers by dao.transfersBetween(from, to).collectAsState(emptyList())
-    val budgets by dao.budgets().collectAsState(emptyList())
+    val list by remember(from, to) { dao.expensesBetween(from, to) }.collectAsState(emptyList())
+    val prev by remember(pFrom, pTo) { dao.expensesBetween(pFrom, pTo) }.collectAsState(emptyList())
+    val transfers by remember(from, to) { dao.transfersBetween(from, to) }.collectAsState(emptyList())
+    val budgets by remember { dao.budgets() }.collectAsState(emptyList())
     var budgetFor by remember { mutableStateOf<String?>(null) }
 
     val out = list.filter { !it.isIncome }

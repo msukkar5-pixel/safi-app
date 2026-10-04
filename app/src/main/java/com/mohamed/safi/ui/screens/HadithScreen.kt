@@ -1,5 +1,6 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,8 +33,16 @@ fun HadithScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) { today = Hadiths.ofTheDay() }
 
     val b = bookId
-    if (b != null) { HadithBookView(b, initialQuery) { bookId = null; initialQuery = "" }; return }
-    if (showFav) { FavouritesView { showFav = false }; return }
+    if (b != null) {
+        BackHandler { bookId = null; initialQuery = "" }
+        HadithBookView(b, initialQuery) { bookId = null; initialQuery = "" }
+        return
+    }
+    if (showFav) {
+        BackHandler { showFav = false }
+        FavouritesView { showFav = false }
+        return
+    }
 
     ScreenScaffold("الأحاديث الصحيحة", onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -92,7 +101,11 @@ private fun HadithBookView(id: String, initialQuery: String = "", onBack: () -> 
     }
     val bk = book
     val s = section
-    if (bk != null && s != null) { SectionView(bk, s) { section = null }; return }
+    if (bk != null && s != null) {
+        BackHandler { section = null }
+        SectionView(bk, s) { section = null }
+        return
+    }
 
     ScreenScaffold(Hadiths.bookTitle(id), onBack = onBack) { pad ->
         if (bk == null) {

@@ -38,11 +38,11 @@ fun CarScreen(onBack: () -> Unit) {
     val prefs = SafiApp.prefs
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val carItems by dao.carItems().collectAsState(emptyList())
-    val ym = YearMonth.now(zone)
-    val sixFrom = monthRange(ym.minusMonths(5)).first
-    val (_, to) = monthRange(ym)
-    val carExpenses by dao.expensesBetween(sixFrom, to).collectAsState(emptyList())
+    val carItems by remember { dao.carItems() }.collectAsState(emptyList())
+    val ym = remember { YearMonth.now(zone) }
+    val sixFrom = remember(ym) { monthRange(ym.minusMonths(5)).first }
+    val to = remember(ym) { monthRange(ym).second }
+    val carExpenses by remember(sixFrom, to) { dao.expensesBetween(sixFrom, to) }.collectAsState(emptyList())
     var odometer by remember { mutableIntStateOf(prefs.odometer) }
     var editOdo by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<CarItem?>(null) }

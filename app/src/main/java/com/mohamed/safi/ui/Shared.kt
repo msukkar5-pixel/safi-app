@@ -136,7 +136,10 @@ fun ExpenseEditor(existing: Expense?, prefill: Expense? = null, onDismiss: () ->
                     if (existing != null) {
                         dao.updateExpense(
                             existing.copy(
-                                amount = a, currency = currency, amountAed = Fx.toAed(a, currency), category = cat,
+                                amount = a, currency = currency,
+                                // keep the rate from the day it was spent unless the amount/currency changed
+                                amountAed = if (Math.abs(a - existing.amount) < 0.005 && currency == existing.currency) existing.amountAed else Fx.toAed(a, currency),
+                                category = cat,
                                 merchant = merchant.trim(), note = note.trim(), method = method, time = time, isIncome = income,
                             ),
                         )

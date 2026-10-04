@@ -112,7 +112,7 @@ object Meds {
     suspend fun save(ctx: Context, m: Medication): Long {
         val id = HealthDb.dao.upsertMed(m).let { if (m.id != 0L) m.id else it }
         val dao = SafiApp.db.dao()
-        dao.remindersFor("med", id).forEach { ReminderScheduler.cancel(ctx, it.id); dao.deleteReminder(it) }
+        dao.remindersFor("med", id).forEach { ReminderScheduler.cancel(ctx, it.id); ReminderScheduler.forget(ctx, it.id); dao.deleteReminder(it) }
         val ended = m.endDate != null && m.endDate < System.currentTimeMillis()
         if (m.active && !ended) {
             val now = LocalDateTime.now(zone)
@@ -134,7 +134,7 @@ object Meds {
 
     suspend fun delete(ctx: Context, m: Medication) {
         val dao = SafiApp.db.dao()
-        dao.remindersFor("med", m.id).forEach { ReminderScheduler.cancel(ctx, it.id); dao.deleteReminder(it) }
+        dao.remindersFor("med", m.id).forEach { ReminderScheduler.cancel(ctx, it.id); ReminderScheduler.forget(ctx, it.id); dao.deleteReminder(it) }
         HealthDb.dao.deleteMed(m)
     }
 

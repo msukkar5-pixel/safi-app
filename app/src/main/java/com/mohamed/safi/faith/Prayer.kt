@@ -185,5 +185,6 @@ class PrayerReceiver : BroadcastReceiver() {
             )
         }
         Prayer.schedule(context)
+        runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(context) }
     }
 }

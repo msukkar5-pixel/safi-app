@@ -72,7 +72,10 @@ object Apps {
         if (pkg != null) pm.getLaunchIntentForPackage(pkg)?.let { if (start(ctx, it)) return name }
         val apps = launchable(ctx)
         val hit = apps.firstOrNull { it.label.lowercase() == n }
-            ?: apps.firstOrNull { it.label.lowercase().contains(n) || n.contains(it.label.lowercase()) }
+            ?: apps.firstOrNull { app ->
+                val label = app.label.lowercase()
+                label.contains(n) || (label.length >= 3 && n.contains(label))
+            }
             ?: apps.firstOrNull { it.pkg.lowercase().contains(n.replace(" ", "")) }
             ?: return null
         val li = pm.getLaunchIntentForPackage(hit.pkg) ?: return null
@@ -97,8 +100,8 @@ object Apps {
         return "الخرائط"
     }
 
-    /** Plays a song/artist/playlist in the chosen music app (Anghami by default). */
-    fun playMusic(ctx: Context, query: String, appPref: String? = null): String {
+    /** Plays a song/artist/playlist in the chosen music app (Anghami by default). Returns the app label, or null if nothing could be opened. */
+    fun playMusic(ctx: Context, query: String, appPref: String? = null): String? {
         val pkg = when (appPref?.lowercase()) {
             "anghami", "انغامي", "أنغامي" -> ANGHAMI
             "spotify", "سبوتيفاي" -> SPOTIFY
@@ -121,14 +124,14 @@ object Apps {
             else -> "https://www.youtube.com/results?search_query=$q"
         }
         if (start(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage(pkg))) return appLabel(pkg)
-        start(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-        return appLabel(pkg)
+        return if (start(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(url)))) appLabel(pkg) else null
     }
 
     fun appLabel(pkg: String) = when (pkg) {
         ANGHAMI -> "أنغامي"
         SPOTIFY -> "Spotify"
         YTMUSIC -> "YouTube Music"
+        YOUTUBE -> "YouTube"
         WAZE -> "Waze"
         GMAPS -> "Google Maps"
         else -> pkg

@@ -3,6 +3,7 @@ package com.mohamed.safi.ui.screens
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.speech.RecognizerIntent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -105,7 +106,7 @@ fun DiaryScreen(onBack: () -> Unit) {
     if (creating) DiaryEditor(null) { saved -> creating = false; saved?.let { viewing = it } }
     editing?.let { e -> DiaryEditor(e) { saved -> editing = null; saved?.let { viewing = it } } }
     viewing?.let { e ->
-        DiaryView(e, onEdit = { viewing = null; editing = e }, onClose = { viewing = null })
+        DiaryView(e, onEdit = { fresh -> viewing = null; editing = fresh }, onClose = { viewing = null })
     }
     showReport?.let { (kind, text) ->
         Dialog(onDismissRequest = { showReport = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -131,17 +132,26 @@ private fun DiaryEditor(existing: DiaryEntry?, onDone: (DiaryEntry?) -> Unit) {
     var mood by remember { mutableStateOf(existing?.mood ?: "") }
     var time by remember { mutableLongStateOf(existing?.time ?: System.currentTimeMillis()) }
     var tidying by remember { mutableStateOf(false) }
+    var confirmDiscard by remember { mutableStateOf(false) }
     val dictate = rememberVoiceInput { said -> text = if (text.isBlank()) said else text.trimEnd() + " " + said }
+    val changed = text != (existing?.text ?: "") || mood != (existing?.mood ?: "")
+    val close: () -> Unit = { if (changed) { confirmDiscard = true } else { onDone(null) } }
 
-    Dialog(onDismissRequest = { onDone(null) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = close,
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false),
+    ) {
+        BackHandler { close() }
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().padding(16.dp).imePadding()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { onDone(null) }) { Icon(Icons.Default.Close, "إلغاء") }
+                    IconButton(onClick = close) { Icon(Icons.Default.Close, "إلغاء") }
                     Text(if (existing == null) "يومي" else "تعديل", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Button(onClick = {
                         if (text.isBlank()) toast(ctx, "احكي أو اكتب حاجة الأول") else scope.launch {
-                            val e = DiaryEntry(id = existing?.id ?: 0, time = time, text = text.trim(), mood = mood, analysis = existing?.analysis ?: "")
+                            // Re-read the stored analysis so an analysis that finished after the editor opened isn't overwritten.
+                            val analysis = existing?.let { DiaryDb.dao.get(it.id)?.analysis ?: it.analysis } ?: ""
+                            val e = DiaryEntry(id = existing?.id ?: 0, time = time, text = text.trim(), mood = mood, analysis = analysis)
                             val id = DiaryDb.dao.upsert(e)
                             onDone(e.copy(id = if (existing != null) existing.id else id))
                         }
@@ -172,10 +182,14 @@ private fun DiaryEditor(existing: DiaryEntry?, onDone: (DiaryEntry?) -> Unit) {
             }
         }
     }
+    if (confirmDiscard) ConfirmDialog("تسيب الكلام ده؟", "اللي كتبته أو قلته مش هيتحفظ", "سيبه", { confirmDiscard = false }) {
+        confirmDiscard = false
+        onDone(null)
+    }
 }
 
 @Composable
-private fun DiaryView(entry: DiaryEntry, onEdit: () -> Unit, onClose: () -> Unit) {
+private fun DiaryView(entry: DiaryEntry, onEdit: (DiaryEntry) -> Unit, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var e by remember(entry.id) { mutableStateOf(entry) }
@@ -187,7 +201,7 @@ private fun DiaryView(entry: DiaryEntry, onEdit: () -> Unit, onClose: () -> Unit
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onClose) { Icon(Icons.Default.Close, "إغلاق") }
                     Text("${e.mood} ${dateStr(e.time)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "تعديل") }
+                    IconButton(onClick = { onEdit(e) }, enabled = !busy) { Icon(Icons.Default.Edit, "تعديل") }
                     IconButton(onClick = { confirmDel = true }) { Icon(Icons.Default.Delete, "مسح") }
                 }
                 Text(timeStr(e.time), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)

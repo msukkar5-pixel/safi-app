@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -74,6 +76,10 @@ private class ContinuousRecognizer(
     private val sr = SpeechRecognizer.createSpeechRecognizer(ctx)
     private var active = false
     private var stopping = false
+    private val handler = Handler(Looper.getMainLooper())
+    private val restartRunnable = Runnable { restart() }
+    /** Errors in a row without any recognized text; reset whenever text comes back. */
+    private var errorsInRow = 0
 
     private fun intent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -93,41 +99,77 @@ private class ContinuousRecognizer(
         override fun onEndOfSpeech() {}
         override fun onEvent(eventType: Int, params: Bundle?) {}
         override fun onPartialResults(partialResults: Bundle?) {
-            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let(onPartial)
+            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let {
+                if (it.isNotBlank()) errorsInRow = 0
+                onPartial(it)
+            }
         }
         override fun onResults(results: Bundle?) {
-            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let(onChunk)
+            results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let {
+                errorsInRow = 0
+                onChunk(it)
+            }
             if (active && !stopping) restart() else onFinished()
         }
         override fun onError(error: Int) {
             when {
                 stopping || !active -> onFinished()
-                error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> restart()
-                error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == SpeechRecognizer.ERROR_CLIENT -> {
-                    sr.cancel(); restart()
+                error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> fatal("اسمح للتطبيق باستخدام الميكروفون")
+                error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> fatal("التعرف على الصوت محتاج إنترنت")
+                error == 12 || error == 13 -> fatal("اللغة دي مش متاحة على تليفونك. غيّرها من الإعدادات أو نزّل حزمة اللغة")
+                else -> {
+                    // Silence (NO_MATCH / SPEECH_TIMEOUT) is normal while the user thinks: keep listening forever.
+                    // Real failures (busy / server / audio) retry shortly and stop after a few in a row.
+                    val silence = error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                    if (!silence) errorsInRow++
+                    if (errorsInRow >= MAX_ERRORS) {
+                        fatal("مش سامع حاجة. دوس خلصت علشان تحفظ اللي اتقال")
+                    } else {
+                        if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == SpeechRecognizer.ERROR_CLIENT) {
+                            runCatching { sr.cancel() }
+                        }
+                        scheduleRestart()
+                    }
                 }
-                error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> onFatal("اسمح للتطبيق باستخدام الميكروفون")
-                error == SpeechRecognizer.ERROR_NETWORK || error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> onFatal("التعرف على الصوت محتاج إنترنت")
-                error == 12 || error == 13 -> onFatal("اللغة دي مش متاحة على تليفونك. غيّرها من الإعدادات أو نزّل حزمة اللغة")
-                else -> restart()
             }
         }
     }
 
+    private fun fatal(msg: String) {
+        active = false
+        handler.removeCallbacks(restartRunnable)
+        runCatching { sr.cancel() }
+        onFatal(msg)
+    }
+
+    private fun scheduleRestart() {
+        handler.removeCallbacks(restartRunnable)
+        handler.postDelayed(restartRunnable, RESTART_DELAY_MS)
+    }
+
     private fun restart() {
-        if (!active) return
-        runCatching { sr.startListening(intent()) }.onFailure { onFatal("الميكروفون مش متاح") }
+        if (!active || stopping) return
+        runCatching { sr.startListening(intent()) }.onFailure { fatal("الميكروفون مش متاح") }
     }
 
     fun start() {
-        active = true; stopping = false
+        active = true; stopping = false; errorsInRow = 0
         sr.setRecognitionListener(listener)
         restart()
     }
 
-    fun finish() { stopping = true; runCatching { sr.stopListening() } }
-    fun cancel() { active = false; runCatching { sr.cancel() } }
-    fun destroy() { active = false; runCatching { sr.destroy() } }
+    fun finish() {
+        stopping = true
+        handler.removeCallbacks(restartRunnable)
+        runCatching { sr.stopListening() }
+    }
+    fun cancel() { active = false; handler.removeCallbacks(restartRunnable); runCatching { sr.cancel() } }
+    fun destroy() { active = false; handler.removeCallbacks(restartRunnable); runCatching { sr.destroy() } }
+
+    private companion object {
+        const val RESTART_DELAY_MS = 400L
+        const val MAX_ERRORS = 5
+    }
 }
 
 /**
@@ -183,6 +225,8 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
             try {
                 r.prepare(); r.start(); recorder = r; audioFile = f
             } catch (e: Exception) {
+                runCatching { r.release() }
+                runCatching { f.delete() }
                 status = "مقدرتش أشغّل التسجيل"
             }
             while (recorder != null && !finishing) { delay(1000); seconds++ }
@@ -206,6 +250,9 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
         onDispose {
             recognizer?.destroy()
             runCatching { recorder?.stop() }; runCatching { recorder?.release() }
+            // Cancelled or never transcribed: don't leave the recording in the cache.
+            // (After a successful transcription it was already deleted.)
+            audioFile?.let { f -> runCatching { f.delete() } }
         }
     }
 
@@ -220,12 +267,19 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
             if (f == null || f.length() < 1000) { deliver(""); return }
             busy = true; status = "بحوّل الكلام لكتابة…"
             scope.launch {
-                try {
-                    deliver(Claude.transcribe(f, VoicePrefs.lang))
+                val said = try {
+                    Claude.transcribe(f, VoicePrefs.lang)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
+                    // Keep the recording so "خلصت" can retry the transcription.
                     busy = false; finishing = false
-                    status = e.message ?: "التحويل فشل"
-                } finally { f.delete() }
+                    status = (e.message ?: "التحويل فشل") + " — دوس خلصت تاني"
+                    return@launch
+                }
+                runCatching { f.delete() }
+                audioFile = null
+                deliver(said)
             }
         } else {
             status = "بخلّص…"

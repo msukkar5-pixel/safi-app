@@ -3,6 +3,9 @@ package com.mohamed.safi.audio
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.media3.common.AudioAttributes
@@ -14,6 +17,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
 import com.mohamed.safi.SafiApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -132,11 +136,43 @@ object Library {
     fun saveProgress(id: String, track: Int, posMs: Long) = sp().edit { putString("p_$id", "$track:$posMs"); putString("last", id) }
     fun progress(id: String): Pair<Int, Long>? = sp().getString("p_$id", null)?.split(":")?.let { (it[0].toIntOrNull() ?: 0) to (it.getOrNull(1)?.toLongOrNull() ?: 0L) }
     var speed: Float get() = sp().getFloat("speed", 1f); set(v) = sp().edit { putFloat("speed", v) }
+
+    /** Wall-clock millis at which the sleep timer pauses playback; 0 = off. Enforced by [PlaybackService]. */
+    var sleepAt: Long get() = sp().getLong("sleep_at", 0L); set(v) = sp().edit { putLong("sleep_at", v) }
 }
 
 /** Plays in the background with lock-screen / notification controls. */
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var lastSave = 0L
+
+    /** Audiobook items use mediaId "bookId#index"; Quran items ("quran#...") are skipped. */
+    private fun saveProgress(p: androidx.media3.common.Player) {
+        val id = p.currentMediaItem?.mediaId ?: return
+        if (id.startsWith("quran#")) return
+        val cut = id.lastIndexOf('#')
+        if (cut <= 0) return
+        val index = id.substring(cut + 1).toIntOrNull() ?: return
+        Library.saveProgress(id.substring(0, cut), index, p.currentPosition.coerceAtLeast(0L))
+        lastSave = SystemClock.elapsedRealtime()
+    }
+
+    private val tick = object : Runnable {
+        override fun run() {
+            val p = session?.player ?: return
+            val sleep = Library.sleepAt
+            if (sleep > 0 && System.currentTimeMillis() >= sleep) {
+                Library.sleepAt = 0L
+                p.pause() // onIsPlayingChanged(false) saves progress and stops the ticker
+                return
+            }
+            if (p.isPlaying) {
+                if (SystemClock.elapsedRealtime() - lastSave >= 15_000L) saveProgress(p)
+                handler.postDelayed(this, 5_000L)
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -144,6 +180,20 @@ class PlaybackService : MediaSessionService() {
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .build()
+        player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                handler.removeCallbacks(tick)
+                if (isPlaying) {
+                    // a timer that expired while paused is stale: don't stop the new session immediately
+                    val sleep = Library.sleepAt
+                    if (sleep > 0 && System.currentTimeMillis() >= sleep) Library.sleepAt = 0L
+                    lastSave = SystemClock.elapsedRealtime()
+                    handler.postDelayed(tick, 5_000L)
+                } else saveProgress(player)
+            }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { saveProgress(player) }
+        })
         session = MediaSession.Builder(this, player).build()
     }
 
@@ -155,6 +205,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(tick)
+        session?.let { saveProgress(it.player) }
         session?.run { player.release(); release() }
         session = null
         super.onDestroy()
@@ -162,10 +214,12 @@ class PlaybackService : MediaSessionService() {
 }
 
 object Player {
-    fun connect(ctx: Context, onReady: (MediaController) -> Unit) {
+    /** Release with [MediaController.releaseFuture] when done. */
+    fun connect(ctx: Context, onReady: (MediaController) -> Unit): ListenableFuture<MediaController> {
         val token = SessionToken(ctx, ComponentName(ctx, PlaybackService::class.java))
         val f = MediaController.Builder(ctx, token).buildAsync()
-        f.addListener({ runCatching { onReady(f.get()) } }, ContextCompat.getMainExecutor(ctx))
+        f.addListener({ if (!f.isCancelled) runCatching { onReady(f.get()) } }, ContextCompat.getMainExecutor(ctx))
+        return f
     }
 
     fun loadQuran(c: MediaController, reciter: String, m: com.mohamed.safi.faith.Moshaf, names: Map<Int, String>, startSurah: Int) {
@@ -178,6 +232,7 @@ object Player {
         val idx = m.surahs.sorted().indexOf(startSurah).coerceAtLeast(0)
         c.setMediaItems(items, idx, 0L)
         c.setPlaybackSpeed(1f)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
         c.prepare()
         c.play()
     }
@@ -192,6 +247,7 @@ object Player {
         }
         c.setMediaItems(items, startIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)), startMs)
         c.setPlaybackSpeed(Library.speed)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
         c.prepare()
         c.play()
     }

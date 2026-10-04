@@ -1,9 +1,12 @@
 package com.mohamed.safi.widget
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.widget.RemoteViews
 import com.mohamed.safi.R
 import com.mohamed.safi.SafiApp
@@ -43,6 +46,17 @@ class SafiWidget : AppWidgetProvider() {
             scope.launch { runCatching { render(ctx, m, ids) } }
         }
 
+        /** Re-render just after the shown prayer starts, so the widget moves on to the next one. */
+        private fun scheduleRefresh(ctx: Context, ids: IntArray, at: Long) {
+            val am = ctx.getSystemService(AlarmManager::class.java) ?: return
+            val i = Intent(ctx, SafiWidget::class.java)
+                .setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            val pi = PendingIntent.getBroadcast(ctx, 9_099_001, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            // Inexact, non-wakeup: refreshes when the phone is next awake; no exact-alarm permission needed.
+            am.set(AlarmManager.RTC, at, pi)
+        }
+
         private suspend fun render(ctx: Context, m: AppWidgetManager, ids: IntArray) {
             val today = LocalDate.now(zone)
             val car = runCatching {
@@ -58,6 +72,7 @@ class SafiWidget : AppWidgetProvider() {
             }.getOrDefault("")
             val prayer = runCatching {
                 val (n, t) = Prayer.nextPrayer()
+                runCatching { scheduleRefresh(ctx, ids, t.atZone(zone).toInstant().toEpochMilli() + 30_000L) }
                 "🕌 $n " + t.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)).replace("AM", "ص").replace("PM", "م")
             }.getOrDefault("")
             val money = runCatching {

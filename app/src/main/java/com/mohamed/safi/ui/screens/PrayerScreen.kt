@@ -28,7 +28,9 @@ import com.mohamed.safi.data.zone
 import com.mohamed.safi.faith.Prayer
 import com.mohamed.safi.faith.PrayerDay
 import com.mohamed.safi.ui.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -64,9 +66,12 @@ fun PrayerScreen(onBack: () -> Unit) {
     var enabled by remember { mutableStateOf(Prayer.enabledPrayers) }
     var pre by remember { mutableIntStateOf(Prayer.preMinutes) }
     var city by remember { mutableStateOf(Prayer.city) }
+    var loc by remember { mutableStateOf(Prayer.lat to Prayer.lng) }
 
     LaunchedEffect(Unit) {
-        if (Prayer.refreshLocation(ctx)) { day = Prayer.today(); city = Prayer.city; Prayer.schedule(ctx) }
+        // refreshLocation uses a blocking Geocoder
+        val moved = runCatching { withContext(Dispatchers.IO) { Prayer.refreshLocation(ctx) } }.getOrDefault(false)
+        if (moved) { day = Prayer.today(); city = Prayer.city; loc = Prayer.lat to Prayer.lng; Prayer.schedule(ctx) }
         while (true) { delay(1000); now = LocalDateTime.now(zone); if (now.toLocalDate() != day.date) day = Prayer.today() }
     }
     val next = day.next(now) ?: Prayer.nextPrayer()
@@ -118,7 +123,7 @@ fun PrayerScreen(onBack: () -> Unit) {
                 }
             }
             item { SectionTitle("القبلة") }
-            item { QiblaCompass() }
+            item { QiblaCompass(loc) }
             item {
                 Text(
                     "المواعيد محسوبة على تليفونك حسب مكانك (الفجر والعشاء 18.2°)، وممكن تفرق دقيقة عن تقويم الأوقاف.",
@@ -130,14 +135,15 @@ fun PrayerScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun QiblaCompass() {
+fun QiblaCompass(loc: Pair<Double, Double> = Prayer.lat to Prayer.lng) {
     val ctx = LocalContext.current
     var azimuth by remember { mutableFloatStateOf(0f) }
     var accuracyLow by remember { mutableStateOf(false) }
-    val qibla = remember { Prayer.qiblaBearing().toFloat() }
-    val declination = remember {
-        GeomagneticField(Prayer.lat.toFloat(), Prayer.lng.toFloat(), 0f, System.currentTimeMillis()).declination
+    val qibla = remember(loc) { Prayer.qiblaBearing(loc.first, loc.second).toFloat() }
+    val declination = remember(loc) {
+        GeomagneticField(loc.first.toFloat(), loc.second.toFloat(), 0f, System.currentTimeMillis()).declination
     }
+    val currentDeclination by rememberUpdatedState(declination)
     val sm = remember { ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     val sensor = remember { sm.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) }
 
@@ -148,7 +154,7 @@ fun QiblaCompass() {
             override fun onSensorChanged(e: SensorEvent) {
                 SensorManager.getRotationMatrixFromVector(rot, e.values)
                 SensorManager.getOrientation(rot, ori)
-                val deg = (Math.toDegrees(ori[0].toDouble()).toFloat() + declination + 360f) % 360f
+                val deg = (Math.toDegrees(ori[0].toDouble()).toFloat() + currentDeclination + 360f) % 360f
                 // smooth
                 val diff = ((deg - azimuth + 540f) % 360f) - 180f
                 azimuth = (azimuth + diff * 0.2f + 360f) % 360f
@@ -205,7 +211,7 @@ fun QiblaCompass() {
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            "القبلة ${qibla.toInt()}° من الشمال • المسافة لمكة ${Prayer.distanceToKaabaKm()} كم",
+            "القبلة ${qibla.toInt()}° من الشمال • المسافة لمكة ${Prayer.distanceToKaabaKm(loc.first, loc.second)} كم",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
         Text(

@@ -21,6 +21,8 @@ class SafiApp : Application() {
             private set
         val db: AppDatabase by lazy { AppDatabase.build(instance) }
         val prefs: Prefs by lazy { Prefs(instance) }
+        /** App-lifetime scope for work that must outlive a screen (e.g. an assistant request). */
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
     }
 }
 

@@ -156,7 +156,8 @@ fun CarpoolScreen(onBack: () -> Unit) {
                     cfg.members.forEach { m ->
                         OutlinedButton(onClick = {
                             save(
-                                if (cfg.mode == "manual") cfg.copy(manual = cfg.manual + (d to m), overrides = cfg.overrides - d, skips = cfg.skips - d)
+                                // Dates outside the manual table become overrides, so the table isn't stretched (and the gap blanked).
+                                if (cfg.mode == "manual" && cfg.inManualRange(d)) cfg.copy(manual = cfg.manual + (d to m), overrides = cfg.overrides - d, skips = cfg.skips - d)
                                 else cfg.copy(overrides = cfg.overrides + (d to m), skips = cfg.skips - d),
                             )
                             dayAction = null
@@ -167,7 +168,7 @@ fun CarpoolScreen(onBack: () -> Unit) {
                     }
                     if (d in cfg.overrides || d in cfg.skips || (cfg.mode == "manual" && d in cfg.manual)) {
                         TextButton(onClick = {
-                            save(cfg.copy(skips = cfg.skips - d, overrides = cfg.overrides - d, manual = if (cfg.mode == "manual") cfg.manual - d else cfg.manual))
+                            save(cfg.copy(skips = cfg.skips - d, overrides = cfg.overrides - d, manual = if (cfg.mode == "manual" && cfg.inManualRange(d) && d !in cfg.overrides && d !in cfg.skips) cfg.manual - d else cfg.manual))
                             dayAction = null
                         }) { Text("امسح التعديل") }
                     }
@@ -285,7 +286,7 @@ private fun CarpoolSetup(cfg: CarpoolConfig, onDismiss: () -> Unit, onSave: (Car
                     val t = time.toLdt()
                     onSave(
                         cfg.copy(
-                            members = clean, me = idx.indexOf(me).coerceAtLeast(0), days = days.ifEmpty { setOf(1, 2, 3, 4, 5) },
+                            members = clean, me = idx.indexOf(me).coerceAtLeast(0), days = days.ifEmpty { setOf(1, 2, 3, 4) },
                             anchorDate = startDate.toLocalDate(), anchorIndex = startWho.coerceIn(0, clean.size - 1),
                             hour = t.hour, minute = t.minute, alwaysNotify = always, enabled = true,
                         ),

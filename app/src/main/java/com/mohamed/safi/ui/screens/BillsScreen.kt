@@ -146,6 +146,7 @@ private fun PayBillDialog(b: Bill, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var amount by remember { mutableStateOf(fmt(b.amount).replace(",", "")) }
+    var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("دفعت ${b.name}؟") },
@@ -160,12 +161,20 @@ private fun PayBillDialog(b: Bill, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(enabled = !busy, onClick = {
                 val a = amount.toDoubleOrNull() ?: 0.0
-                if (a <= 0) toast(ctx, "اكتب المبلغ") else scope.launch {
-                    Bills.markPaid(ctx, b, a)
-                    toast(ctx, "تمام، الميعاد الجاي اتحدد")
-                    onDismiss()
+                if (busy) return@TextButton
+                if (a <= 0) toast(ctx, "اكتب المبلغ") else {
+                    busy = true
+                    scope.launch {
+                        try {
+                            Bills.markPaid(ctx, b, a)
+                            toast(ctx, "تمام، الميعاد الجاي اتحدد")
+                            onDismiss()
+                        } finally {
+                            busy = false
+                        }
+                    }
                 }
             }) { Text("تأكيد", fontWeight = FontWeight.Bold) }
         },
@@ -221,13 +230,16 @@ private fun BillEditor(existing: Bill?, preset: Preset?, onDismiss: () -> Unit) 
             TextButton(onClick = {
                 val a = amount.toDoubleOrNull() ?: 0.0
                 if (name.isBlank() || a <= 0) toast(ctx, "اكتب الاسم والمبلغ") else scope.launch {
-                    SafiApp.db.dao().upsertBill(
+                    // the chosen day becomes the bill's anchor day (so 31st stays 31st after short months)
+                    if (existing != null) Obligations.setAnchor(existing.id, nextDue)
+                    val newId = SafiApp.db.dao().upsertBill(
                         Bill(
                             id = existing?.id ?: 0, name = name.trim(), kind = kind, category = category, amount = a,
                             currency = currency, frequency = frequency, nextDue = nextDue,
                             remindDaysBefore = remind.toIntOrNull() ?: 2, note = note.trim(), lastPaid = existing?.lastPaid,
                         ),
                     )
+                    if (existing == null) Obligations.setAnchor(newId, nextDue)
                     onDismiss()
                 }
             }) { Text("حفظ", fontWeight = FontWeight.Bold) }

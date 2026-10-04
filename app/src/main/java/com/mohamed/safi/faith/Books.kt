@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.content.edit
 import com.mohamed.safi.SafiApp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -170,33 +171,44 @@ object Books {
     fun byCat(cat: String) = catalog().filter { it.cat == cat }
     fun meta(id: String) = catalog().firstOrNull { it.id == id }
 
-    /** Downloads and unpacks a book. onProgress gets 0..1. */
-    suspend fun download(id: String, onProgress: (Float) -> Unit): Unit = withContext(Dispatchers.IO) {
+    private val downloadLocks = mutableMapOf<String, Mutex>()
+
+    /** Downloads and unpacks a book. onProgress gets 0..1. One download per book id at a time. */
+    suspend fun download(id: String, onProgress: (Float) -> Unit) {
+        val lock = synchronized(downloadLocks) { downloadLocks.getOrPut(id) { Mutex() } }
+        lock.withLock { downloadLocked(id, onProgress) }
+    }
+
+    private suspend fun downloadLocked(id: String, onProgress: (Float) -> Unit): Unit = withContext(Dispatchers.IO) {
         val tmp = File(root(), "$id.part")
         root().mkdirs()
-        http.newCall(Request.Builder().url("$BASE$id.zip").build()).execute().use { r ->
-            if (!r.isSuccessful) throw IllegalStateException("التحميل فشل (${r.code})")
-            val body = r.body ?: throw IllegalStateException("التحميل فشل")
-            val total = body.contentLength().takeIf { it > 0 } ?: (meta(id)?.size ?: 0L)
-            body.byteStream().use { input ->
-                tmp.outputStream().use { out ->
-                    val buf = ByteArray(64 * 1024)
-                    var done = 0L
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        out.write(buf, 0, n)
-                        done += n
-                        if (total > 0) onProgress((done.toFloat() / total).coerceAtMost(1f))
+        try {
+            http.newCall(Request.Builder().url("$BASE$id.zip").build()).execute().use { r ->
+                if (!r.isSuccessful) throw IllegalStateException("التحميل فشل (${r.code})")
+                val body = r.body ?: throw IllegalStateException("التحميل فشل")
+                val total = body.contentLength().takeIf { it > 0 } ?: (meta(id)?.size ?: 0L)
+                body.byteStream().use { input ->
+                    tmp.outputStream().use { out ->
+                        val buf = ByteArray(64 * 1024)
+                        var done = 0L
+                        while (true) {
+                            coroutineContext.ensureActive()
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            out.write(buf, 0, n)
+                            done += n
+                            if (total > 0) onProgress((done.toFloat() / total).coerceAtMost(1f))
+                        }
                     }
                 }
             }
-        }
+        } catch (t: Throwable) { tmp.delete(); throw t }
         val target = dir(id)
         val staging = File(root(), "$id.new")
         staging.deleteRecursively(); staging.mkdirs()
         ZipInputStream(tmp.inputStream().buffered()).use { z ->
             while (true) {
+                coroutineContext.ensureActive()
                 val e = z.nextEntry ?: break
                 val name = File(e.name).name
                 if (e.isDirectory || name.isBlank()) continue
@@ -206,7 +218,11 @@ object Books {
         tmp.delete()
         if (!File(staging, "index.json").exists()) { staging.deleteRecursively(); throw IllegalStateException("الملف ناقص") }
         target.deleteRecursively()
-        staging.renameTo(target)
+        if (!staging.renameTo(target)) {
+            val copied = runCatching { staging.copyRecursively(target, overwrite = true) }.getOrDefault(false)
+            staging.deleteRecursively()
+            if (!copied) { target.deleteRecursively(); throw IllegalStateException("مقدرتش أحفظ الكتاب") }
+        }
         synchronized(cache) { cache.remove(id) }
     }
 

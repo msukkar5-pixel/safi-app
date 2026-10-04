@@ -65,6 +65,8 @@ object Claude {
         messages: JSONArray,
         model: String = SafiApp.prefs.model,
         maxTokens: Int = 2048,
+        /** True when the caller expects one JSON object back: turns on the provider's JSON mode where supported. */
+        json: Boolean = false,
     ): String = withContext(Dispatchers.IO) {
         val key = SafiApp.prefs.apiKey
         val p = Providers.current
@@ -73,8 +75,8 @@ object Claude {
         if (!p.vision && hasImage(messages)) throw ClaudeException("${p.label} مش بيقرا صور. اختار مزود تاني للفواتير والأكل بالصور.")
         val req = when (p.kind) {
             "anthropic" -> anthropicRequest(p, key, system, messages, model, maxTokens)
-            "gemini" -> geminiRequest(p, key, system, messages, model, maxTokens)
-            else -> openAiRequest(p, key, system, messages, model, maxTokens)
+            "gemini" -> geminiRequest(p, key, system, messages, model, maxTokens, json)
+            else -> openAiRequest(p, key, system, messages, model, maxTokens, json)
         }
         try {
             http.newCall(req).execute().use { r ->
@@ -138,7 +140,7 @@ object Claude {
             .post(body.toString().toRequestBody(JSON)).build()
     }
 
-    private fun openAiRequest(p: Provider, key: String, system: String, messages: JSONArray, model: String, maxTokens: Int): Request {
+    private fun openAiRequest(p: Provider, key: String, system: String, messages: JSONArray, model: String, maxTokens: Int, json: Boolean = false): Request {
         val msgs = JSONArray().put(JSONObject().put("role", "system").put("content", system))
         for (i in 0 until messages.length()) {
             val m = messages.getJSONObject(i)
@@ -165,6 +167,7 @@ object Claude {
         }
         val body = JSONObject().put("model", model).put("messages", msgs)
             .put(if (p.id == "openai") "max_completion_tokens" else p.maxParam, if (p.id == "openai") maxTokens + 4000 else maxTokens)
+        if (json) body.put("response_format", JSONObject().put("type", "json_object"))
         val b = Request.Builder().url(baseUrl(p) + "/chat/completions")
             .addHeader("Authorization", "Bearer $key")
             .post(body.toString().toRequestBody(JSON))
@@ -172,7 +175,7 @@ object Claude {
         return b.build()
     }
 
-    private fun geminiRequest(p: Provider, key: String, system: String, messages: JSONArray, model: String, maxTokens: Int): Request {
+    private fun geminiRequest(p: Provider, key: String, system: String, messages: JSONArray, model: String, maxTokens: Int, json: Boolean = false): Request {
         val contents = JSONArray()
         for (i in 0 until messages.length()) {
             val m = messages.getJSONObject(i)
@@ -192,10 +195,12 @@ object Claude {
             } else parts.put(JSONObject().put("text", c.toString()))
             contents.put(JSONObject().put("role", if (m.optString("role") == "assistant") "model" else "user").put("parts", parts))
         }
+        val gen = JSONObject().put("maxOutputTokens", maxTokens + 8000)
+        if (json) gen.put("responseMimeType", "application/json")
         val body = JSONObject()
             .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", system))))
             .put("contents", contents)
-            .put("generationConfig", JSONObject().put("maxOutputTokens", maxTokens + 8000))
+            .put("generationConfig", gen)
         return Request.Builder().url(baseUrl(p) + "/models/" + model + ":generateContent")
             .addHeader("x-goog-api-key", key)
             .post(body.toString().toRequestBody(JSON)).build()

@@ -213,6 +213,7 @@ fun SavingsScreen(onBack: () -> Unit) {
         val scope = rememberCoroutineScope()
         var amt by remember(g.id) { mutableStateOf("") }
         var withdraw by remember(g.id) { mutableStateOf(false) }
+        var busy by remember(g.id) { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { deposit = null },
             title = { Text(g.name) },
@@ -226,11 +227,17 @@ fun SavingsScreen(onBack: () -> Unit) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(enabled = !busy, onClick = {
                     val a = amt.toDoubleOrNull() ?: 0.0
+                    if (busy) return@TextButton
+                    busy = true
                     scope.launch {
-                        if (a > 0) ExtraDb.dao.upsertGoal(g.copy(saved = (g.saved + if (withdraw) -a else a).coerceAtLeast(0.0)))
-                        deposit = null
+                        try {
+                            if (a > 0) ExtraDb.dao.upsertGoal(g.copy(saved = (g.saved + if (withdraw) -a else a).coerceAtLeast(0.0)))
+                            deposit = null
+                        } finally {
+                            busy = false
+                        }
                     }
                 }) { Text("حفظ") }
             },

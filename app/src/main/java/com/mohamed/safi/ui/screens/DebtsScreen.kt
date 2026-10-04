@@ -117,6 +117,7 @@ private fun PayDebtDialog(d: Debt, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var amount by remember { mutableStateOf(fmt(d.monthlyInstallment?.coerceAtMost(d.remaining) ?: d.remaining).replace(",", "")) }
+    var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (d.direction == "i_owe") "سداد لـ ${d.person}" else "${d.person} رجّع") },
@@ -127,12 +128,22 @@ private fun PayDebtDialog(d: Debt, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(enabled = !busy, onClick = {
                 val a = amount.toDoubleOrNull() ?: 0.0
-                if (a <= 0) toast(ctx, "اكتب المبلغ") else scope.launch {
-                    val u = Debts.pay(ctx, d, a)
-                    toast(ctx, if (u.closed) "خلصت السلفة 🎉" else "باقي ${money(u.remaining, d.currency)}")
-                    onDismiss()
+                if (busy) return@TextButton
+                if (a <= 0) toast(ctx, "اكتب المبلغ") else {
+                    busy = true
+                    scope.launch {
+                        try {
+                            val u = Debts.pay(ctx, d, a)
+                            // this month's instalment is done; don't list it as due any more
+                            if (d.direction == "i_owe" && d.monthlyInstallment != null) Obligations.markInstalmentPaid(d.id)
+                            toast(ctx, if (u.closed) "خلصت السلفة 🎉" else "باقي ${money(u.remaining, d.currency)}")
+                            onDismiss()
+                        } finally {
+                            busy = false
+                        }
+                    }
                 }
             }) { Text("تأكيد", fontWeight = FontWeight.Bold) }
         },

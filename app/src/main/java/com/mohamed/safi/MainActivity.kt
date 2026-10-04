@@ -190,6 +190,8 @@ fun AppRoot() {
                 else "اتسجل ${res.added.size} عملية" + if (res.skipped > 0) " (${res.skipped} مش عمليات)" else "",
             )
             runCatching { go(nav, "expenses") }
+        } else if (res.duplicates > 0) {
+            toast(ctx, "العمليات دي متسجلة قبل كده")
         } else if (com.mohamed.safi.ai.Claude.hasKey) {
             UiBus.pendingVoice.value = text
             runCatching { go(nav, "assistant") }

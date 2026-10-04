@@ -28,8 +28,13 @@ fun TransfersScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     var ym by remember { mutableStateOf(YearMonth.now(zone)) }
     val (from, to) = remember(ym) { monthRange(ym) }
-    val list by dao.transfersBetween(from, to).collectAsState(emptyList())
-    val fromBank by dao.expensesInCategory(Cats.TRANSFER).collectAsState(emptyList())
+    val list by remember(from, to) { dao.transfersBetween(from, to) }.collectAsState(emptyList())
+    val transferExpenses by remember { dao.expensesInCategory(Cats.TRANSFER) }.collectAsState(emptyList())
+    // Only recent bank-SMS transfers need classifying; manual/old ones can't be cleared from here.
+    val fromBank = remember(transferExpenses) {
+        val since = System.currentTimeMillis() - 60L * 86_400_000L
+        transferExpenses.filter { it.source == "sms" && it.time >= since }
+    }
     var editing by remember { mutableStateOf<Transfer?>(null) }
     var adding by remember { mutableStateOf(false) }
     var classify by remember { mutableStateOf<Expense?>(null) }
@@ -186,7 +191,11 @@ fun TransferEditor(existing: Transfer?, fromExpense: Expense?, onDismiss: () -> 
                         note = note.trim(), time = time,
                     )
                     dao.upsertTransfer(t)
-                    if (fromExpense != null) dao.deleteExpense(fromExpense)
+                    if (fromExpense != null) {
+                        // remember the SMS so pasting/receiving it again doesn't re-import it as an expense
+                        fromExpense.smsHash?.let { com.mohamed.safi.sms.SmsProcessor.markConsumed(it) }
+                        dao.deleteExpense(fromExpense)
+                    }
                     onDismiss()
                 }
             }) { Text("حفظ", fontWeight = FontWeight.Bold) }

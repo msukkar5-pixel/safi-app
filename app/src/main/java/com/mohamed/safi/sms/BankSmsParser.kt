@@ -51,7 +51,7 @@ object BankSmsParser {
     )
 
     private val curPattern = "(AED|EGP|USD|SAR|EUR|GBP|QAR|KWD|OMR|BHD|درهم|د\\.إ)"
-    private val numPattern = "([0-9]{1,3}(?:,[0-9]{3})*(?:\\.[0-9]{1,2})?|[0-9]+(?:\\.[0-9]{1,2})?)"
+    private val numPattern = "([0-9]{1,3}(?:,[0-9]{3})+(?:\\.[0-9]{1,2})?|[0-9]+(?:\\.[0-9]{1,2})?)"
     private val amountBefore = Regex("$curPattern\\s*$numPattern", RegexOption.IGNORE_CASE)
     private val amountAfter = Regex("$numPattern\\s*$curPattern", RegexOption.IGNORE_CASE)
     private val balanceCut = Regex(

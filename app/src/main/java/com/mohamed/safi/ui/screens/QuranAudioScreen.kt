@@ -55,9 +55,8 @@ fun QuranAudioScreen(onBack: () -> Unit) {
         }.onFailure { err = it.message }
     }
     DisposableEffect(Unit) {
-        var c: MediaController? = null
-        Player.connect(ctx) { c = it; ctrl = it }
-        onDispose { c?.release() }
+        val f = Player.connect(ctx) { ctrl = it }
+        onDispose { ctrl = null; MediaController.releaseFuture(f) }
     }
 
     val m = openM
@@ -147,12 +146,14 @@ private fun SurahPlayer(r: Reciter, m: Moshaf, names: Map<Int, String>, ctrl: Me
     LaunchedEffect(Unit) { QuranAudio.lastReciter = r.id; QuranAudio.lastMoshaf = m.id }
     LaunchedEffect(ctrl) {
         val c = ctrl ?: return@LaunchedEffect
+        repeatOne = c.repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE
         if (startSurah != null && !autoStarted && startSurah in m.surahs) { autoStarted = true; Player.loadQuran(c, r.name, m, names, startSurah) }
         while (true) {
             val id = c.currentMediaItem?.mediaId ?: ""
             if (id.startsWith("quran#${m.id}#")) {
                 cur = id.substringAfterLast('#').toIntOrNull() ?: -1
                 playing = c.isPlaying; pos = c.currentPosition; dur = c.duration.coerceAtLeast(0)
+                repeatOne = c.repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE
             } else { cur = -1; playing = false }
             delay(700)
         }

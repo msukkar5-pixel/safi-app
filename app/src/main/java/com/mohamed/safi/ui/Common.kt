@@ -91,6 +91,7 @@ fun ScreenScaffold(
     fab: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    if (onBack != null) androidx.activity.compose.BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
             TopAppBar(

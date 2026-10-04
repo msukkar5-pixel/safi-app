@@ -139,7 +139,9 @@ private fun MedDialog(existing: Medication?, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = {
-                if (name.isBlank()) toast(ctx, "اكتب اسم الدوا") else scope.launch {
+                if (name.isBlank()) toast(ctx, "اكتب اسم الدوا")
+                else if (times.isNotBlank() && Meds.times(times).isEmpty()) toast(ctx, "مفهمتش المواعيد — اكتبها زي 8:00 أو 8 م")
+                else scope.launch {
                     Meds.save(
                         ctx,
                         Medication(

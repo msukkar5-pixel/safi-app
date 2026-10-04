@@ -93,7 +93,7 @@ fun ScheduleScreen() {
                                         dao.upsertReminder(r.copy(done = true))
                                         ReminderScheduler.cancel(ctx, r.id)
                                     } else {
-                                        ReminderScheduler.nextTime(r.time, r.repeat)?.let {
+                                        ReminderScheduler.nextTime(ctx, r)?.let {
                                             val u = r.copy(time = it)
                                             dao.upsertReminder(u)
                                             ReminderScheduler.schedule(ctx, u)
@@ -209,6 +209,7 @@ private fun ReminderEditor(existing: Reminder?, kind: String, onDismiss: () -> U
         ConfirmDialog("مسح؟", existing.title, "امسح", { confirmDelete = false }) {
             scope.launch {
                 ReminderScheduler.cancel(ctx, existing.id)
+                ReminderScheduler.forget(ctx, existing.id)
                 SafiApp.db.dao().deleteReminder(existing)
                 onDismiss()
             }

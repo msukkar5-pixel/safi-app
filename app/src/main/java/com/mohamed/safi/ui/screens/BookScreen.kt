@@ -60,13 +60,16 @@ fun BookScreen(bookId: String, onBack: () -> Unit, initialQuery: String = "") {
         BookToc(ov, all.size > 1, onOpen = { reading = it }) { openVol = 0 }
         return
     }
-    // single-volume books open straight on their table of contents
-    if (all != null && all.size == 1 && hits == null && q.isBlank()) {
+    // single-volume books open straight on their table of contents; search hits show in the same
+    // layout (same scaffold + text field) so the keyboard stays open while typing
+    if (all != null && all.size == 1) {
         BookToc(all[0], false, onOpen = { reading = it }, title = meta?.title ?: "", header = {
             BookHeader(meta, book, all) { reading = it }
             OutlinedTextField(q, { q = it }, placeholder = { Text("دوّر في الكتاب: اسم، حدث، كلمة…") }, singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, null) }, modifier = Modifier.fillMaxWidth())
-        }, onBack = onBack)
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                trailingIcon = { if (q.isNotEmpty()) IconButton(onClick = { q = "" }) { Icon(Icons.Default.Close, "مسح") } },
+                modifier = Modifier.fillMaxWidth())
+        }, hits = if (q.trim().length >= 2) hits else null, searching = searching && q.trim().length >= 2, onBack = onBack)
         return
     }
 
@@ -145,11 +148,28 @@ private fun BookHeader(meta: BookMeta?, book: BookData, all: List<BVolume>, onCo
 
 @Composable
 private fun BookToc(
-    v: BVolume, multi: Boolean, onOpen: (BSection) -> Unit, title: String = "", header: (@Composable () -> Unit)? = null, onBack: () -> Unit,
+    v: BVolume, multi: Boolean, onOpen: (BSection) -> Unit, title: String = "", header: (@Composable () -> Unit)? = null,
+    hits: List<BookData.Hit>? = null, searching: Boolean = false, onBack: () -> Unit,
 ) {
     ScreenScaffold(if (multi) "المجلد ${v.vol}" else title.ifBlank { "الفهرس" }, onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp)) {
-            if (header != null) item { header(); Spacer(Modifier.height(12.dp)); Text("الفهرس", fontWeight = FontWeight.Bold) }
+            if (header != null) item(key = "header") { header(); Spacer(Modifier.height(12.dp)) }
+            if (searching) item(key = "searching") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            if (hits != null) {
+                item(key = "hits") {
+                    Text(if (hits.isEmpty() && !searching) "مفيش نتايج" else "${hits.size}${if (hits.size >= 80) "+" else ""} نتيجة", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                }
+                items(hits) { hit ->
+                    AppCard(onClick = { onOpen(hit.section) }) {
+                        Text(hit.section.title, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                        Text(hit.snippet, style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+                return@LazyColumn
+            }
+            if (header != null) item(key = "toc") { Text("الفهرس", fontWeight = FontWeight.Bold) }
             items(v.sections, key = { it.idx }) { s ->
                 Row(
                     Modifier.fillMaxWidth().clickable { onOpen(s) }.padding(vertical = 10.dp).padding(start = ((s.level - 1).coerceIn(0, 4) * 14).dp),

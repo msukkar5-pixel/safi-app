@@ -51,7 +51,7 @@ fun AssistantScreen() {
     val scope = rememberCoroutineScope()
     val messages by dao.chat().collectAsState(emptyList())
     var input by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
+    val busy by Assistant.busy.collectAsState()
     var confirmClear by remember { mutableStateOf(false) }
     var handoff by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -62,17 +62,17 @@ fun AssistantScreen() {
 
     fun send(text: String) {
         val t = text.trim()
-        if (t.isEmpty() || busy) return
+        if (t.isEmpty() || Assistant.busy.value) return
         if (!Claude.hasKey) {
             toast(ctx, "اربط ذكاء اصطناعي من الإعدادات الأول")
             return
         }
         input = ""
-        busy = true
-        scope.launch {
-            val r = Assistant.ask(ctx, t)
-            if (tts) com.mohamed.safi.ai.Speaker.say(r.reply)
-            busy = false
+        val appCtx = ctx.applicationContext
+        // App-level scope: leaving the chat must not cancel the request or lose its actions.
+        SafiApp.scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) { // sets busy before send() can run again
+            val r = Assistant.ask(appCtx, t)
+            if (com.mohamed.safi.apps.Apps.ttsOn(appCtx)) com.mohamed.safi.ai.Speaker.say(r.reply)
         }
     }
 

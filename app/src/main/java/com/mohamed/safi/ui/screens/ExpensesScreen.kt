@@ -29,7 +29,7 @@ fun ExpensesScreen() {
     val scope = rememberCoroutineScope()
     var ym by remember { mutableStateOf(YearMonth.now(zone)) }
     val (from, to) = remember(ym) { monthRange(ym) }
-    val all by dao.expensesBetween(from, to).collectAsState(emptyList())
+    val all by remember(from, to) { dao.expensesBetween(from, to) }.collectAsState(emptyList())
     var filter by remember { mutableStateOf("الكل") }
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
@@ -59,7 +59,14 @@ fun ExpensesScreen() {
                     scope.launch {
                         val r = withContext(Dispatchers.IO) { SmsProcessor.processText(ctx, clip) }
                         importing = false
-                        toast(ctx, if (r.added.isNotEmpty()) "اتسجل ${r.added.size} عملية" else "مفيش عمليات جديدة في اللي نسخته")
+                        toast(
+                            ctx,
+                            when {
+                                r.added.isNotEmpty() -> "اتسجل ${r.added.size} عملية" + if (r.duplicates > 0) " (${r.duplicates} متسجلة قبل كده)" else ""
+                                r.duplicates > 0 -> "العمليات دي متسجلة قبل كده"
+                                else -> "مفيش عمليات جديدة في اللي نسخته"
+                            },
+                        )
                     }
                 }
             }) {

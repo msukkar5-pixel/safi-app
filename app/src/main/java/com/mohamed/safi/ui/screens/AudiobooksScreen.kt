@@ -1,5 +1,6 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -32,7 +33,11 @@ import kotlinx.coroutines.delay
 fun AudiobooksScreen(onBack: () -> Unit) {
     var book by remember { mutableStateOf<AudioBook?>(null) }
     val b = book
-    if (b != null) { BookPlayer(b) { book = null }; return }
+    if (b != null) {
+        BackHandler { book = null }
+        BookPlayer(b) { book = null }
+        return
+    }
 
     var tab by remember { mutableIntStateOf(if (Library.shelf.isEmpty()) 1 else 0) }
     var q by remember { mutableStateOf("") }
@@ -139,7 +144,7 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
     var dur by remember { mutableLongStateOf(0L) }
     var playing by remember { mutableStateOf(false) }
     var speed by remember { mutableFloatStateOf(Library.speed) }
-    var sleepAt by remember { mutableLongStateOf(0L) }
+    var sleepAt by remember { mutableLongStateOf(Library.sleepAt.let { if (it > System.currentTimeMillis()) it else 0L }) }
     var mine by remember { mutableStateOf(false) } // controller currently holds this book
 
     LaunchedEffect(b.id) {
@@ -147,9 +152,15 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
             .onFailure { err = it.message }
     }
     DisposableEffect(Unit) {
-        var c: MediaController? = null
-        Player.connect(ctx) { c = it; ctrl = it }
-        onDispose { c?.release() }
+        val f = Player.connect(ctx) { ctrl = it }
+        onDispose {
+            ctrl?.let { c ->
+                val id = c.currentMediaItem?.mediaId ?: ""
+                if (id.startsWith(b.id + "#")) Library.saveProgress(b.id, id.substringAfterLast('#').toIntOrNull() ?: 0, c.currentPosition.coerceAtLeast(0L))
+            }
+            ctrl = null
+            MediaController.releaseFuture(f)
+        }
     }
     LaunchedEffect(ctrl) {
         val c = ctrl ?: return@LaunchedEffect
@@ -160,9 +171,9 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
                 cur = id.substringAfter('#').toIntOrNull() ?: 0
                 pos = c.currentPosition; dur = c.duration.coerceAtLeast(0)
                 playing = c.isPlaying
-                if (playing) Library.saveProgress(b.id, cur, pos)
-                if (sleepAt > 0 && System.currentTimeMillis() >= sleepAt) { c.pause(); sleepAt = 0 }
             } else { playing = false }
+            // progress saving and the sleep timer run in PlaybackService; just mirror the timer here
+            sleepAt = Library.sleepAt.let { if (it > System.currentTimeMillis()) it else 0L }
             delay(1000)
         }
     }
@@ -230,6 +241,7 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
                             val left = if (sleepAt > now) (sleepAt - now) / 60000 + 1 else 0
                             val next = when { left <= 0 -> 15L; left <= 15 -> 30L; left <= 30 -> 60L; else -> 0L }
                             sleepAt = if (next == 0L) 0 else now + next * 60000
+                            Library.sleepAt = sleepAt
                             toast(ctx, if (next == 0L) "مؤقت النوم اتلغى" else "هيقف بعد $next دقيقة")
                         }) {
                             Icon(Icons.Default.Bedtime, null); Spacer(Modifier.width(4.dp))

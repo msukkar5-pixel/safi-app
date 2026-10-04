@@ -1,5 +1,6 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -52,6 +53,7 @@ fun QuranScreen(onBack: () -> Unit) {
     val surahs = list
     val o = open
     if (surahs != null && o != null) {
+        BackHandler { open = null }
         QuranReader(surahs, o.first, o.second, onBack = { open = null })
         return
     }
@@ -105,7 +107,8 @@ fun QuranScreen(onBack: () -> Unit) {
                         )
                     }
                 }
-                val filtered = if (searching && q.isNotBlank()) surahs.filter { Quran.plain(it.name).contains(Quran.plain(q)) || it.number.toString() == q } else surahs
+                val pq = Quran.plain(q)
+                val filtered = if (searching && q.isNotBlank()) surahs.filter { Quran.plain(it.name).contains(pq) || it.number.toString() == q } else surahs
                 items(filtered, key = { it.number }) { s ->
                     Card(
                         onClick = { open = s.number to 1 }, modifier = Modifier.fillMaxWidth(),

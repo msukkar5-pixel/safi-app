@@ -1,5 +1,6 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.os.Build
 import android.os.VibrationEffect
@@ -54,8 +55,16 @@ fun AzkarScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) { UiBus.pendingAzkar.value = null }
     var tasbeeh by remember { mutableStateOf(false) }
     val o = open
-    if (o != null) { ZikrReader(o) { open = null }; return }
-    if (tasbeeh) { TasbeehView { tasbeeh = false }; return }
+    if (o != null) {
+        BackHandler { open = null }
+        ZikrReader(o) { open = null }
+        return
+    }
+    if (tasbeeh) {
+        BackHandler { tasbeeh = false }
+        TasbeehView { tasbeeh = false }
+        return
+    }
 
     val scope = rememberCoroutineScope()
     var morning by remember { mutableStateOf<LocalTime?>(null) }
