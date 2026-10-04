@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 
-private val Gold = Color(0xFFD4AF37)
-private val GoldSoft = Color(0xFFE9D8A6)
+private val SplashGold = Color(0xFFD4AF37)
+private val SplashGoldSoft = Color(0xFFE9D8A6)
 
 /** Opening dedication: صدقة جارية على روح المرحوم عبدالمحسن رمضان سكر. */
 @Composable
@@ -78,12 +78,12 @@ fun DedicationSplash(onDone: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text(
                 "﴿رَّبِّ ٱرۡحَمۡهُمَا كَمَا رَبَّيَانِي صَغِيرٗا﴾",
-                fontFamily = quran, fontSize = 26.sp, color = Gold, textAlign = TextAlign.Center, lineHeight = 44.sp,
+                fontFamily = quran, fontSize = 26.sp, color = SplashGold, textAlign = TextAlign.Center, lineHeight = 44.sp,
             )
             Spacer(Modifier.weight(1f))
             Ornament()
             Spacer(Modifier.height(14.dp))
-            Text("إلى روح أبي الطاهرة", color = GoldSoft, fontSize = 16.sp, textAlign = TextAlign.Center)
+            Text("إلى روح أبي الطاهرة", color = SplashGoldSoft, fontSize = 16.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(6.dp))
             Text(
                 "المرحوم عبدالمحسن رمضان سكر",
@@ -97,7 +97,7 @@ fun DedicationSplash(onDone: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text(
                 "اللهم ارحمه رحمةً واسعة، واغفر له، ونوّر قبره، واجعل كل خيرٍ يُعمل به هنا في ميزان حسناته، واجعله من أهل الفردوس الأعلى",
-                color = Gold, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, lineHeight = 30.sp,
+                color = SplashGold, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, lineHeight = 30.sp,
             )
             Spacer(Modifier.height(14.dp))
             Ornament()
@@ -114,9 +114,9 @@ fun DedicationSplash(onDone: () -> Unit) {
 @Composable
 private fun Ornament() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(60.dp).height(1.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, Gold))))
-        Text("  ۞  ", color = Gold, fontSize = 18.sp)
-        Box(Modifier.width(60.dp).height(1.dp).background(Brush.horizontalGradient(listOf(Gold, Color.Transparent))))
+        Box(Modifier.width(60.dp).height(1.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, SplashGold))))
+        Text("  ۞  ", color = SplashGold, fontSize = 18.sp)
+        Box(Modifier.width(60.dp).height(1.dp).background(Brush.horizontalGradient(listOf(SplashGold, Color.Transparent))))
     }
 }
 
