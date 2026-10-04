@@ -203,8 +203,10 @@ object Claude {
 
     /** Speech-to-text with the current provider (OpenAI, Groq: transcription API; Gemini: audio understanding). */
     suspend fun transcribe(audio: java.io.File, lang: String): String = withContext(Dispatchers.IO) {
-        val p = Providers.current
-        val key = SafiApp.prefs.apiKey
+        val p = Providers.get(com.mohamed.safi.ui.VoicePrefs.sttProvider)
+        val key = SafiApp.prefs.keyOf(p.id)
+        if (key.isBlank()) throw ClaudeException("حط مفتاح ${p.label} في الإعدادات ← الصوت")
+        fun baseUrl(p: Provider) = p.baseUrl.trimEnd('/')
         val iso = lang.substringBefore('-')
         try {
             when (p.id) {
@@ -221,7 +223,7 @@ object Claude {
                             ),
                         ),
                     ).put("generationConfig", JSONObject().put("maxOutputTokens", 8000))
-                    val req = Request.Builder().url(baseUrl(p) + "/models/" + SafiApp.prefs.fastModel + ":generateContent")
+                    val req = Request.Builder().url(baseUrl(p) + "/models/" + (if (SafiApp.prefs.aiProvider == "gemini") SafiApp.prefs.fastModel else p.fastModel) + ":generateContent")
                         .addHeader("x-goog-api-key", key).post(body.toString().toRequestBody(JSON)).build()
                     http.newCall(req).execute().use { r ->
                         val s = r.body?.string() ?: ""

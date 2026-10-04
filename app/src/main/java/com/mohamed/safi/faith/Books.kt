@@ -54,7 +54,7 @@ class BookData(val id: String, private val open: (String) -> InputStream) {
     suspend fun text(vol: Int): List<String> = lock.withLock {
         texts[vol]?.let { return@withLock it }
         withContext(Dispatchers.IO) {
-            val a = JSONArray(open("v%02d.json".format(vol)).bufferedReader().use { it.readText() })
+            val a = JSONArray(open(String.format(java.util.Locale.US, "v%02d.json", vol)).bufferedReader().use { it.readText() })
             val list = (0 until a.length()).map { a.getString(it) }
             if (texts.size >= 3) texts.remove(texts.keys.first())
             texts[vol] = list

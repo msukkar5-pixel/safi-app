@@ -154,6 +154,7 @@ private fun QuranReader(surahs: List<Surah>, surahNo: Int, startAyah: Int, onBac
     ScreenScaffold(
         s.name, onBack = onBack,
         actions = {
+            IconButton(onClick = { UiBus.pendingQuranAudio.value = current; UiBus.pendingRoute.value = "quranaudio" }) { Icon(Icons.Default.Headphones, "استمع") }
             IconButton(onClick = { size = (size - 2).coerceAtLeast(16); Quran.fontSize = size }) { Icon(Icons.Default.TextDecrease, "أصغر") }
             IconButton(onClick = { size = (size + 2).coerceAtMost(48); Quran.fontSize = size }) { Icon(Icons.Default.TextIncrease, "أكبر") }
         },

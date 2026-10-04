@@ -48,8 +48,17 @@ object VoicePrefs {
         "hi-IN" to "हिन्दी", "ur-PK" to "اردو", "tl-PH" to "Filipino", "tr-TR" to "Türkçe",
     )
 
-    /** Providers that can turn audio into text. */
-    fun aiCanTranscribe() = Providers.current.id in setOf("openai", "gemini", "groq")
+    val sttProviders = linkedMapOf("gemini" to "Gemini (فيه باقة مجانية)", "groq" to "Groq (فيه باقة مجانية)", "openai" to "OpenAI")
+
+    /** Which service turns recorded speech into text (independent of the chat AI). */
+    var sttProvider: String
+        get() = sp().getString("stt", null)
+            ?: Providers.current.id.takeIf { it in sttProviders && SafiApp.prefs.keyOf(it).isNotBlank() }
+            ?: sttProviders.keys.firstOrNull { SafiApp.prefs.keyOf(it).isNotBlank() }
+            ?: "gemini"
+        set(v) = sp().edit { putString("stt", v) }
+
+    fun aiCanTranscribe() = SafiApp.prefs.keyOf(sttProvider).isNotBlank()
 }
 
 /** Phone speech engine that keeps listening through pauses until the user taps "done". */
@@ -142,7 +151,7 @@ fun rememberVoiceInput(onText: (String) -> Unit): () -> Unit {
 private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val useAi = VoicePrefs.engine == "ai" && VoicePrefs.aiCanTranscribe() && Claude.hasKey
+    val useAi = VoicePrefs.engine == "ai" && VoicePrefs.aiCanTranscribe()
     var committed by remember { mutableStateOf("") }
     var partial by remember { mutableStateOf("") }
     var status by remember { mutableStateOf(if (useAi) "بسجّل… اتكلم براحتك ودوس خلصت" else "اتكلم… مش هقفل لحد ما تدوس خلصت") }
@@ -159,7 +168,7 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
 
     LaunchedEffect(Unit) {
         if (useAi) {
-            val gem = Providers.current.id == "gemini"
+            val gem = VoicePrefs.sttProvider == "gemini"
             val f = File(ctx.cacheDir, "voice_${System.currentTimeMillis()}.${if (gem) "aac" else "m4a"}")
             val r = (if (Build.VERSION.SDK_INT >= 31) MediaRecorder(ctx) else @Suppress("DEPRECATION") MediaRecorder()).apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)

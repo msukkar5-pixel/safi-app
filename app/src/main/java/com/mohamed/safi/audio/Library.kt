@@ -38,38 +38,37 @@ object Library {
     private val http = OkHttpClient.Builder().readTimeout(40, TimeUnit.SECONDS).build()
 
     val languages = linkedMapOf(
-        "" to "كل اللغات", "ara" to "عربي", "eng" to "English", "fra" to "Français",
-        "deu" to "Deutsch", "spa" to "Español", "ita" to "Italiano", "urd" to "اردو",
+        "ara" to "عربي", "eng" to "English", "urd" to "اردو", "fra" to "Français", "ind" to "Indonesia",
+        "tur" to "Türkçe", "msa" to "Melayu", "ben" to "বাংলা", "deu" to "Deutsch", "spa" to "Español", "" to "كل اللغات",
     )
     private val langQ = mapOf(
         "ara" to "(Arabic OR ara)", "eng" to "(English OR eng)", "fra" to "(French OR fre OR fra)",
-        "deu" to "(German OR ger OR deu)", "spa" to "(Spanish OR spa)", "ita" to "(Italian OR ita)", "urd" to "(Urdu OR urd)",
+        "deu" to "(German OR ger OR deu)", "spa" to "(Spanish OR spa)", "urd" to "(Urdu OR urd)",
+        "ind" to "(Indonesian OR ind)", "tur" to "(Turkish OR tur)", "msa" to "(Malay OR msa OR may)", "ben" to "(Bengali OR ben)",
     )
 
-    val arabicSuggestions = listOf("كتاب مسموع", "رواية", "قصص", "السيرة النبوية", "رياض الصالحين", "تفسير", "شعر", "تاريخ", "كليلة ودمنة", "الأدب")
+    val suggestions = mapOf(
+        "ara" to listOf("السيرة النبوية", "قصص الأنبياء", "الصحابة", "تفسير", "رياض الصالحين", "الأربعين النووية", "العقيدة", "الفقه", "الرقائق", "التاريخ الإسلامي"),
+        "" to listOf("Seerah", "Prophets", "Sahaba", "Tafsir", "Hadith", "Riyad as-Salihin", "Aqeedah", "Fiqh", "Islamic history"),
+    )
+
+    // Islamic subjects only (in several languages)
+    private const val ISLAMIC = "(islam OR islamic OR muslim OR muslims OR إسلام OR الإسلام OR إسلامي OR إسلامية OR الاسلام OR اسلامي OR سيرة OR السيرة OR النبوية OR الرسول OR الأنبياء OR الانبياء OR الصحابة OR حديث OR الحديث OR فقه OR الفقه OR تفسير OR التفسير OR عقيدة OR العقيدة OR seerah OR sirah OR hadith OR tafsir OR fiqh OR aqeedah OR sunnah OR prophet OR muhammad OR islami OR islamique OR islamisch)"
 
     private fun esc(s: String) = s.replace(Regex("[\\\\\"():^~*?+\\-!{}\\[\\]/]"), " ").trim()
 
-    /**
-     * source = "librivox": public-domain LibriVox recordings.
-     * source = "archive": any Internet Archive audio with a public-domain / CC licence (good for Arabic).
-     */
+    /** Islamic audiobooks and lectures-as-books from the Internet Archive (incl. LibriVox). */
     suspend fun search(source: String, text: String, lang: String, page: Int): Pair<List<AudioBook>, Int> = withContext(Dispatchers.IO) {
         val parts = mutableListOf<String>()
-        if (source == "librivox") parts += "collection:librivoxaudio"
-        else {
-            parts += "mediatype:audio"
-            parts += "(licenseurl:*publicdomain* OR licenseurl:*creativecommons* OR collection:librivoxaudio)"
-            parts += "NOT collection:(etree OR georgeblood OR 78rpm OR audio_music OR opensource_audio_music)"
-        }
+        parts += "mediatype:audio"
+        parts += "NOT collection:(etree OR georgeblood OR 78rpm OR audio_music OR opensource_audio_music OR podcasts)"
+        parts += "(subject:$ISLAMIC OR title:$ISLAMIC)"
+        // books, not recitations / nasheed / music
+        parts += "NOT subject:(تلاوة OR تلاوات OR مرتل OR مجود OR recitation OR qiraat OR nasheed OR نشيد OR اناشيد OR أناشيد OR music OR موسيقى OR song OR songs)"
         langQ[lang]?.let { parts += "language:$it" }
         val t = esc(text)
         if (t.isNotBlank()) parts += "(title:($t) OR creator:($t) OR subject:($t))"
-        if (source != "librivox") {
-            // real audiobooks only: no Quran recitations, songs or random clips
-            parts += "(subject:(audiobook OR audiobooks OR \"كتاب مسموع\" OR \"كتب مسموعة\" OR \"كتاب صوتي\" OR \"كتب صوتية\" OR librivox) OR title:(\"كتاب مسموع\" OR \"كتاب صوتي\" OR audiobook) OR collection:librivoxaudio)"
-            parts += "NOT subject:(quran OR قرآن OR تلاوة OR نشيد OR اناشيد OR music OR موسيقى)"
-        }
+        parts += "(subject:(audiobook OR audiobooks OR book OR books OR كتاب OR كتب OR \"كتاب مسموع\" OR \"كتب مسموعة\" OR \"كتاب صوتي\" OR librivox OR lecture OR lectures OR دروس OR شرح OR سلسلة) OR title:(كتاب OR كتب OR شرح OR سلسلة OR book OR audiobook) OR collection:librivoxaudio)"
         val url = "https://archive.org/advancedsearch.php".toHttpUrl().newBuilder()
             .addQueryParameter("q", parts.joinToString(" AND "))
             .addQueryParameter("fl[]", "identifier").addQueryParameter("fl[]", "title")
@@ -101,9 +100,9 @@ object Library {
             val j = JSONObject(r.body?.string() ?: "{}")
             val server = "https://archive.org/download/$id/"
             val files = j.optJSONArray("files") ?: JSONArray()
-            val all = (0 until files.length()).map { files.getJSONObject(it) }.filter { it.optString("name").endsWith(".mp3", true) }
+            val all = (0 until files.length()).map { files.getJSONObject(it) }.filter { f -> listOf(".mp3", ".ogg", ".m4a", ".opus", ".flac", ".wav", ".aac").any { f.optString("name").endsWith(it, true) } }
             // prefer one quality per chapter: 64kb > VBR > 128kb > anything
-            val preferred = listOf("64Kbps MP3", "VBR MP3", "128Kbps MP3")
+            val preferred = listOf("64Kbps MP3", "VBR MP3", "128Kbps MP3", "MP3", "Ogg Vorbis")
             val chosen = preferred.firstNotNullOfOrNull { fmt -> all.filter { it.optString("format") == fmt }.takeIf { it.isNotEmpty() } } ?: all
             chosen.sortedWith(compareBy({ it.optString("track").substringBefore('/').toIntOrNull() ?: Int.MAX_VALUE }, { it.optString("name") }))
                 .map {
@@ -167,6 +166,20 @@ object Player {
         val token = SessionToken(ctx, ComponentName(ctx, PlaybackService::class.java))
         val f = MediaController.Builder(ctx, token).buildAsync()
         f.addListener({ runCatching { onReady(f.get()) } }, ContextCompat.getMainExecutor(ctx))
+    }
+
+    fun loadQuran(c: MediaController, reciter: String, m: com.mohamed.safi.faith.Moshaf, names: Map<Int, String>, startSurah: Int) {
+        val items = m.surahs.sorted().map { n ->
+            MediaItem.Builder().setUri(m.url(n)).setMediaId("quran#${m.id}#$n")
+                .setMediaMetadata(
+                    MediaMetadata.Builder().setTitle("سورة " + (names[n] ?: n.toString())).setArtist(reciter).setAlbumTitle(m.name).build(),
+                ).build()
+        }
+        val idx = m.surahs.sorted().indexOf(startSurah).coerceAtLeast(0)
+        c.setMediaItems(items, idx, 0L)
+        c.setPlaybackSpeed(1f)
+        c.prepare()
+        c.play()
     }
 
     fun load(c: MediaController, book: AudioBook, tracks: List<Track>, startIndex: Int, startMs: Long) {

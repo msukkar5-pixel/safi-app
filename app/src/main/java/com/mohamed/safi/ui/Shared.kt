@@ -45,6 +45,7 @@ object UiBus {
     /** Route requested by a notification tap. */
     val pendingRoute = MutableStateFlow<String?>(null)
     val pendingAzkar = MutableStateFlow<String?>(null)
+    val pendingQuranAudio = MutableStateFlow<Int?>(null) // surah to play
     val pendingBook = MutableStateFlow<Pair<String, String>?>(null) // bookId to search query
     /** Bank message(s) shared into the app from Messages. */
     val pendingShare = MutableStateFlow<String?>(null)

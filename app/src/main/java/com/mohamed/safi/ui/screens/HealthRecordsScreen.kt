@@ -119,7 +119,7 @@ private fun MedDialog(existing: Medication?, onDismiss: () -> Unit) {
                 Row {
                     TextButton(onClick = {
                         pickTime(ctx, System.currentTimeMillis()) { h, m ->
-                            times = (Meds.times(times).map { it.toString() } + "%02d:%02d".format(h, m)).distinct().sorted().joinToString(", ")
+                            times = (Meds.times(times).map { it.toString() } + String.format(java.util.Locale.US, "%02d:%02d", h, m)).distinct().sorted().joinToString(", ")
                         }
                     }) { Icon(Icons.Default.Schedule, null); Text("ضيف ميعاد") }
                     if (times.isNotBlank()) TextButton(onClick = { times = "" }) { Text("امسح") }

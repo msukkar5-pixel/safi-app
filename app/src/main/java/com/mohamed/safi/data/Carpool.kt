@@ -173,7 +173,7 @@ data class CarpoolConfig(
             var lastMonth: Int? = null
             var lastYear = today.year
             val re = Regex("(\\d{1,2})(?:\\s*[/\\-.]\\s*(\\d{1,2}))?(?:\\s*[/\\-.]\\s*(\\d{2,4}))?\\s*[:：\\-–]?\\s*([\\p{L}]+(?:\\s+[\\p{L}]+)?)")
-            for (raw in text.lines()) {
+            for (raw in com.mohamed.safi.ui.normalizeDigits(text).lines()) {
                 val line = toWestern(raw).replace("•", " ").replace("\t", " ").trim()
                 if (line.isEmpty()) continue
                 val m = re.find(line) ?: continue

@@ -253,6 +253,7 @@ fun AppRoot() {
             composable("wird") { WirdScreen(back) }
             composable("stories") { StoriesScreen(back, open) }
             composable("bidaya") { BidayaScreen(back) }
+            composable("quranaudio") { QuranAudioScreen(back) }
             composable("library") { LibraryScreen(back) { nav.navigate("book/$it") } }
             composable("book/{id}") { e ->
                 val id = e.arguments?.getString("id") ?: "bidaya"

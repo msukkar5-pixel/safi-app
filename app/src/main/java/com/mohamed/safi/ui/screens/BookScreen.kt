@@ -172,19 +172,32 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
     BackHandler { onBack() }
     var sec by remember { mutableStateOf(start) }
     var body by remember { mutableStateOf<List<String>?>(null) }
+    var loadErr by remember { mutableStateOf<String?>(null) }
+    var endIdx by remember { mutableIntStateOf(start.idx) }
     var size by remember { mutableIntStateOf(Books.fontSize) }
     var marks by remember { mutableStateOf(book.marks) }
     val state = rememberLazyListState()
     LaunchedEffect(sec) {
-        body = null
-        val t = runCatching { book.text(sec.vol) }.getOrDefault(emptyList())
-        body = (t.getOrNull(sec.idx) ?: "").split('\n').filter { it.isNotBlank() }
+        body = null; loadErr = null
+        val t = runCatching { book.text(sec.vol) }.onFailure { loadErr = it.message ?: it.javaClass.simpleName }.getOrDefault(emptyList())
+        val secs = all.firstOrNull { it.vol == sec.vol }?.sections ?: emptyList()
+        // a heading with no text of its own: show the following sub-sections right away
+        val out = mutableListOf<String>()
+        var i = sec.idx
+        while (true) {
+            if (i != sec.idx) secs.getOrNull(i)?.let { out += "§" + it.title }
+            out += (t.getOrNull(i) ?: "").split('\n').filter { it.isNotBlank() }
+            if (out.any { !it.startsWith("§") } || i + 1 >= secs.size || i - sec.idx >= 6) break
+            i++
+        }
+        endIdx = i
+        body = if (out.none { !it.startsWith("§") }) emptyList() else out
         book.lastVol = sec.vol; book.lastIdx = sec.idx
         state.scrollToItem(0)
     }
     fun neighbour(d: Int): BSection? {
         val v = all.firstOrNull { it.vol == sec.vol } ?: return null
-        val i = sec.idx + d
+        val i = (if (d > 0) endIdx else sec.idx) + d
         return when {
             i in v.sections.indices -> v.sections[i]
             d > 0 -> all.firstOrNull { it.vol > sec.vol }?.sections?.firstOrNull()
@@ -211,9 +224,16 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
             }
             val b = body
             if (b == null) item { CircularProgressIndicator() }
-            else if (b.isEmpty()) item { Text("(عنوان بدون نص، النص في الفصل اللي بعده)", color = MaterialTheme.colorScheme.outline) }
+            else if (b.isEmpty()) item {
+                Text(if (loadErr != null) "النص مش راضي يفتح: $loadErr" else "الجزء ده عنوان بس، دوس «التالي».", color = MaterialTheme.colorScheme.outline)
+            }
             else items(b.size) { i ->
                 val p = b[i]
+                if (p.startsWith("§")) {
+                    Text(p.drop(1), fontSize = (size + 2).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
+                    return@items
+                }
                 val obit = p.startsWith("◆")
                 Text(
                     p, fontSize = size.sp, lineHeight = (size * 1.75).sp, textAlign = TextAlign.Justify,

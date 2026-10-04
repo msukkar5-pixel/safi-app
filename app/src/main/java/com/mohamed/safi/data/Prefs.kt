@@ -35,6 +35,9 @@ class Prefs(context: Context) {
         set(v) = putS("fast_$aiProvider", v.trim())
     var aiBaseUrl: String get() = s("baseUrl_$aiProvider", ""); set(v) = putS("baseUrl_$aiProvider", v.trim())
 
+    fun keyOf(provider: String): String = if (provider == "anthropic") s("key_anthropic", s("apiKey", "")) else s("key_$provider", "")
+    fun setKeyOf(provider: String, v: String) = putS("key_$provider", v.trim())
+
     fun allKeys(): Map<String, String> = p.all.filterKeys { it == "apiKey" || it.startsWith("key_") }.mapValues { it.value.toString() }
 
     // Exchange rates (base AED). egpPerAed = how many EGP for 1 AED

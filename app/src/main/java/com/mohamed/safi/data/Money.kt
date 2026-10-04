@@ -76,7 +76,7 @@ fun shortDate(t: Long): String {
 
 fun dateTimeStr(t: Long) = "${shortDate(t)} ${timeStr(t)}"
 
-fun isoLocal(t: Long): String = t.toLdt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+fun isoLocal(t: Long): String = t.toLdt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", java.util.Locale.US))
 
 /** "بعد 3 أيام" / "متأخرة يومين" */
 fun dueText(due: Long): String {

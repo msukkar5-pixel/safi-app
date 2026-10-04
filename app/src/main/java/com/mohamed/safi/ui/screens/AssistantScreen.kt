@@ -76,7 +76,6 @@ fun AssistantScreen() {
     }
 
     val voice = rememberVoiceInput { send(it) }
-    val claudeVoice = rememberVoiceInput { ClaudeApp.ask(ctx, it) }
     LaunchedEffect(listenNow) {
         if (listenNow) {
             UiBus.listenNow.value = false
@@ -109,7 +108,6 @@ fun AssistantScreen() {
         },
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).imePadding()) {
-            ClaudeAppBar(onVoice = { claudeVoice() }, onText = { ClaudeApp.ask(ctx, input); input = "" }, hasText = input.isNotBlank())
             LazyColumn(
                 Modifier.weight(1f).fillMaxWidth(),
                 state = listState,
@@ -283,31 +281,3 @@ object ClaudeApp {
     }
 }
 
-@Composable
-private fun ClaudeAppBar(onVoice: () -> Unit, onText: () -> Unit, hasText: Boolean) {
-    val ctx = LocalContext.current
-    Surface(color = Color(0xFFD97757).copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = Color(0xFFD97757), modifier = Modifier.size(34.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Text("✳", color = Color.White, fontWeight = FontWeight.Bold) }
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Claude باشتراكك", fontWeight = FontWeight.Bold)
-                    Text("بيفتح تطبيق Claude الحقيقي", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = onVoice, modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97757), contentColor = Color.White),
-                ) { Icon(Icons.Default.Mic, null); Spacer(Modifier.width(6.dp)); Text("كلّم Claude") }
-                OutlinedButton(onClick = { if (hasText) onText() else ClaudeApp.open(ctx) }, modifier = Modifier.weight(1f)) {
-                    Text(if (hasText) "ابعت المكتوب لـClaude" else "افتح Claude")
-                }
-            }
-        }
-    }
-}

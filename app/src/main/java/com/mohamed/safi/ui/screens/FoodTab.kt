@@ -289,7 +289,7 @@ private fun SuppDialog(existing: Supplement?, onDismiss: () -> Unit) {
                 Row {
                     TextButton(onClick = {
                         pickTime(ctx, System.currentTimeMillis()) { h, m ->
-                            val t = "%02d:%02d".format(h, m)
+                            val t = String.format(java.util.Locale.US, "%02d:%02d", h, m)
                             times = (Supps.parseTimes(times).map { it.toString() } + t).distinct().sorted().joinToString(", ")
                         }
                     }) { Icon(Icons.Default.Schedule, null); Text("ضيف ميعاد") }

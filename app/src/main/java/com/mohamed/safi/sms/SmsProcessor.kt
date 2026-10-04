@@ -18,7 +18,7 @@ object SmsProcessor {
     fun hash(sender: String, body: String): String {
         val md = MessageDigest.getInstance("SHA-1")
         return md.digest((sender.lowercase().trim() + "|" + body.trim()).toByteArray())
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { String.format(java.util.Locale.US, "%02x", it) }
     }
 
     /** Ask Claude to read a bank SMS the rule parser couldn't handle. */
@@ -146,7 +146,7 @@ object SmsProcessor {
     suspend fun processText(ctx: Context, text: String, useClaude: Boolean = Claude.hasKey): ImportResult {
         val added = mutableListOf<Expense>()
         var skipped = 0
-        for (msg in split(text)) {
+        for (msg in split(com.mohamed.safi.ui.normalizeDigits(text))) {
             val time = dateIn(msg) ?: System.currentTimeMillis()
             val e = runCatching { process(ctx, "shared", msg, time, notify = false, useClaude = useClaude, trusted = true) }.getOrNull()
             if (e != null) added += e else skipped++
