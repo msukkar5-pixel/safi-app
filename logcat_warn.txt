@@ -1,0 +1,45 @@
+W/om.mohamed.safi( 3263): Unexpected CPU variant for x86: x86_64.
+W/om.mohamed.safi( 3263): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, tremont, kabylake, default
+E/om.mohamed.safi( 3263): Not starting debugger since process cannot load the jdwp agent.
+E/JobScheduler.JobStatus(  520): App com.mohamed.safi became active but still in NEVER bucket
+W/om.mohamed.safi( 3263): Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+W/om.mohamed.safi( 3263): Common causes for lock verification issues are non-optimized dex code
+W/om.mohamed.safi( 3263): and incorrect proguard optimizations.
+W/om.mohamed.safi( 3263): Method boolean androidx.compose.runtime.snapshots.SnapshotStateList.conditionalUpdate$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+W/om.mohamed.safi( 3263): Method java.lang.Object androidx.compose.runtime.snapshots.SnapshotStateList.mutate(kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+W/om.mohamed.safi( 3263): Method void androidx.compose.runtime.snapshots.SnapshotStateList.update(boolean, kotlin.jvm.functions.Function1) failed lock verification and will run slower.
+W/om.mohamed.safi( 3263): Method void androidx.compose.runtime.snapshots.SnapshotStateList.update$default(androidx.compose.runtime.snapshots.SnapshotStateList, boolean, kotlin.jvm.functions.Function1, int, java.lang.Object) failed lock verification and will run slower.
+W/InputManager-JNI(  520): Input channel object '6bc7142 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/ProcessStats(  520): Tracking association SourceState{8f7809c com.mohamed.safi/10192 BTop #1250} whose proc state 2 is better than process ProcessState{43bcede com.google.android.gms.persistent/10131 pkg=com.google.android.gms} proc state 4 (7227 skipped)
+W/om.mohamed.safi( 3263): Cleared Reference was only reachable from finalizer (only reported once)
+E/FrameTracker( 3263): force finish cuj, time out: J<IME_INSETS_ANIMATION::0@1@com.mohamed.safi>
+E/FrameTracker( 3263): force finish cuj, time out: J<IME_INSETS_ANIMATION::1@1@com.mohamed.safi>
+W/InputManager-JNI(  520): Input channel object '706a4d1 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '94aa386 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '5767355 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '2b63f26 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'dc05303 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'd62fdbf Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'fbdc578 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'b3ba6d2 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '1de66ff com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '2819c9a Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '54ce866 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'fc6becd Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '39cb5ce com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'bf18216 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '4a2c633 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'db40e12 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '4d9013f com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'ede0ce Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '921180b com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'c10d03 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '73688ac com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '7826893 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'a8758e7 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '566bf6e Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'bc3647a com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '564c1cb Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '6d8dc54 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object 'ace5cd1 Splash Screen com.mohamed.safi (client)' was disposed without first being removed with the input manager!
+W/InputManager-JNI(  520): Input channel object '5627cc2 com.mohamed.safi/com.mohamed.safi.MainActivity (client)' was disposed without first being removed with the input manager!

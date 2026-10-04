@@ -1,0 +1,161 @@
+screen 1080x2400
+Performing Streamed Install
+Success
+
+[0] ['launch']
+[1] ['wait', 1.5]
+[2] ['shot', 'splash_early']
+  shot results/001_splash_early.jpg
+[3] ['wait', 5]
+[4] ['shot', 'splash_late']
+  shot results/002_splash_late.jpg
+[5] ['tap', 'آمين']
+[6] ['wait', 2]
+[7] ['shot', 'after_splash']
+  shot results/003_after_splash.jpg
+[8] ['tapxy', 0.5, 0.36]
+[9] ['type', 'Sokar']
+[10] ['back']
+[11] ['tap', 'يلا نبدأ']
+[12] ['wait', 3]
+[13] ['shot', 'home']
+  shot results/004_home.jpg
+[14] ['scroll']
+[15] ['shot', 'home_scrolled']
+  shot results/005_home_scrolled.jpg
+[16] ['route', 'bidaya']
+[17] ['wait', 4]
+[18] ['shot', 'bidaya']
+  shot results/006_bidaya.jpg
+[19] ['tap', 'المجلد 1', True]
+[20] ['wait', 3]
+[21] ['shot', 'bidaya_toc']
+  shot results/007_bidaya_toc.jpg
+[22] ['tapxy', 0.5, 0.2]
+[23] ['wait', 4]
+[24] ['shot', 'bidaya_read']
+  shot results/008_bidaya_read.jpg
+[25] ['scroll']
+[26] ['shot', 'bidaya_read2']
+  shot results/009_bidaya_read2.jpg
+[27] ['back']
+[28] ['back']
+[29] ['tapxy', 0.5, 0.28]
+[30] ['type', '774']
+[31] ['wait', 25]
+[32] ['shot', 'bidaya_search']
+  shot results/010_bidaya_search.jpg
+[33] ['back']
+[34] ['back']
+[35] ['route', 'audiobooks']
+[36] ['wait', 6]
+[37] ['shot', 'audio_arabic']
+  shot results/011_audio_arabic.jpg
+[38] ['tap', 'LibriVox']
+  (text not found: LibriVox)
+[39] ['wait', 8]
+[40] ['shot', 'audio_librivox']
+  shot results/012_audio_librivox.jpg
+[41] ['tapxy', 0.5, 0.42]
+[42] ['wait', 8]
+[43] ['shot', 'audio_book']
+  shot results/013_audio_book.jpg
+[44] ['tap', 'تشغيل']
+  (text not found: تشغيل)
+[45] ['wait', 10]
+[46] ['shot', 'audio_playing']
+  shot results/014_audio_playing.jpg
+[47] ['back']
+[48] ['tap', 'مكتبتي']
+  (text not found: مكتبتي)
+[49] ['wait', 2]
+[50] ['shot', 'audio_shelf']
+  shot results/015_audio_shelf.jpg
+[51] ['back']
+[52] ['route', 'stories']
+[53] ['wait', 3]
+[54] ['shot', 'stories']
+  shot results/016_stories.jpg
+[55] ['tapxy', 0.5, 0.3]
+[56] ['wait', 3]
+[57] ['shot', 'story_detail']
+  shot results/017_story_detail.jpg
+[58] ['back']
+[59] ['back']
+[60] ['route', 'history']
+[61] ['wait', 3]
+[62] ['shot', 'history_egypt']
+  shot results/018_history_egypt.jpg
+[63] ['tap', 'تاريخ الإمارات']
+  (text not found: تاريخ الإمارات)
+[64] ['wait', 2]
+[65] ['shot', 'history_uae']
+  shot results/019_history_uae.jpg
+[66] ['back']
+[67] ['route', 'quran']
+[68] ['wait', 4]
+[69] ['shot', 'quran']
+  shot results/020_quran.jpg
+[70] ['back']
+[71] ['route', 'hadith']
+[72] ['wait', 5]
+[73] ['shot', 'hadith']
+  shot results/021_hadith.jpg
+[74] ['back']
+[75] ['route', 'azkar']
+[76] ['wait', 3]
+[77] ['shot', 'azkar']
+  shot results/022_azkar.jpg
+[78] ['back']
+[79] ['route', 'wird']
+[80] ['wait', 3]
+[81] ['shot', 'wird']
+  shot results/023_wird.jpg
+[82] ['back']
+[83] ['route', 'prayer']
+[84] ['wait', 3]
+[85] ['shot', 'prayer']
+  shot results/024_prayer.jpg
+[86] ['back']
+[87] ['route', 'assistant']
+[88] ['wait', 3]
+[89] ['shot', 'assistant']
+  shot results/025_assistant.jpg
+[90] ['route', 'more']
+[91] ['wait', 2]
+[92] ['shot', 'more']
+  shot results/026_more.jpg
+[93] ['scroll']
+[94] ['shot', 'more2']
+  shot results/027_more2.jpg
+[95] ['route', 'diary']
+[96] ['wait', 2]
+[97] ['shot', 'diary']
+  shot results/028_diary.jpg
+[98] ['back']
+[99] ['route', 'healthrecords']
+[100] ['wait', 2]
+[101] ['shot', 'health']
+  shot results/029_health.jpg
+[102] ['back']
+[103] ['route', 'fitness']
+[104] ['wait', 3]
+[105] ['shot', 'fitness']
+  shot results/030_fitness.jpg
+[106] ['back']
+[107] ['route', 'carpool']
+[108] ['wait', 2]
+[109] ['shot', 'carpool']
+  shot results/031_carpool.jpg
+[110] ['back']
+[111] ['route', 'shaarawy']
+[112] ['wait', 2]
+[113] ['shot', 'shaarawy']
+  shot results/032_shaarawy.jpg
+[114] ['back']
+[115] ['route', 'settings']
+[116] ['wait', 2]
+[117] ['shot', 'settings']
+  shot results/033_settings.jpg
+[118] ['back']
+DONE crashes=0
