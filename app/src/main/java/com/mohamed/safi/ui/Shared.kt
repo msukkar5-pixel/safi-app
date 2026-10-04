@@ -205,7 +205,7 @@ fun ReceiptHost(c: ReceiptController) {
 
     fun process(uri: Uri) {
         if (!Claude.hasKey) {
-            error = "قراءة الفواتير محتاجة مفتاح Claude API. ضيفه من الإعدادات."
+            error = "قراءة الفواتير محتاجة تربط ذكاء اصطناعي من الإعدادات."
             return
         }
         loading = true
@@ -232,7 +232,7 @@ fun ReceiptHost(c: ReceiptController) {
         AlertDialog(
             onDismissRequest = { c.chooser = false },
             title = { Text("صوّر الفاتورة") },
-            text = { Text("صافي هيقرا المحل والمبلغ والتصنيف لوحده، وانت تراجع قبل الحفظ.") },
+            text = { Text("${com.mohamed.safi.AppName.v} هيقرا المحل والمبلغ والتصنيف لوحده، وانت تراجع قبل الحفظ.") },
             confirmButton = {
                 TextButton(onClick = {
                     c.chooser = false

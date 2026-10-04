@@ -120,7 +120,7 @@ object Assistant {
     }
 
     private val SYSTEM = """
-You are "صافي", the personal assistant inside Mohamed's own Android app. Mohamed is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
+You are "${com.mohamed.safi.AppName.v}", the personal assistant inside the user's own Android app. The user (name: ${com.mohamed.safi.SafiApp.prefs.userName.ifBlank { "unknown" }}) is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
 Speak Egyptian Arabic, short and direct, warm but no fluff. Use Western digits for numbers.
 
 You can read his data (given below) and take actions. ALWAYS answer with ONE JSON object only, no text outside it:
@@ -154,7 +154,8 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
 - {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
 - {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
-- {"type":"open_screen","screen":"quran|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"open_screen","screen":"quran|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"add_diary","text":"the diary text exactly as he said it, cleaned punctuation only","mood":"one emoji or empty"}   (when he says سجّل في مذكراتي / اكتب في المذكرات)
 - {"type":"add_document","title":"","owner":"","expiry":"YYYY-MM-DD"}
 - {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
 
@@ -196,7 +197,7 @@ Rules:
         }
         flush()
 
-        val system = SYSTEM + "\n\n=== MOHAMED'S DATA ===\n" + context()
+        val system = SYSTEM + "\n\n=== USER DATA ===\n" + context()
         return try {
             val raw = Claude.call(system, msgs, SafiApp.prefs.model, 2048)
             val json = Claude.extractJson(raw)
@@ -303,7 +304,7 @@ Rules:
                         val i2 = Intent(AlarmClock.ACTION_SET_ALARM)
                             .putExtra(AlarmClock.EXTRA_HOUR, a.optInt("hour"))
                             .putExtra(AlarmClock.EXTRA_MINUTES, a.optInt("minute"))
-                            .putExtra(AlarmClock.EXTRA_MESSAGE, a.str("label").ifBlank { "صافي" })
+                            .putExtra(AlarmClock.EXTRA_MESSAGE, a.str("label").ifBlank { "${com.mohamed.safi.AppName.v}" })
                             .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         if (days != null && days.length() > 0) {
@@ -317,7 +318,7 @@ Rules:
                     "set_timer" -> {
                         val i2 = Intent(AlarmClock.ACTION_SET_TIMER)
                             .putExtra(AlarmClock.EXTRA_LENGTH, a.optInt("seconds", 60))
-                            .putExtra(AlarmClock.EXTRA_MESSAGE, a.str("label").ifBlank { "صافي" })
+                            .putExtra(AlarmClock.EXTRA_MESSAGE, a.str("label").ifBlank { "${com.mohamed.safi.AppName.v}" })
                             .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         ctx.startActivity(i2)
@@ -414,6 +415,13 @@ Rules:
                     "open_screen" -> {
                         val sc = a.str("screen")
                         if (sc.isNotBlank()) { com.mohamed.safi.ui.UiBus.pendingRoute.value = sc; done += "✓ فتحت" }
+                    }
+                    "add_diary" -> {
+                        val t = a.str("text")
+                        if (t.isNotBlank()) {
+                            com.mohamed.safi.diary.DiaryDb.dao.upsert(com.mohamed.safi.diary.DiaryEntry(text = t, mood = a.str("mood")))
+                            done += "✓ اتسجل في مذكراتك"
+                        }
                     }
                     "add_document" -> {
                         val t = a.str("title")

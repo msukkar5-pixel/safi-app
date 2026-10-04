@@ -133,7 +133,7 @@ class ReminderReceiver : BroadcastReceiver() {
                     context, nid,
                     if (r.alarm) Notifier.CH_ALARM else Notifier.CH_REMIND,
                     (if (r.kind == "appointment") "📅 " else "⏰ ") + r.title,
-                    text, route = "schedule", actions = actions, fullScreen = r.alarm,
+                    text, route = if (r.refType == "azkar") "azkar" else "schedule", actions = actions, fullScreen = r.alarm,
                 )
                 if (!snoozed && r.repeat != "none") {
                     ReminderScheduler.nextTime(r.time, r.repeat)?.let { next ->

@@ -33,11 +33,6 @@ fun SettingsScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     var name by remember { mutableStateOf(prefs.userName) }
-    var key by remember { mutableStateOf(prefs.apiKey) }
-    var showKey by remember { mutableStateOf(false) }
-    var model by remember { mutableStateOf(prefs.model) }
-    var fast by remember { mutableStateOf(prefs.fastModel) }
-    var testing by remember { mutableStateOf(false) }
     var rate by remember { mutableStateOf(prefs.egpPerAed.toString()) }
     var rateAuto by remember { mutableStateOf(prefs.rateAuto) }
     var rateUpdated by remember { mutableLongStateOf(prefs.rateUpdated) }
@@ -54,48 +49,11 @@ fun SettingsScreen(onBack: () -> Unit) {
             SectionTitle("الصلاحيات")
             PermissionsList()
 
-            SectionTitle("المساعد الذكي (Claude)")
-            AppCard {
-                OutlinedTextField(
-                    key, { key = it.trim() }, label = { Text("مفتاح Claude API") }, singleLine = true,
-                    placeholder = { Text("sk-ant-…") },
-                    visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { showKey = !showKey }) { Icon(if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, null) }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    "من console.anthropic.com ← API Keys. المفتاح بيتحفظ على تليفونك بس.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(model, { model = it }, label = { Text("الموديل الأساسي") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(fast, { fast = it }, label = { Text("الموديل السريع (رسايل البنك)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {
-                        prefs.apiKey = key; prefs.model = model.ifBlank { "claude-sonnet-5-5" }; prefs.fastModel = fast.ifBlank { "claude-haiku-4-5-20251001" }
-                        toast(ctx, "اتحفظ")
-                    }) { Text("حفظ") }
-                    OutlinedButton(onClick = {
-                        prefs.apiKey = key; prefs.model = model; prefs.fastModel = fast
-                        testing = true
-                        scope.launch {
-                            val msg = try {
-                                Claude.call("Reply with one short Egyptian Arabic sentence.", JSONArray().put(Claude.userText("قول أهلاً")), prefs.model, 50)
-                                "✓ شغال: " + prefs.model
-                            } catch (e: Exception) {
-                                e.message ?: "فيه مشكلة"
-                            }
-                            testing = false
-                            toast(ctx, msg)
-                        }
-                    }, enabled = !testing && key.isNotBlank()) {
-                        if (testing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("جرّب")
-                    }
-                }
-            }
+            SectionTitle("الذكاء الاصطناعي")
+            AiSettingsCard()
+
+            SectionTitle("اسم التطبيق")
+            AppNameCard()
 
             SectionTitle("العملة وتحويلات مصر")
             AppCard {
@@ -135,10 +93,10 @@ fun SettingsScreen(onBack: () -> Unit) {
             AppCard {
                 Text("تليفونك بيمنع أي تطبيق برا المتجر يقرا الرسايل، فالتسجيل بيتم بطريقتين:", fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(6.dp))
-                Text("• رسالة واحدة: في تطبيق الرسايل دوس مطوّل على رسالة البنك ← مشاركة ← صافي.", style = MaterialTheme.typography.bodyMedium)
+                Text("• رسالة واحدة: في تطبيق الرسايل دوس مطوّل على رسالة البنك ← مشاركة ← ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodyMedium)
                 Text("• كذا رسالة مرة واحدة: انسخهم، وفي شاشة المصاريف دوس زرار اللصق فوق.", style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(6.dp))
-                Text("بيتعرف على Emirates NBD وADCB وADIB وأي بنك تاني. نفس الرسالة مش بتتسجل مرتين. لو صيغتها غريبة وفيه مفتاح Claude، Claude بيقراها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text("بيتعرف على Emirates NBD وADCB وADIB وأي بنك تاني. نفس الرسالة مش بتتسجل مرتين. لو صيغتها غريبة والذكاء الاصطناعي مربوط، هو اللي بيقراها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
 
             SectionTitle("النسخة الاحتياطية")
@@ -158,7 +116,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "قول لصافي: \"وديني دبي مول\"، \"شغّل فيروز\"، \"افتح كريم\"، \"ابعت واتساب لـ 050…\". أي تطبيق متثبت على تليفونك يقدر يفتحه بالاسم.",
+                    "قول لـ${com.mohamed.safi.AppName.v}: \"وديني دبي مول\"، \"شغّل فيروز\"، \"افتح كريم\"، \"ابعت واتساب لـ 050…\". أي تطبيق متثبت على تليفونك يقدر يفتحه بالاسم.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
                 )
             }
@@ -184,11 +142,11 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Switch(lockOn, { lockOn = it; prefs.lockOn = it })
                 }
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = { prefs.userName = name.trim().ifBlank { "محمد" }; toast(ctx, "اتحفظ") }) { Text("حفظ") }
+                Button(onClick = { prefs.userName = name.trim(); toast(ctx, "اتحفظ") }) { Text("حفظ") }
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "صافي ${runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrDefault("")} • كل بياناتك على تليفونك انت بس",
+                "${com.mohamed.safi.AppName.v} ${runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrDefault("")} • كل بياناتك على تليفونك انت بس",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
             )
@@ -229,7 +187,7 @@ private fun BackupCard() {
             OutlinedButton(onClick = { open.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, enabled = !busy) { Text("رجّع نسخة") }
         }
         Text(
-            "وكمان كل جمعة بتتعمل نسخة أوتوماتيك في Downloads/Safi على التليفون. مفتاح Claude مش بيتحفظ في النسخة.",
+            "وكمان كل جمعة بتتعمل نسخة أوتوماتيك في Downloads/Safi على التليفون. مفاتيح الذكاء الاصطناعي مش بتتحفظ في النسخة.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
     }
@@ -240,5 +198,114 @@ private fun BackupCard() {
                 try { com.mohamed.safi.extra.Backup.restore(ctx, u) } catch (e: Exception) { busy = false; toast(ctx, e.message ?: "فشل") }
             }
         }
+    }
+}
+
+
+@Composable
+private fun AiSettingsCard() {
+    val prefs = SafiApp.prefs
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var provider by remember { mutableStateOf(prefs.aiProvider) }
+    var key by remember(provider) { mutableStateOf(prefs.apiKey) }
+    var model by remember(provider) { mutableStateOf(prefs.model) }
+    var fast by remember(provider) { mutableStateOf(prefs.fastModel) }
+    var baseUrl by remember(provider) { mutableStateOf(prefs.aiBaseUrl) }
+    var showKey by remember { mutableStateOf(false) }
+    var testing by remember { mutableStateOf(false) }
+    var models by remember(provider) { mutableStateOf<List<String>>(emptyList()) }
+    var loadingModels by remember { mutableStateOf(false) }
+    val p = com.mohamed.safi.ai.Providers.get(provider)
+
+    fun persist() {
+        prefs.aiProvider = provider
+        prefs.apiKey = key
+        prefs.aiBaseUrl = baseUrl
+        prefs.model = model
+        prefs.fastModel = fast
+    }
+
+    AppCard {
+        Text("اختار أي ذكاء اصطناعي عندك حساب فيه. كل مزود ليه مفتاحه، والمفاتيح بتتحفظ على تليفونك بس.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(8.dp))
+        ChoiceField("المزوّد", provider, com.mohamed.safi.ai.Providers.all.map { it.id }, display = { com.mohamed.safi.ai.Providers.get(it).label }) {
+            persist(); provider = it; prefs.aiProvider = it
+        }
+        Spacer(Modifier.height(8.dp))
+        if (provider == "custom") {
+            OutlinedTextField(baseUrl, { baseUrl = it.trim() }, label = { Text("الرابط (https://…/v1)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+        }
+        OutlinedTextField(
+            key, { key = it.trim() }, label = { Text("مفتاح API") }, singleLine = true,
+            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = { IconButton(onClick = { showKey = !showKey }) { Icon(if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility, null) } },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (p.keyUrl.isNotBlank()) Text("المفتاح من: ${p.keyUrl}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        if (!p.vision) Text("${p.label} مش بيقرا صور، فقراءة الفواتير والأكل بالصورة مش هتشتغل معاه.", style = MaterialTheme.typography.bodySmall, color = Warn)
+        Spacer(Modifier.height(8.dp))
+        if (models.isNotEmpty()) {
+            ChoiceField("الموديل الأساسي", model, models) { model = it }
+            Spacer(Modifier.height(6.dp))
+            ChoiceField("الموديل السريع", fast, models) { fast = it }
+        } else {
+            OutlinedTextField(model, { model = it }, label = { Text("الموديل الأساسي") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(fast, { fast = it }, label = { Text("الموديل السريع (رسايل البنك)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        TextButton(onClick = {
+            persist(); loadingModels = true
+            scope.launch {
+                try { models = com.mohamed.safi.ai.Claude.listModels(); if (models.isEmpty()) toast(ctx, "مفيش موديلات راجعة") }
+                catch (e: Exception) { toast(ctx, e.message ?: "فشل") }
+                loadingModels = false
+            }
+        }, enabled = key.isNotBlank() && !loadingModels) {
+            if (loadingModels) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) else Text("هات الموديلات المتاحة")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { persist(); toast(ctx, "اتحفظ") }) { Text("حفظ") }
+            OutlinedButton(onClick = {
+                persist()
+                testing = true
+                scope.launch {
+                    val msg = try {
+                        val r = com.mohamed.safi.ai.Claude.call("Reply with one short Egyptian Arabic sentence.", JSONArray().put(com.mohamed.safi.ai.Claude.userText("قول أهلاً")), prefs.model, 60)
+                        "✓ شغال (${p.label}): " + r.take(60)
+                    } catch (e: Exception) { e.message ?: "فيه مشكلة" }
+                    testing = false
+                    toast(ctx, msg)
+                }
+            }, enabled = !testing && key.isNotBlank()) {
+                if (testing) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("جرّب")
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppNameCard() {
+    val prefs = SafiApp.prefs
+    val ctx = LocalContext.current
+    var name by remember { mutableStateOf(prefs.appName) }
+    AppCard {
+        Text("سمّي التطبيق والمساعد بالاسم اللي يعجبك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        OutlinedTextField(name, { name = it }, label = { Text("الاسم") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                prefs.appName = name.trim().ifBlank { "صافي" }
+                toast(ctx, "اتغير الاسم. اقفل التطبيق وافتحه علشان يظهر في كل مكان.")
+            }) { Text("حفظ") }
+            OutlinedButton(onClick = {
+                prefs.appName = name.trim().ifBlank { "صافي" }
+                com.mohamed.safi.AppName.pinShortcut(ctx)
+            }) { Text("أيقونة بالاسم ده") }
+        }
+        Text(
+            "أندرويد مش بيسمح بتغيير اسم الأيقونة الأصلية، فزرار \"أيقونة بالاسم ده\" بيحط أيقونة جديدة على الشاشة الرئيسية بالاسم اللي اخترته.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+        )
     }
 }

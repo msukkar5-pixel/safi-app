@@ -61,7 +61,7 @@ fun AssistantScreen() {
         val t = text.trim()
         if (t.isEmpty() || busy) return
         if (!Claude.hasKey) {
-            toast(ctx, "ضيف مفتاح Claude API من الإعدادات الأول")
+            toast(ctx, "اربط ذكاء اصطناعي من الإعدادات الأول")
             return
         }
         input = ""
@@ -93,13 +93,13 @@ fun AssistantScreen() {
     }
 
     ScreenScaffold(
-        "صافي",
+        "${com.mohamed.safi.AppName.v}",
         actions = {
             IconButton(onClick = {
                 tts = !tts
                 com.mohamed.safi.apps.Apps.setTts(ctx, tts)
                 if (!tts) com.mohamed.safi.ai.Speaker.stop()
-                toast(ctx, if (tts) "صافي هيرد بالصوت" else "الرد بالصوت اتقفل")
+                toast(ctx, if (tts) "${com.mohamed.safi.AppName.v} هيرد بالصوت" else "الرد بالصوت اتقفل")
             }) { Icon(if (tts) Icons.Default.VolumeUp else Icons.Default.VolumeOff, "الرد بالصوت") }
             if (messages.isNotEmpty()) IconButton(onClick = { confirmClear = true }) { Icon(Icons.Default.DeleteSweep, "مسح المحادثة") }
         },
@@ -125,7 +125,7 @@ fun AssistantScreen() {
                             )
                             if (!Claude.hasKey) {
                                 Spacer(Modifier.height(10.dp))
-                                Text("⚠️ محتاج تضيف مفتاح Claude API من الإعدادات", color = Warn)
+                                Text("⚠️ اربط أي ذكاء اصطناعي من الإعدادات (Claude، ChatGPT، Gemini…)", color = Warn)
                             }
                             Spacer(Modifier.height(16.dp))
                             suggestions.forEach { s ->
@@ -139,7 +139,7 @@ fun AssistantScreen() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("صافي بيفكر…", color = MaterialTheme.colorScheme.outline)
+                        Text("${com.mohamed.safi.AppName.v} بيفكر…", color = MaterialTheme.colorScheme.outline)
                     }
                 }
             }

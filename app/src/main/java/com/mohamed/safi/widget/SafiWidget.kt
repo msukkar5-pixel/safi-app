@@ -76,7 +76,7 @@ class SafiWidget : AppWidgetProvider() {
 
             for (id in ids) {
                 val v = RemoteViews(ctx.packageName, R.layout.widget_safi)
-                v.setTextViewText(R.id.w_car, car.ifBlank { "صافي" })
+                v.setTextViewText(R.id.w_car, car.ifBlank { "${com.mohamed.safi.AppName.v}" })
                 v.setTextViewText(R.id.w_prayer, prayer)
                 v.setTextViewText(R.id.w_money, money)
                 v.setTextViewText(R.id.w_food, food)

@@ -108,7 +108,7 @@ class MainActivity : FragmentActivity() {
             },
         )
         val info = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("صافي")
+            .setTitle("${com.mohamed.safi.AppName.v}")
             .setSubtitle("افتح بالبصمة")
             .setAllowedAuthenticators(authenticators)
             .apply { if (Build.VERSION.SDK_INT < 30) setNegativeButtonText("إلغاء") }
@@ -123,7 +123,7 @@ private fun LockScreen(onUnlock: () -> Unit) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(Icons.Default.Lock, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(16.dp))
-            Text("صافي مقفول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("${com.mohamed.safi.AppName.v} مقفول", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(16.dp))
             Button(onClick = onUnlock) {
                 Icon(Icons.Default.Fingerprint, null)
@@ -139,7 +139,7 @@ private data class Tab(val route: String, val label: String, val icon: androidx.
 private val tabs = listOf(
     Tab("home", "الرئيسية", Icons.Default.Home),
     Tab("expenses", "المصاريف", Icons.Default.Receipt),
-    Tab("assistant", "صافي", Icons.Default.Mic),
+    Tab("assistant", "${com.mohamed.safi.AppName.v}", Icons.Default.Mic),
     Tab("schedule", "المواعيد", Icons.Default.Event),
     Tab("more", "المزيد", Icons.Default.GridView),
 )
@@ -230,6 +230,9 @@ fun AppRoot() {
             composable("savings") { SavingsScreen(back) }
             composable("lessons") { LessonsScreen(back) }
             composable("zakat") { ZakatScreen(back) }
+            composable("azkar") { AzkarScreen(back) }
+            composable("hadith") { HadithScreen(back) }
+            composable("diary") { DiaryScreen(back) }
         }
     }
 }

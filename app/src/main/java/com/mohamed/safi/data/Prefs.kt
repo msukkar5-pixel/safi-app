@@ -15,12 +15,27 @@ class Prefs(context: Context) {
     private fun l(k: String, d: Long) = p.getLong(k, d)
     private fun putL(k: String, v: Long) = p.edit { putLong(k, v) }
 
-    var userName: String get() = s("userName", "محمد"); set(v) = putS("userName", v)
+    var userName: String get() = s("userName", ""); set(v) = putS("userName", v)
 
-    // Claude
-    var apiKey: String get() = s("apiKey", ""); set(v) = putS("apiKey", v.trim())
-    var model: String get() = s("model", "claude-sonnet-5-5"); set(v) = putS("model", v.trim())
-    var fastModel: String get() = s("fastModel", "claude-haiku-4-5-20251001"); set(v) = putS("fastModel", v.trim())
+    /** Name the user gave the app / assistant. */
+    var appName: String get() = s("appName", "صافي").ifBlank { "صافي" }; set(v) = putS("appName", v.trim())
+
+    // AI provider (any): anthropic | openai | gemini | deepseek | groq | openrouter | custom
+    var aiProvider: String get() = s("aiProvider", "anthropic"); set(v) = putS("aiProvider", v)
+
+    /** Key / models are stored per provider so switching keeps each one. */
+    var apiKey: String
+        get() = if (aiProvider == "anthropic") s("key_anthropic", s("apiKey", "")) else s("key_$aiProvider", "")
+        set(v) = putS("key_$aiProvider", v.trim())
+    var model: String
+        get() = s("model_$aiProvider", if (aiProvider == "anthropic") s("model", "") else "").ifBlank { com.mohamed.safi.ai.Providers.get(aiProvider).model }
+        set(v) = putS("model_$aiProvider", v.trim())
+    var fastModel: String
+        get() = s("fast_$aiProvider", if (aiProvider == "anthropic") s("fastModel", "") else "").ifBlank { com.mohamed.safi.ai.Providers.get(aiProvider).fastModel.ifBlank { model } }
+        set(v) = putS("fast_$aiProvider", v.trim())
+    var aiBaseUrl: String get() = s("baseUrl_$aiProvider", ""); set(v) = putS("baseUrl_$aiProvider", v.trim())
+
+    fun allKeys(): Map<String, String> = p.all.filterKeys { it == "apiKey" || it.startsWith("key_") }.mapValues { it.value.toString() }
 
     // Exchange rates (base AED). egpPerAed = how many EGP for 1 AED
     var egpPerAed: Double

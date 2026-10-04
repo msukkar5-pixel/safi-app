@@ -32,7 +32,13 @@ jobs:
           curl -sfL --retry 3 https://github.com/google/fonts/raw/main/ofl/amiriquran/AmiriQuran-Regular.ttf -o app/src/main/assets/fonts/quran.ttf \
             || curl -sfL --retry 3 https://github.com/google/fonts/raw/main/ofl/amiri/Amiri-Regular.ttf -o app/src/main/assets/fonts/quran.ttf \
             || { echo "font download failed"; rm -f app/src/main/assets/fonts/quran.ttf; }
-          ls -la app/src/main/assets app/src/main/assets/fonts
+          mkdir -p app/src/main/assets/hadith
+          for b in bukhari muslim; do
+            curl -sfL --retry 3 https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/ara-$b.min.json -o app/src/main/assets/hadith/$b.json \
+              && python3 -c "import json;d=json.load(open('app/src/main/assets/hadith/$b.json'));print('$b',len(d['hadiths']),'sections',len(d['metadata']['section']));print(list(d['metadata']['section'].items())[:5])" \
+              || { echo "hadith $b download failed"; rm -f app/src/main/assets/hadith/$b.json; }
+          done
+          ls -la app/src/main/assets app/src/main/assets/fonts app/src/main/assets/hadith
 
       - name: Build
         run: gradle assembleRelease --stacktrace --no-daemon

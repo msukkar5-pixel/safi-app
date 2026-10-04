@@ -76,7 +76,7 @@ object Coach {
             5-8 exercises per day. Day names in Arabic.
         """.trimIndent()
         val raw = Claude.call(system, JSONArray().put(Claude.userText(prompt)), SafiApp.prefs.model, 4000)
-        val j = Claude.extractJson(raw) ?: throw ClaudeException("Claude رجّع خطة مش مفهومة، جرب تاني")
+        val j = Claude.extractJson(raw) ?: throw ClaudeException("الرد كان مش مفهوم، جرب تاني")
         // attach exercise ids from the encyclopedia
         val days = j.optJSONArray("days") ?: throw ClaudeException("الخطة فاضية، جرب تاني")
         for (i in 0 until days.length()) {

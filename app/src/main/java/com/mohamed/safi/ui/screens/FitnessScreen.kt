@@ -144,7 +144,7 @@ private fun TodayTab(goTab: (Int) -> Unit) {
                 } else if (!hcGranted) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "1) في Samsung Health: الإعدادات ← Health Connect ← فعّل المشاركة.\n2) دوس الزرار ده واسمح لصافي يقرا.",
+                        "1) في Samsung Health: الإعدادات ← Health Connect ← فعّل المشاركة.\n2) دوس الزرار ده واسمح لـ${com.mohamed.safi.AppName.v} يقرا.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.height(6.dp))
@@ -196,7 +196,7 @@ private fun TodayTab(goTab: (Int) -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("تقرير الأسبوع", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Button(onClick = {
-                        if (!Claude.hasKey) toast(ctx, "محتاج مفتاح Claude") else {
+                        if (!Claude.hasKey) toast(ctx, "اربط ذكاء اصطناعي من الإعدادات") else {
                             reportBusy = true
                             scope.launch {
                                 report = try { Coach.weeklyReport(ctx) } catch (e: Exception) { "⚠️ " + (e.message ?: "") }
@@ -215,7 +215,7 @@ private fun TodayTab(goTab: (Int) -> Unit) {
         }
         item {
             Text(
-                "صافي مش دكتور. أي حاجة تخص أمراض أو أدوية أو تحاليل راجع فيها دكتورك.",
+                "${com.mohamed.safi.AppName.v} مش دكتور. أي حاجة تخص أمراض أو أدوية أو تحاليل راجع فيها دكتورك.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
             )
         }

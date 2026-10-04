@@ -23,16 +23,17 @@ import java.util.zip.ZipOutputStream
  * The Claude API key is never written to the backup.
  */
 object Backup {
-    private val dbNames = listOf("safi.db", "safi_life.db", "safi_extra.db")
+    private val dbNames = listOf("safi.db", "safi_life.db", "safi_extra.db", "safi_diary.db")
     private val folders = listOf("receipts", "docs")
 
     private fun checkpoint() {
         runCatching { SafiApp.db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
         runCatching { LifeDb.get(SafiApp.instance).openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
         runCatching { ExtraDb.get().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
+        runCatching { com.mohamed.safi.diary.DiaryDb.get().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
     }
 
-    private fun stripKey(xml: String) = xml.replace(Regex("<string name=\"apiKey\">.*?</string>", RegexOption.DOT_MATCHES_ALL), "")
+    private fun stripKey(xml: String) = xml.replace(Regex("<string name=\"(apiKey|key_[a-z]+)\">.*?</string>", RegexOption.DOT_MATCHES_ALL), "")
 
     fun write(ctx: Context, out: OutputStream) {
         checkpoint()
@@ -86,17 +87,18 @@ object Backup {
 
     /** Restores and restarts the app. Keeps the current API key. */
     suspend fun restore(ctx: Context, uri: Uri) {
-        val key = SafiApp.prefs.apiKey
+        val keys = SafiApp.prefs.allKeys()
         withContext(Dispatchers.IO) {
             val tmp = File(ctx.cacheDir, "restore.zip")
             ctx.contentResolver.openInputStream(uri)?.use { i -> tmp.outputStream().use { i.copyTo(it) } }
                 ?: throw IllegalStateException("مقدرتش أفتح الملف")
             val names = ZipInputStream(tmp.inputStream()).use { z -> generateSequence { z.nextEntry }.map { it.name }.toList() }
-            if ("databases/safi.db" !in names) throw IllegalStateException("الملف ده مش نسخة احتياطية من صافي")
+            if ("databases/safi.db" !in names) throw IllegalStateException("الملف ده مش نسخة احتياطية من ${com.mohamed.safi.AppName.v}")
 
             runCatching { SafiApp.db.close() }
             runCatching { LifeDb.closeAll() }
             runCatching { ExtraDb.closeAll() }
+            runCatching { com.mohamed.safi.diary.DiaryDb.closeAll() }
             for (db in dbNames) {
                 val f = ctx.getDatabasePath(db)
                 File(f.path + "-wal").delete(); File(f.path + "-shm").delete()
@@ -112,8 +114,9 @@ object Backup {
                     }
                     if (target != null && !e.isDirectory && !e.name.contains("..")) {
                         target.parentFile?.mkdirs()
-                        if (e.name == "shared_prefs/safi.xml" && key.isNotBlank()) {
-                            val xml = String(z.readBytes()).replace("</map>", "<string name=\"apiKey\">${key.replace("&", "&amp;").replace("<", "&lt;")}</string>\n</map>")
+                        if (e.name == "shared_prefs/safi.xml" && keys.isNotEmpty()) {
+                            val inject = keys.entries.joinToString("\n") { (k, v) -> "<string name=\"$k\">${v.replace("&", "&amp;").replace("<", "&lt;")}</string>" }
+                            val xml = String(z.readBytes()).replace("</map>", "$inject\n</map>")
                             target.writeText(xml)
                         } else {
                             target.outputStream().use { copy(z, it) }

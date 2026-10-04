@@ -66,7 +66,7 @@ object MonthReport {
         val w = Writer(doc)
         w.newPage()
         w.heading("تقرير ${monthName(ym)} — ${SafiApp.prefs.userName}")
-        w.text("اتعمل من تطبيق صافي ${dateTimeStr(System.currentTimeMillis())}")
+        w.text("اتعمل من تطبيق ${com.mohamed.safi.AppName.v} ${dateTimeStr(System.currentTimeMillis())}")
 
         w.section("الملخص")
         w.row("المصروف", money(spent))

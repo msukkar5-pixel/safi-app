@@ -99,7 +99,7 @@ fun FoodTab() {
         }
         item {
             OutlinedButton(onClick = {
-                if (!Claude.hasKey) toast(ctx, "محتاج مفتاح Claude") else {
+                if (!Claude.hasKey) toast(ctx, "اربط ذكاء اصطناعي من الإعدادات") else {
                     reviewBusy = true
                     scope.launch {
                         review = try { Coach.reviewSupplements() } catch (e: Exception) { "⚠️ " + (e.message ?: "") }
@@ -117,14 +117,14 @@ fun FoodTab() {
         item {
             AppCard {
                 Text(
-                    if (plan.isBlank()) "Claude هيعملك نظام كامل على حسب احتياجك وأكلك اللي بتحبه ومكملاتك."
+                    if (plan.isBlank()) "الذكاء الاصطناعي هيعملك نظام كامل على حسب احتياجك وأكلك اللي بتحبه ومكملاتك."
                     else "اتعمل ${shortDate(Fit.prefs.dietPlanDate)}",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
-                        if (!Claude.hasKey) toast(ctx, "محتاج مفتاح Claude")
+                        if (!Claude.hasKey) toast(ctx, "اربط ذكاء اصطناعي من الإعدادات")
                         else if (Fit.prefs.heightCm <= 0) toast(ctx, "كمّل ملفك الأول (زرار الشخص فوق)")
                         else {
                             planBusy = true
@@ -200,7 +200,7 @@ private fun AddFoodDialog(onDismiss: () -> Unit) {
         carbs = e.carbs.toInt().toString(); fat = e.fat.toInt().toString()
     }
     fun photo(uri: Uri) {
-        if (!Claude.hasKey) { toast(ctx, "محتاج مفتاح Claude"); return }
+        if (!Claude.hasKey) { toast(ctx, "اربط ذكاء اصطناعي من الإعدادات"); return }
         busy = true
         scope.launch {
             try { fill(Coach.estimateFoodPhoto(ctx, uri, text)) } catch (e: Exception) { toast(ctx, e.message ?: "") }
@@ -224,7 +224,7 @@ private fun AddFoodDialog(onDismiss: () -> Unit) {
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilledTonalButton(onClick = {
-                        if (!Claude.hasKey) toast(ctx, "محتاج مفتاح Claude") else if (text.isBlank()) toast(ctx, "اكتب أكلت إيه") else {
+                        if (!Claude.hasKey) toast(ctx, "اربط ذكاء اصطناعي من الإعدادات") else if (text.isBlank()) toast(ctx, "اكتب أكلت إيه") else {
                             busy = true
                             scope.launch {
                                 try { fill(Coach.estimateFood(text)) } catch (e: Exception) { toast(ctx, e.message ?: "") }

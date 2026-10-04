@@ -104,7 +104,7 @@ class LocationService : Service(), LocationListener {
         super.onCreate()
         val n = NotificationCompat.Builder(this, Notifier.CH_LOC)
             .setSmallIcon(R.drawable.ic_notify)
-            .setContentTitle("صافي بيسجل أماكنك")
+            .setContentTitle("${com.mohamed.safi.AppName.v} بيسجل أماكنك")
             .setContentText("علشان يربط كل مصروف بمكانه")
             .setContentIntent(Notifier.openAppIntent(this, "places", 77))
             .setOngoing(true)

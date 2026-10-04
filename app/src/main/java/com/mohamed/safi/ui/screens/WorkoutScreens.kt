@@ -57,13 +57,13 @@ fun WorkoutTab() {
             AppCard {
                 Text("خطة التمرين", fontWeight = FontWeight.Bold)
                 Text(
-                    if (plan == null) "Claude هيعملك خطة أسبوعية على حسب ملفك وهدفك ووقتك، من تمارين الموسوعة."
+                    if (plan == null) "الذكاء الاصطناعي هيعملك خطة أسبوعية على حسب ملفك وهدفك ووقتك، من تمارين الموسوعة."
                     else "اتعملت ${shortDate(Fit.prefs.workoutPlanDate)} • ${plan.days.size} أيام",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
                 )
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = {
-                    if (!Claude.hasKey) toast(ctx, "محتاج مفتاح Claude من الإعدادات")
+                    if (!Claude.hasKey) toast(ctx, "اربط ذكاء اصطناعي من الإعدادات")
                     else {
                         busy = true
                         scope.launch {
@@ -401,7 +401,7 @@ fun ExerciseDetail(e: Exercise, onDismiss: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
-                        if (!Claude.hasKey) toast(ctx, "محتاج مفتاح Claude") else {
+                        if (!Claude.hasKey) toast(ctx, "اربط ذكاء اصطناعي من الإعدادات") else {
                             busy = true
                             scope.launch {
                                 try {

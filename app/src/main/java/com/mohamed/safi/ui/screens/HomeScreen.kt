@@ -78,7 +78,7 @@ fun HomeScreen(open: (String) -> Unit) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("$greet يا ${prefs.userName}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(greet + (prefs.userName.takeIf { it.isNotBlank() }?.let { " يا $it" } ?: ""), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text(dateStr(System.currentTimeMillis()), color = MaterialTheme.colorScheme.outline)
                 }
                 AssistChip(
@@ -200,7 +200,7 @@ fun HomeScreen(open: (String) -> Unit) {
 
         item { SectionTitle("آخر المصاريف") { TextButton(onClick = { open("expenses") }) { Text("الكل") } } }
         if (recent.isEmpty()) {
-            item { EmptyState(Icons.Default.Receipt, "لسه مفيش مصاريف. شارك رسالة البنك لصافي من تطبيق الرسايل.") }
+            item { EmptyState(Icons.Default.Receipt, "لسه مفيش مصاريف. شارك رسالة البنك لـ${com.mohamed.safi.AppName.v} من تطبيق الرسايل.") }
         }
         items(recent, key = { "e" + it.id }) { e -> ExpenseRow(e) { editing = e } }
         item { Spacer(Modifier.height(24.dp)) }

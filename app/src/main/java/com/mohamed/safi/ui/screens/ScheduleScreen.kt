@@ -72,7 +72,7 @@ fun ScheduleScreen() {
                     if (active.isEmpty()) item {
                         EmptyState(
                             if (tab == 0) Icons.Default.Notifications else Icons.Default.Event,
-                            if (tab == 0) "قول لصافي: فكرني بكرة الساعة 9 أكلم البنك" else "ضيف مواعيدك وهفكرك قبلها",
+                            if (tab == 0) "قول لـ${com.mohamed.safi.AppName.v}: فكرني بكرة الساعة 9 أكلم البنك" else "ضيف مواعيدك وهفكرك قبلها",
                         )
                     }
                     val groups = active.groupBy { it.time.toLocalDate() }
@@ -233,7 +233,7 @@ private fun AlarmsTab() {
     ) {
         AppCard {
             Text("منبه جديد", fontWeight = FontWeight.Bold)
-            Text("بيتضاف في تطبيق الساعة بتاع تليفونك، فبيرن حتى لو صافي مقفول.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            Text("بيتضاف في تطبيق الساعة بتاع تليفونك، فبيرن حتى لو ${com.mohamed.safi.AppName.v} مقفول.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             Spacer(Modifier.height(10.dp))
             OutlinedButton(onClick = { pickTime(ctx, time) { h, m -> time = time.toLdt().withHour(h).withMinute(m).millis() } }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Schedule, null); Spacer(Modifier.width(8.dp)); Text(timeStr(time), style = MaterialTheme.typography.titleLarge)
@@ -252,7 +252,7 @@ private fun AlarmsTab() {
                 val i = Intent(AlarmClock.ACTION_SET_ALARM)
                     .putExtra(AlarmClock.EXTRA_HOUR, t.hour)
                     .putExtra(AlarmClock.EXTRA_MINUTES, t.minute)
-                    .putExtra(AlarmClock.EXTRA_MESSAGE, label.ifBlank { "صافي" })
+                    .putExtra(AlarmClock.EXTRA_MESSAGE, label.ifBlank { "${com.mohamed.safi.AppName.v}" })
                     .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
                 if (days.isNotEmpty()) i.putIntegerArrayListExtra(AlarmClock.EXTRA_DAYS, ArrayList(days.sorted()))
                 startSafe(i)
@@ -270,7 +270,7 @@ private fun AlarmsTab() {
                             startSafe(
                                 Intent(AlarmClock.ACTION_SET_TIMER)
                                     .putExtra(AlarmClock.EXTRA_LENGTH, m * 60)
-                                    .putExtra(AlarmClock.EXTRA_MESSAGE, "صافي")
+                                    .putExtra(AlarmClock.EXTRA_MESSAGE, "${com.mohamed.safi.AppName.v}")
                                     .putExtra(AlarmClock.EXTRA_SKIP_UI, true),
                             )
                             toast(ctx, "مؤقت $m دقيقة")
@@ -286,7 +286,7 @@ private fun AlarmsTab() {
             Icon(Icons.Default.Alarm, null); Spacer(Modifier.width(8.dp)); Text("افتح كل المنبهات")
         }
         Text(
-            "تقدر كمان تقول لصافي بالصوت: \"صحيني كل يوم الساعة 6 ونص الصبح ما عدا الجمعة\"",
+            "تقدر كمان تقول لـ${com.mohamed.safi.AppName.v} بالصوت: \"صحيني كل يوم الساعة 6 ونص الصبح ما عدا الجمعة\"",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
     }

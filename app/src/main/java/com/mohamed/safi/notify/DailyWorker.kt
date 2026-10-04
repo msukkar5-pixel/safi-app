@@ -127,7 +127,7 @@ object Brief {
         if (lines.isNotEmpty()) {
             Notifier.show(
                 ctx, 501, Notifier.CH_DAILY,
-                "صباح الخير يا ${prefs.userName} ☀️",
+                "صباح الخير" + (prefs.userName.takeIf { it.isNotBlank() }?.let { " يا $it" } ?: "") + " ☀️",
                 "المطلوب قريب:\n" + lines.joinToString("\n"),
                 route = "bills",
             )

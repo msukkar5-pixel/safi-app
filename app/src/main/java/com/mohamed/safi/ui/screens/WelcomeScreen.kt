@@ -128,23 +128,27 @@ fun WelcomeScreen(onDone: () -> Unit) {
     val prefs = SafiApp.prefs
     val ctx = LocalContext.current
     var name by remember { mutableStateOf(prefs.userName) }
+    var appName by remember { mutableStateOf(prefs.appName) }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
     ) {
-        Text("أهلاً بيك في صافي 👋", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("أهلاً بيك في ${com.mohamed.safi.AppName.v} 👋", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(
-            "مساعدك الشخصي: مصاريفك، تحويلات مصر، الفواتير، السلف، المواعيد، المنبهات، العربية والأماكن. كله على تليفونك انت بس.\n\nرسايل البنك: من تطبيق الرسايل دوس مطوّل على الرسالة ← مشاركة ← صافي، وهتتسجل لوحدها.",
+            "مساعدك الشخصي: مصاريفك، تحويلات مصر، الفواتير، السلف، المواعيد، المنبهات، العربية والأماكن. كله على تليفونك انت بس.\n\nرسايل البنك: من تطبيق الرسايل دوس مطوّل على الرسالة ← مشاركة ← ${com.mohamed.safi.AppName.v}، وهتتسجل لوحدها.",
             color = MaterialTheme.colorScheme.outline,
         )
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(name, { name = it }, label = { Text("اسمك") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(appName, { appName = it }, label = { Text("سمّي مساعدك (اختياري)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         SectionTitle("الصلاحيات")
         PermissionsList()
         Spacer(Modifier.height(20.dp))
         Button(
             onClick = {
-                prefs.userName = name.trim().ifBlank { "محمد" }
+                prefs.userName = name.trim()
+                prefs.appName = appName.trim().ifBlank { "صافي" }
                 prefs.onboarded = true
                 if (granted(ctx, Manifest.permission.ACCESS_FINE_LOCATION)) {
                     prefs.locationOn = true
@@ -156,7 +160,7 @@ fun WelcomeScreen(onDone: () -> Unit) {
         ) { Text("يلا نبدأ", fontWeight = FontWeight.Bold) }
         Spacer(Modifier.height(8.dp))
         Text(
-            "تقدر تغير أي حاجة بعدين من الإعدادات. علشان المساعد الذكي وقراءة الفواتير ضيف مفتاح Claude API من الإعدادات.",
+            "تقدر تغير أي حاجة بعدين من الإعدادات. علشان المساعد الذكي وقراءة الفواتير اربط أي ذكاء اصطناعي (Claude أو ChatGPT أو Gemini أو غيرهم) من الإعدادات.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
     }
