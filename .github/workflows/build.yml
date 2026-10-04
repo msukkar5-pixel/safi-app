@@ -47,7 +47,16 @@ jobs:
           ls -la app/src/main/assets app/src/main/assets/fonts app/src/main/assets/hadith
 
       - name: Build
-        run: gradle assembleRelease --stacktrace --no-daemon
+        run: |
+          set -o pipefail
+          gradle assembleRelease --no-daemon 2>&1 | tee build.log || {
+            for chunk in 1 2 3; do
+              start=$(( (chunk-1)*40 + 1 )); end=$(( chunk*40 ))
+              msg=$(grep -E "^e: |error:|What went wrong|Execution failed|> " build.log | sed -n "${start},${end}p" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+              [ -n "$msg" ] && echo "::error title=build-$chunk::$msg"
+            done
+            exit 1
+          }
 
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk Safi.apk
