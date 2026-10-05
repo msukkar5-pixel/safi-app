@@ -37,16 +37,18 @@ fun HealthRecordsScreen(onBack: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     ScreenScaffold("حالتي الصحية", onBack = onBack) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-            TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
-                Tab(tab == 0, { tab = 0 }, text = { Text("الأدوية") })
-                Tab(tab == 1, { tab = 1 }, text = { Text("التحاليل") })
-                Tab(tab == 2, { tab = 2 }, text = { Text("الدكاترة") })
-                Tab(tab == 3, { tab = 3 }, text = { Text("ملخص") })
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp, containerColor = MaterialTheme.colorScheme.background) {
+                Tab(tab == 0, { tab = 0 }, text = { Text("القلب والضغط") })
+                Tab(tab == 1, { tab = 1 }, text = { Text("الأدوية") })
+                Tab(tab == 2, { tab = 2 }, text = { Text("التحاليل") })
+                Tab(tab == 3, { tab = 3 }, text = { Text("الدكاترة") })
+                Tab(tab == 4, { tab = 4 }, text = { Text("ملخص") })
             }
             when (tab) {
-                0 -> MedsTab()
-                1 -> LabsTab()
-                2 -> VisitsTab()
+                0 -> VitalsSummary()
+                1 -> MedsTab()
+                2 -> LabsTab()
+                3 -> VisitsTab()
                 else -> HealthSummaryTab()
             }
         }

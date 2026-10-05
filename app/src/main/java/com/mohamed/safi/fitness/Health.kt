@@ -48,6 +48,8 @@ object Health {
         HealthPermission.getReadPermission(BodyFatRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(androidx.health.connect.client.records.BloodPressureRecord::class),
+        HealthPermission.getReadPermission(androidx.health.connect.client.records.OxygenSaturationRecord::class),
     )
 
     fun status(ctx: Context): Int = HealthConnectClient.getSdkStatus(ctx, HC_PACKAGE)

@@ -42,6 +42,7 @@ private val sections = listOf(
     ),
     "الصحة" to listOf(
         Entry("fitness", "الجيم والصحة", "أكل، تمارين، وزن، الساعة", Icons.Default.FitnessCenter, Color(0xFF1B998B)),
+        Entry("vitals", "القلب والضغط", "الضغط والنبض والأكسجين ونصايح", Icons.Default.Favorite, Color(0xFFC62828)),
         Entry("healthrecords", "حالتي الصحية", "أدوية، تحاليل، دكاترة", Icons.Default.MonitorHeart, Color(0xFFD32F2F)),
     ),
     "الإعدادات" to listOf(

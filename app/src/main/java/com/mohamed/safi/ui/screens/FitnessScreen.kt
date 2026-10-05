@@ -35,7 +35,7 @@ fun FitnessScreen(onBack: () -> Unit) {
     var profile by remember { mutableStateOf(Fit.prefs.heightCm <= 0) }
     // Bumped when the profile dialog closes so tabs that read Fit.prefs recompute.
     var profileRev by remember { mutableIntStateOf(0) }
-    val tabs = listOf("اليوم", "التمرين", "الموسوعة", "الأكل", "الوزن")
+    val tabs = listOf("اليوم", "القلب والضغط", "التمرين", "الموسوعة", "الأكل", "الوزن")
     ScreenScaffold(
         "الجيم والصحة", onBack = onBack,
         actions = { IconButton(onClick = { profile = true }) { Icon(Icons.Default.Person, "ملفي") } },
@@ -45,10 +45,11 @@ fun FitnessScreen(onBack: () -> Unit) {
                 tabs.forEachIndexed { i, t -> Tab(tab == i, { tab = i }, text = { Text(t) }) }
             }
             when (tab) {
-                0 -> TodayTab(profileRev) { tab = it }
-                1 -> WorkoutTab()
-                2 -> EncyclopediaTab()
-                3 -> FoodTab()
+                0 -> TodayTab(profileRev) { tab = if (it >= 1) it + 1 else it }
+                1 -> VitalsSummary()
+                2 -> WorkoutTab()
+                3 -> EncyclopediaTab()
+                4 -> FoodTab()
                 else -> WeightTab(profileRev)
             }
         }

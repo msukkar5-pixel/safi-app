@@ -245,6 +245,7 @@ fun AppRoot() {
             composable("finance") { FinanceScreen(null, open) }
             composable("vehicle") { VehicleScreen(back, open) }
             composable("alerts") { AlertsScreen(back) }
+            composable("vitals") { VitalsScreen(back) }
             composable("assistant") { AssistantScreen() }
             composable("schedule") { ScheduleScreen() }
             composable("more") { MoreScreen(open) }
