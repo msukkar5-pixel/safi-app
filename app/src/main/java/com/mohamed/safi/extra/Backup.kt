@@ -23,8 +23,8 @@ import java.util.zip.ZipOutputStream
  * The Claude API key is never written to the backup.
  */
 object Backup {
-    private val dbNames = listOf("safi.db", "safi_life.db", "safi_extra.db", "safi_diary.db", "safi_health.db")
-    private val folders = listOf("receipts", "docs", "labs")
+    private val dbNames = listOf("safi.db", "safi_life.db", "safi_extra.db", "safi_diary.db", "safi_health.db", "safi_car.db", "safi_vitals.db", "safi_docs.db", "safi_faith.db")
+    private val folders = listOf("receipts", "docs", "labs", "car")
 
     private fun checkpoint() {
         runCatching { SafiApp.db.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
