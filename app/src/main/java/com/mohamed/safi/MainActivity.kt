@@ -181,6 +181,10 @@ fun AppRoot() {
     val current = entry?.destination?.route
     val pendingRoute by UiBus.pendingRoute.collectAsState()
 
+    DisposableEffect(Unit) {
+        com.mohamed.safi.audio.NowPlaying.connect(ctx)
+        onDispose { com.mohamed.safi.audio.NowPlaying.release() }
+    }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             if (System.currentTimeMillis() - SafiApp.prefs.rateUpdated > 6 * 3_600_000L) Fx.refresh()
@@ -221,6 +225,8 @@ fun AppRoot() {
 
     Scaffold(
         bottomBar = {
+            Column {
+            MiniPlayer(current) { r -> runCatching { go(nav, r) } }
             if (current in tabs.map { it.route }) {
                 NavigationBar {
                     tabs.forEach { t ->
@@ -232,6 +238,7 @@ fun AppRoot() {
                         )
                     }
                 }
+            }
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -287,6 +294,16 @@ fun AppRoot() {
             }
             composable("history") { HistoryScreen(back, open) }
             composable("audiobooks") { AudiobooksScreen(back) }
+            composable("manasik") { ManasikScreen(back, open) }
+            composable("umrah") { GuideScreen("umrah", back, open) }
+            composable("hajj") { GuideScreen("hajj", back, open) }
+            composable("ruqyah") { GuideScreen("ruqyah", back, open) }
+            composable("hisn") { HisnScreen(back, open) }
+            composable("hisn/{i}") { e -> HisnScreen(back, open, e.arguments?.getString("i")?.toIntOrNull()) }
+            composable("sleep") { SleepScreen(back, open) }
+            composable("radio") { RadioScreen(back) }
+            composable("tv") { TvScreen(back) }
+            composable("tool/{id}") { e -> DeenToolScreen(e.arguments?.getString("id") ?: "", back) }
         }
     }
 }
