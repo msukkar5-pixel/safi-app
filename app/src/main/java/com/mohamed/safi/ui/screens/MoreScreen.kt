@@ -28,6 +28,9 @@ private val sections = listOf(
         Entry("wird", "الورد اليومي", "صفحات كل يوم وختمة", Icons.Default.AutoStories, Color(0xFF1B5E20)),
         Entry("azkar", "الأذكار والأدعية", "الصباح والمساء والسبحة", Icons.Default.Favorite, Color(0xFF00897B)),
         Entry("prayer", "الصلاة والقبلة", "المواعيد والأذان والبوصلة", Icons.Default.Mosque, Color(0xFF2E7DBA)),
+        Entry("prayertracker", "متابعة الصلوات", "في وقتها، جماعة، القضاء", Icons.Default.TaskAlt, Color(0xFF1B7A4E)),
+        Entry("islamiccalendar", "التقويم الهجري", "المناسبات وأيام الصيام", Icons.Default.CalendarMonth, Color(0xFF8F6E22)),
+        Entry("asmahusna", "أسماء الله الحسنى", "الأسماء ومعانيها", Icons.Default.AutoAwesome, Color(0xFF00695C)),
         Entry("shaarawy", "الشيخ الشعراوي", "خواطر بالسورة والموضوع", Icons.Default.VideoLibrary, Color(0xFFC62828)),
     ),
     "المعرفة" to listOf(

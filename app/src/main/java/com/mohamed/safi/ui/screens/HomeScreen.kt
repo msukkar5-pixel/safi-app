@@ -95,7 +95,9 @@ fun HomeScreen(open: (String) -> Unit) {
         }
 
         item { WirdHomeCard(open) }
+        item { PrayerTrackerHomeCard(open) }
         item { NextUpCard(reminders, open) }
+        item { OccasionHomeCard(open) }
 
         item { CarpoolCard(open) }
 

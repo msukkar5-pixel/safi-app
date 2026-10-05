@@ -246,6 +246,9 @@ fun AppRoot() {
             composable("vehicle") { VehicleScreen(back, open) }
             composable("alerts") { AlertsScreen(back) }
             composable("vitals") { VitalsScreen(back) }
+            composable("prayertracker") { PrayerTrackerScreen(back) }
+            composable("islamiccalendar") { IslamicCalendarScreen(back) }
+            composable("asmahusna") { AsmaHusnaScreen(back) }
             composable("assistant") { AssistantScreen() }
             composable("schedule") { ScheduleScreen() }
             composable("more") { MoreScreen(open) }
