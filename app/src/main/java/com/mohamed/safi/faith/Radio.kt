@@ -32,7 +32,7 @@ object Radio {
         return (0 until a.length()).mapNotNull { i ->
             val o = a.getJSONObject(i)
             val url = o.optString("url").replace("http://", "https://")
-            if (url.isBlank()) null else Station("mp3q_" + o.optInt("id"), o.optString("name").trim(), url, groupOf(o.optString("name")))
+            if (url.isBlank()) null else Station("mp3q_" + o.optInt("id"), o.optString("name").replace("*", "").trim(), url, groupOf(o.optString("name")))
         }
     }
 

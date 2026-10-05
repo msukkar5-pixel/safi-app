@@ -282,7 +282,7 @@ private fun DrawScope.drawTawaf(p: Pen) {
 
     label(p, "الكعبة", Offset(c.x, c.y + k * 0.08f), Gold, 12.sp, true)
     label(p, "حِجر إسماعيل\n(من الكعبة — طُف من ورائه)", Offset(c.x, tl.y - k * 0.62f), p.fg, 10.sp)
-    label(p, "الحجر الأسود\nابدأ وانتهِ هنا", Offset(bs.x + 34.dp.toPx(), bs.y + 22.dp.toPx()), Color(0xFF2E9D5B), 11.sp, true)
+    label(p, "الحجر الأسود\nابدأ وانتهِ هنا", Offset(bs.x + 8.dp.toPx(), bs.y + 44.dp.toPx()), Color(0xFF2E9D5B), 11.sp, true)
     label(p, "الركن اليماني\nاستلمه بيدك إن تيسّر", Offset(ym.x - 30.dp.toPx(), ym.y + 24.dp.toPx()), p.accent, 10.sp, true)
     label(p, "مقام إبراهيم", Offset(mq.x + 30.dp.toPx(), mq.y - 2.dp.toPx()), p.fg, 10.sp)
     label(p, "بين الركنين: ربنا آتنا في الدنيا حسنة…", Offset(c.x, c.y + ry + 2.dp.toPx()), p.muted, 10.sp, maxW = size.width * 0.8f)

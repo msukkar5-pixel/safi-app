@@ -4,6 +4,13 @@ on:
   push:
     branches: [main, dev]
   workflow_dispatch:
+    inputs:
+      plan:
+        description: "UI test plan (tools/uiplan_quick.json = new screens only, ~10 min)"
+        default: tools/uiplan.json
+      apis:
+        description: "Emulator API levels, e.g. [35] for a quick run"
+        default: "[34, 35]"
 
 permissions:
   contents: write
@@ -91,7 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [34, 35]
+        api: ${{ fromJSON(github.event.inputs.apis || '[34, 35]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -111,7 +118,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: python3 tools/uitest.py Safi.apk tools/uiplan.json || true
+          script: python3 tools/uitest.py Safi.apk ${{ github.event.inputs.plan || 'tools/uiplan.json' }} || true
       - name: Push results to ci-results branch
         if: always()
         run: |
