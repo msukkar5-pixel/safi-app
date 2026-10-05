@@ -196,6 +196,7 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
     var loadErr by remember { mutableStateOf<String?>(null) }
     var endIdx by remember { mutableIntStateOf(start.idx) }
     var size by remember { mutableIntStateOf(Books.fontSize) }
+    val rs = rememberReadStyle()
     var marks by remember { mutableStateOf(book.marks) }
     val state = rememberLazyListState()
     LaunchedEffect(sec) {
@@ -257,7 +258,7 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
                 }
                 val obit = p.startsWith("◆")
                 Text(
-                    p, fontSize = (size * ReadPrefs.scale).sp, lineHeight = (size * ReadPrefs.scale * ReadPrefs.line * 1.1f).sp, textAlign = TextAlign.Justify, fontFamily = rememberReadStyle().family,
+                    p, fontSize = rs.size(size.toFloat()), lineHeight = rs.lineH(size * 1.1f), textAlign = TextAlign.Justify, fontFamily = rs.family,
                     fontWeight = if (obit) FontWeight.Bold else FontWeight.Normal,
                     color = if (obit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),

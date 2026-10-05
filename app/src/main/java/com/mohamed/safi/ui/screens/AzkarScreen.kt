@@ -153,6 +153,7 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
     val left = remember(c.name) { mutableStateListOf(*c.items.map { it.count }.toTypedArray()) }
     val done = left.count { it == 0 }
     var size by remember { mutableIntStateOf(22) }
+    val rs = rememberReadStyle()
 
     ReadingTheme { ScreenScaffold(
         c.name, onBack = onBack,
@@ -181,7 +182,7 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
                         ),
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text(z.text, fontFamily = family, fontSize = (size * ReadPrefs.scale).sp, lineHeight = (size * ReadPrefs.scale * ReadPrefs.line).sp, textAlign = TextAlign.Justify)
+                            Text(z.text, fontFamily = family, fontSize = rs.size(size.toFloat()), lineHeight = rs.lineH(size.toFloat()), textAlign = TextAlign.Justify)
                             if (z.desc.isNotBlank()) {
                                 Spacer(Modifier.height(8.dp))
                                 Text(z.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
