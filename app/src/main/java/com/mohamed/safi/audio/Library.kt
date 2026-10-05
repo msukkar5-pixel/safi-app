@@ -149,10 +149,10 @@ class PlaybackService : MediaSessionService() {
     private val handler = Handler(Looper.getMainLooper())
     private var lastSave = 0L
 
-    /** Audiobook items use mediaId "bookId#index"; Quran items ("quran#...") are skipped. */
+    /** Audiobook items use mediaId "bookId#index"; Quran ("quran#...") and other items ("deen#...", "radio#...") are skipped. */
     private fun saveProgress(p: androidx.media3.common.Player) {
         val id = p.currentMediaItem?.mediaId ?: return
-        if (id.startsWith("quran#")) return
+        if (id.startsWith("quran#") || id.startsWith("deen#") || id.startsWith("radio#")) return
         val cut = id.lastIndexOf('#')
         if (cut <= 0) return
         val index = id.substring(cut + 1).toIntOrNull() ?: return
@@ -233,6 +233,18 @@ object Player {
         }
         val idx = m.surahs.sorted().indexOf(startSurah).coerceAtLeast(0)
         c.setMediaItems(items, idx, 0L)
+        c.setPlaybackSpeed(1f)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+        c.prepare()
+        c.play()
+    }
+
+    /** One recording (a Hisn al-Muslim chapter, a dua…); mediaId should start with "deen#". */
+    fun loadSingle(c: MediaController, mediaId: String, url: String, title: String, album: String) {
+        val item = MediaItem.Builder().setUri(url).setMediaId(mediaId)
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(album).setAlbumTitle(album).build())
+            .build()
+        c.setMediaItem(item)
         c.setPlaybackSpeed(1f)
         c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
         c.prepare()

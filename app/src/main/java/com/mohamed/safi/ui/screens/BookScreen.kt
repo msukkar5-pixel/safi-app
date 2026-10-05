@@ -354,6 +354,9 @@ fun LibraryScreen(onBack: () -> Unit, openBook: (String) -> Unit, openRoute: (St
                     Triple("hadith", "الأحاديث الصحيحة", Icons.Default.LibraryBooks),
                     Triple("history", "تاريخ مصر والإمارات", Icons.Default.AccountBalance),
                     Triple("audiobooks", "الكتب المسموعة", Icons.Default.Headphones),
+                    Triple("hisn", "حصن المسلم", Icons.Default.Shield),
+                    Triple("manasik", "الحج والعمرة", Icons.Default.Landscape),
+                    Triple("ruqyah", "الرقية الشرعية", Icons.Default.Healing),
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     shelves.chunked(2).forEach { row ->

@@ -287,6 +287,12 @@ fun AppRoot() {
             }
             composable("history") { HistoryScreen(back, open) }
             composable("audiobooks") { AudiobooksScreen(back) }
+            composable("manasik") { ManasikScreen(back, open) }
+            composable("umrah") { GuideScreen("umrah", back, open) }
+            composable("hajj") { GuideScreen("hajj", back, open) }
+            composable("ruqyah") { GuideScreen("ruqyah", back, open) }
+            composable("hisn") { HisnScreen(back, open) }
+            composable("tool/{id}") { e -> DeenToolScreen(e.arguments?.getString("id") ?: "", back) }
         }
     }
 }
