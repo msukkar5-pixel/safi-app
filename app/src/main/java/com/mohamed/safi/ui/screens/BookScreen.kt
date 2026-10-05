@@ -227,10 +227,10 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
     }
     val key = "${sec.vol}:${sec.idx}"
 
-    ScreenScaffold(
+    ReadingTheme { ScreenScaffold(
         (if (all.size > 1) "المجلد ${sec.vol}" else "") + (if (sec.page > 0) (if (all.size > 1) " • " else "") + "ص ${sec.page}" else ""),
         onBack = onBack,
-        actions = {
+        actions = { ReadingSettingsButton();
             IconButton(onClick = { marks = if (key in marks) marks - key else marks + key; book.marks = marks }) {
                 Icon(if (key in marks) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "علامة")
             }
@@ -257,7 +257,7 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
                 }
                 val obit = p.startsWith("◆")
                 Text(
-                    p, fontSize = size.sp, lineHeight = (size * 1.95).sp, textAlign = TextAlign.Justify, fontFamily = Amiri,
+                    p, fontSize = (size * ReadPrefs.scale).sp, lineHeight = (size * ReadPrefs.scale * ReadPrefs.line * 1.1f).sp, textAlign = TextAlign.Justify, fontFamily = rememberReadStyle().family,
                     fontWeight = if (obit) FontWeight.Bold else FontWeight.Normal,
                     color = if (obit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -272,7 +272,7 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
                 }
             }
         }
-    }
+    } }
 }
 
 @Composable

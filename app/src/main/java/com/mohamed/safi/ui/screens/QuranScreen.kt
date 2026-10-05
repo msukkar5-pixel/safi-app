@@ -11,6 +11,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import com.mohamed.safi.ui.Text
@@ -132,98 +137,264 @@ fun QuranScreen(onBack: () -> Unit) {
     }
 }
 
+private val quranModes = listOf("mushaf" to "مصحف", "flow" to "متصل", "ayat" to "آية آية", "tafsir" to "مع التفسير")
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun QuranReader(surahs: List<Surah>, surahNo: Int, startAyah: Int, onBack: () -> Unit) {
-    val ctx = LocalContext.current
     var current by remember { mutableIntStateOf(surahNo) }
-    val s = surahs[current - 1]
+    var start by remember { mutableIntStateOf(startAyah) }
+    var mode by remember { mutableStateOf(Quran.viewMode) }
     var size by remember { mutableIntStateOf(Quran.fontSize) }
     var marks by remember { mutableStateOf(Quran.bookmarks) }
-    val family = remember {
-        if (Quran.hasFont(ctx)) runCatching { FontFamily(Font("fonts/quran.ttf", ctx.assets)) }.getOrNull() ?: FontFamily.Default else FontFamily.Default
-    }
-    val state = rememberLazyListState()
-    LaunchedEffect(current) {
-        state.scrollToItem(if (current == surahNo && startAyah > 1) startAyah else 0)
-    }
-    // remember position
-    LaunchedEffect(state.firstVisibleItemIndex, current) {
-        delay(600)
-        Quran.lastSurah = current
-        Quran.lastAyah = (state.firstVisibleItemIndex).coerceIn(1, s.ayahs.size)
-    }
-    val accent = MaterialTheme.colorScheme.primary
-    var sheetAyah by remember { mutableStateOf<Int?>(null) }
+    var fontId by remember { mutableStateOf(Quran.quranFont) }
+    var bars by remember { mutableStateOf(true) }
+    var auto by remember { mutableStateOf(false) }
+    var speed by remember { mutableIntStateOf(Quran.autoSpeed) }
+    var sheet by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val family = if (fontId == "system") FontFamily.Default else Amiri
+    val hasPages = remember(surahs) { surahs.all { s -> s.ayahs.all { it.page in 1..604 } } }
+    if (mode == "mushaf" && !hasPages) mode = "ayat"
+    val s = surahs[current - 1]
+    ImmersiveEffect(!bars)
 
-    ScreenScaffold(
-        s.name, onBack = onBack,
-        actions = {
-            IconButton(onClick = { UiBus.pendingQuranAudio.value = current; UiBus.pendingRoute.value = "quranaudio" }) { Icon(Icons.Default.Headphones, "استمع") }
-            IconButton(onClick = { size = (size - 2).coerceAtLeast(16); Quran.fontSize = size }) { Icon(Icons.Default.TextDecrease, "أصغر") }
-            IconButton(onClick = { size = (size + 2).coerceAtMost(48); Quran.fontSize = size }) { Icon(Icons.Default.TextIncrease, "أكبر") }
-        },
-    ) { pad ->
-        LazyColumn(Modifier.fillMaxSize().padding(pad), state = state, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
-            item {
-                Column(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(s.name, fontFamily = family, fontSize = (size + 4).sp, color = accent)
-                            Text("${s.revelationAr} • ${s.ayahs.size} آية", style = MaterialTheme.typography.bodySmall)
+    ReadingTheme {
+        val st = rememberReadStyle()
+        ScreenScaffold(
+            if (mode == "mushaf") "المصحف" else s.name, onBack = onBack, showTopBar = bars,
+            actions = {
+                IconButton(onClick = { UiBus.pendingQuranAudio.value = current; UiBus.pendingRoute.value = "quranaudio" }) { Icon(Icons.Default.Headphones, "استمع") }
+                IconButton(onClick = { size = (size + 2).coerceAtMost(48); Quran.fontSize = size }) { Icon(Icons.Default.TextIncrease, "أكبر") }
+                IconButton(onClick = { size = (size - 2).coerceAtLeast(16); Quran.fontSize = size }) { Icon(Icons.Default.TextDecrease, "أصغر") }
+                ReadingSettingsButton {
+                    Text("طريقة عرض المصحف", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        quranModes.forEach { (id, t) -> if (id != "mushaf" || hasPages) FilterChip(mode == id, { mode = id; Quran.viewMode = id }, label = { Text(t) }) }
+                    }
+                    Text("خط المصحف", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(fontId == "amiri", { fontId = "amiri"; Quran.quranFont = "amiri" }, label = { Text("نسخ (أميري)", fontFamily = Amiri) })
+                        FilterChip(fontId == "system", { fontId = "system"; Quran.quranFont = "system" }, label = { Text("خط الجهاز") })
+                    }
+                    Text("حجم خط المصحف: ${Quran.toArabicDigits(size)}", style = MaterialTheme.typography.labelLarge)
+                    Slider(size.toFloat(), { size = it.toInt(); Quran.fontSize = size }, valueRange = 16f..48f)
+                }
+            },
+        ) { pad ->
+            Column(Modifier.fillMaxSize().padding(pad)) {
+                if (bars) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    quranModes.forEach { (id, t) ->
+                        if (id != "mushaf" || hasPages) FilterChip(mode == id, { mode = id; Quran.viewMode = id; auto = false }, label = { Text(t, fontSize = 12.sp) })
+                    }
+                }
+                Box(Modifier.weight(1f)) {
+                    val tap: (Int, Int) -> Unit = { sn, an -> sheet = sn to an }
+                    when (mode) {
+                        "mushaf" -> MushafPager(surahs, current, start, size, family, st, marks, onTap = tap, onToggleBars = { bars = !bars }) { sn, an ->
+                            current = sn; start = an; Quran.lastSurah = sn; Quran.lastAyah = an
                         }
+                        else -> SurahList(
+                            surahs, s, start, mode, size, family, st, marks, auto, speed,
+                            onTap = tap, onToggleBars = { bars = !bars },
+                            onSurah = { current = it; start = 1 },
+                        )
                     }
-                    if (s.number != 1 && s.number != 9) {
-                        Spacer(Modifier.height(12.dp))
-                        Text(Quran.BASMALA, fontFamily = family, fontSize = size.sp, textAlign = TextAlign.Center)
+                }
+                if (mode != "mushaf" && bars) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalIconButton(onClick = { auto = !auto }) { Icon(if (auto) Icons.Default.Pause else Icons.Default.PlayArrow, "تمرير تلقائي") }
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (auto) "تمرير تلقائي" else "تمرير تلقائي للقراءة الطويلة", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                    if (auto) {
+                        IconButton(onClick = { speed = (speed - 1).coerceAtLeast(1); Quran.autoSpeed = speed }) { Icon(Icons.Default.Remove, "أبطأ") }
+                        Text(Quran.toArabicDigits(speed))
+                        IconButton(onClick = { speed = (speed + 1).coerceAtMost(8); Quran.autoSpeed = speed }) { Icon(Icons.Default.Add, "أسرع") }
                     }
-                }
-            }
-            itemsIndexed(s.ayahs, key = { _, a -> a.n }) { _, a ->
-                val key = "${s.number}:${a.n}"
-                val marked = key in marks
-                Column(
-                    Modifier.fillMaxWidth()
-                        .clickable { sheetAyah = a.n }
-                        .background(if (marked) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f) else androidx.compose.ui.graphics.Color.Transparent)
-                        .padding(vertical = 8.dp),
-                ) {
-                    Text(
-                        buildAnnotatedString {
-                            append(a.text)
-                            append(" ")
-                            withStyle(SpanStyle(color = accent)) { append("﴿${Quran.toArabicDigits(a.n)}﴾") }
-                        },
-                        fontFamily = family, fontSize = size.sp, lineHeight = (size * 1.9).sp,
-                        textAlign = TextAlign.Justify, modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (a.sajda) Text("۩ سجدة", color = accent, style = MaterialTheme.typography.labelSmall)
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-            }
-            item {
-                Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    if (current > 1) OutlinedButton(onClick = { current -= 1 }) { Text("السورة اللي قبلها") } else Spacer(Modifier)
-                    if (current < 114) Button(onClick = { current += 1 }) { Text("السورة اللي بعدها") }
-                }
-                Text("دوس على أي آية علشان تقرا تفسيرها أو تحط عليها علامة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                OutlinedButton(onClick = { com.mohamed.safi.faith.Shaarawy.open(ctx, com.mohamed.safi.faith.Shaarawy.surahSearch(s.name)) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    Icon(Icons.Default.PlayCircle, null); Spacer(Modifier.width(6.dp)); Text("خواطر الشعراوي عن ${s.name}")
                 }
             }
         }
     }
 
-    sheetAyah?.let { n ->
-        val a = s.ayahs.first { it.n == n }
-        AyahSheet(s, a, family, size, key = "${s.number}:${a.n}", marked = "${s.number}:${a.n}" in marks,
-            onToggleMark = {
-                val k = "${s.number}:${a.n}"
-                marks = if (k in marks) marks - k else marks + k
-                Quran.bookmarks = marks
-            },
-            onDismiss = { sheetAyah = null })
+    sheet?.let { (sn, an) ->
+        val ss = surahs[sn - 1]
+        val a = ss.ayahs.first { it.n == an }
+        val k = "$sn:$an"
+        AyahSheet(ss, a, family, size, key = k, marked = k in marks,
+            onToggleMark = { marks = if (k in marks) marks - k else marks + k; Quran.bookmarks = marks },
+            onDismiss = { sheet = null })
     }
 }
+
+/** Ayahs as one flowing, justified paragraph; tapping an ayah opens its sheet. */
+@Composable
+private fun AyahFlow(
+    surahNo: Int, ayahs: List<com.mohamed.safi.faith.Ayah>, size: Int, family: FontFamily, st: ReadStyle, marks: Set<String>,
+    onTap: (Int, Int) -> Unit, onToggleBars: () -> Unit, modifier: Modifier = Modifier,
+) {
+    val markBg = st.accent.copy(alpha = 0.16f)
+    val ann = remember(ayahs, marks, st.accent) {
+        buildAnnotatedString {
+            ayahs.forEach { a ->
+                pushStringAnnotation("a", a.n.toString())
+                if ("$surahNo:${a.n}" in marks) withStyle(SpanStyle(background = markBg)) { append(a.text) } else append(a.text)
+                append(" ")
+                withStyle(SpanStyle(color = st.accent)) { append("﴿${Quran.toArabicDigits(a.n)}﴾") }
+                if (a.sajda) withStyle(SpanStyle(color = st.accent)) { append(" ۩") }
+                pop()
+                append(" ")
+            }
+        }
+    }
+    var layout by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
+    androidx.compose.material3.Text(
+        ann,
+        modifier = modifier.fillMaxWidth().pointerInput(ann) {
+            detectTapGestures(
+                onDoubleTap = { onToggleBars() },
+                onTap = { pos ->
+                    val off = layout?.getOffsetForPosition(pos) ?: return@detectTapGestures
+                    ann.getStringAnnotations("a", off, off).firstOrNull()?.let { onTap(surahNo, it.item.toInt()) }
+                },
+            )
+        },
+        onTextLayout = { layout = it },
+        color = st.fg, fontFamily = family, fontSize = size.sp, lineHeight = (size * st.line * 1.1f).sp, textAlign = TextAlign.Justify,
+    )
+}
+
+@Composable
+private fun SurahBanner(s: Surah, size: Int, family: FontFamily, st: ReadStyle) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(st.accent.copy(alpha = 0.10f))
+                .border(1.5.dp, Gold, RoundedCornerShape(10.dp)).padding(3.dp).border(0.8.dp, Gold.copy(alpha = 0.6f), RoundedCornerShape(8.dp)).padding(vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("۞", color = Gold, fontSize = 18.sp)
+                Spacer(Modifier.width(10.dp))
+                Text(s.name, fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = (size * 0.85f).sp, color = st.accent)
+                Spacer(Modifier.width(10.dp))
+                Text("۞", color = Gold, fontSize = 18.sp)
+            }
+        }
+        Text("${s.revelationAr} • ${Quran.toArabicDigits(s.ayahs.size)} آية", fontSize = 11.sp, color = st.fg.copy(alpha = 0.6f))
+        if (s.number != 1 && s.number != 9) Text(Quran.BASMALA, fontFamily = family, fontSize = size.sp, color = st.fg, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun MushafPager(
+    surahs: List<Surah>, surahNo: Int, startAyah: Int, size: Int, family: FontFamily, st: ReadStyle, marks: Set<String>,
+    onTap: (Int, Int) -> Unit, onToggleBars: () -> Unit, onPage: (Int, Int) -> Unit,
+) {
+    val pages = remember(surahs) { surahs.flatMap { s -> s.ayahs.map { s to it } }.groupBy { it.second.page } }
+    val startPage = remember { surahs[surahNo - 1].ayahs.firstOrNull { it.n >= startAyah }?.page ?: 1 }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = startPage - 1) { 604 }
+    LaunchedEffect(pager.currentPage) {
+        delay(400)
+        pages[pager.currentPage + 1]?.firstOrNull()?.let { (s, a) -> onPage(s.number, a.n) }
+    }
+    androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { p ->
+        val items = pages[p + 1].orEmpty()
+        val juz = items.firstOrNull()?.second?.juz ?: 0
+        Box(Modifier.fillMaxSize().padding(8.dp)) {
+            Column(
+                Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).background(st.bg)
+                    .border(2.dp, Gold.copy(alpha = 0.85f), RoundedCornerShape(6.dp)).padding(4.dp)
+                    .border(0.8.dp, st.accent.copy(alpha = 0.5f), RoundedCornerShape(4.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Row(Modifier.fillMaxWidth()) {
+                    Text(items.firstOrNull()?.first?.name ?: "", fontFamily = Amiri, fontSize = 13.sp, color = st.accent, modifier = Modifier.weight(1f))
+                    Text("الجزء ${Quran.toArabicDigits(juz)}", fontFamily = Amiri, fontSize = 13.sp, color = st.accent)
+                }
+                HorizontalDivider(color = Gold.copy(alpha = 0.5f))
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
+                    var i = 0
+                    while (i < items.size) {
+                        val s = items[i].first
+                        var j = i
+                        while (j < items.size && items[j].first.number == s.number) j++
+                        val run = items.subList(i, j).map { it.second }
+                        if (run.first().n == 1) SurahBanner(s, size, family, st)
+                        AyahFlow(s.number, run, size, family, st, marks, onTap, onToggleBars)
+                        i = j
+                    }
+                }
+                HorizontalDivider(color = Gold.copy(alpha = 0.5f))
+                Text("﴾ ${Quran.toArabicDigits(p + 1)} ﴿", fontFamily = Amiri, fontSize = 13.sp, color = st.accent, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
+
+@Composable
+private fun SurahList(
+    surahs: List<Surah>, s: Surah, startAyah: Int, mode: String, size: Int, family: FontFamily, st: ReadStyle, marks: Set<String>,
+    auto: Boolean, speed: Int, onTap: (Int, Int) -> Unit, onToggleBars: () -> Unit, onSurah: (Int) -> Unit,
+) {
+    val ctx = LocalContext.current
+    val state = rememberLazyListState()
+    val chunk = 8
+    val chunks = remember(s, mode) { if (mode == "flow") s.ayahs.chunked(chunk) else s.ayahs.map { listOf(it) } }
+    var tafsir by remember { mutableStateOf<Map<Int, List<String>>?>(null) }
+    var tafsirFailed by remember { mutableStateOf(false) }
+    if (mode == "tafsir") LaunchedEffect(Unit) {
+        runCatching { tafsir = com.mohamed.safi.faith.Tafsir.load("muyassar") }.onFailure { tafsirFailed = true }
+    }
+    LaunchedEffect(s.number, mode) {
+        val idx = chunks.indexOfFirst { c -> c.any { it.n == startAyah } }.coerceAtLeast(0)
+        state.scrollToItem(if (startAyah > 1) idx + 1 else 0)
+    }
+    LaunchedEffect(state.firstVisibleItemIndex, s.number) {
+        delay(600)
+        Quran.lastSurah = s.number
+        Quran.lastAyah = chunks.getOrNull((state.firstVisibleItemIndex - 1).coerceAtLeast(0))?.first()?.n ?: 1
+    }
+    LaunchedEffect(auto, speed) {
+        while (auto) {
+            state.scrollBy(speed * 0.6f)
+            delay(16)
+        }
+    }
+    LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp)) {
+        item { SurahBanner(s, size, family, st) }
+        itemsIndexed(chunks, key = { _, c -> c.first().n }) { _, c ->
+            when (mode) {
+                "flow" -> AyahFlow(s.number, c, size, family, st, marks, onTap, onToggleBars, Modifier.padding(vertical = 2.dp))
+                else -> {
+                    val a = c.first()
+                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        AyahFlow(s.number, c, size, family, st, marks, onTap, onToggleBars)
+                        if (mode == "tafsir") {
+                            val t = tafsir?.get(s.number)?.getOrNull(a.n - 1)
+                            Spacer(Modifier.height(4.dp))
+                            Surface(color = st.card, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    t ?: if (tafsirFailed) "التفسير محتاج إنترنت أول مرة" else "…",
+                                    Modifier.padding(10.dp), fontSize = st.size(14f), lineHeight = st.lineH(14f), color = st.fg.copy(alpha = 0.85f),
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider(color = st.fg.copy(alpha = 0.08f))
+                }
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                if (s.number > 1) OutlinedButton(onClick = { onSurah(s.number - 1) }) { Text("السورة اللي قبلها") } else Spacer(Modifier)
+                if (s.number < 114) Button(onClick = { onSurah(s.number + 1) }) { Text("السورة اللي بعدها") }
+            }
+            Text("دوس على أي آية للتفسير أو العلامة أو المشاركة • دوس مرتين لوضع التركيز", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            OutlinedButton(onClick = { com.mohamed.safi.faith.Shaarawy.open(ctx, com.mohamed.safi.faith.Shaarawy.surahSearch(s.name)) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Icon(Icons.Default.PlayCircle, null); Spacer(Modifier.width(6.dp)); Text("خواطر الشعراوي عن ${s.name}")
+            }
+            Spacer(Modifier.height(40.dp))
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

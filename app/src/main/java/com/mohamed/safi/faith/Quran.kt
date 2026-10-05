@@ -108,6 +108,11 @@ object Quran {
     var lastSurah: Int get() = sp().getInt("lastSurah", 0); set(v) = sp().edit { putInt("lastSurah", v) }
     var lastAyah: Int get() = sp().getInt("lastAyah", 1); set(v) = sp().edit { putInt("lastAyah", v) }
     var fontSize: Int get() = sp().getInt("fontSize", 26); set(v) = sp().edit { putInt("fontSize", v) }
+    /** mushaf | flow | ayat | tafsir */
+    var viewMode: String get() = sp().getString("viewMode", "mushaf")!!; set(v) = sp().edit { putString("viewMode", v) }
+    /** amiri | system */
+    var quranFont: String get() = sp().getString("quranFont", "amiri")!!; set(v) = sp().edit { putString("quranFont", v) }
+    var autoSpeed: Int get() = sp().getInt("autoSpeed", 2); set(v) = sp().edit { putInt("autoSpeed", v) }
     var bookmarks: Set<String> get() = sp().getStringSet("bookmarks", emptySet()) ?: emptySet(); set(v) = sp().edit { putStringSet("bookmarks", v) }
 
     fun hasFont(ctx: Context) = runCatching { ctx.assets.list("fonts")?.contains("quran.ttf") == true }.getOrDefault(false)

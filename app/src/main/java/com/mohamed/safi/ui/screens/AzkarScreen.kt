@@ -154,9 +154,9 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
     val done = left.count { it == 0 }
     var size by remember { mutableIntStateOf(22) }
 
-    ScreenScaffold(
+    ReadingTheme { ScreenScaffold(
         c.name, onBack = onBack,
-        actions = {
+        actions = { ReadingSettingsButton();
             IconButton(onClick = { size = (size - 2).coerceAtLeast(14) }) { Icon(Icons.Default.ZoomOut, "أصغر") }
             IconButton(onClick = { size = (size + 2).coerceAtMost(40) }) { Icon(Icons.Default.ZoomIn, "أكبر") }
         },
@@ -181,7 +181,7 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
                         ),
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text(z.text, fontFamily = family, fontSize = size.sp, lineHeight = (size * 1.8).sp, textAlign = TextAlign.Justify)
+                            Text(z.text, fontFamily = family, fontSize = (size * ReadPrefs.scale).sp, lineHeight = (size * ReadPrefs.scale * ReadPrefs.line).sp, textAlign = TextAlign.Justify)
                             if (z.desc.isNotBlank()) {
                                 Spacer(Modifier.height(8.dp))
                                 Text(z.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
@@ -211,7 +211,7 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
                 }
             }
         }
-    }
+    } }
 }
 
 private val tasbeehPhrases = listOf("سبحان الله", "الحمد لله", "الله أكبر", "لا إله إلا الله", "أستغفر الله", "سبحان الله وبحمده", "لا حول ولا قوة إلا بالله", "اللهم صلِّ على محمد")

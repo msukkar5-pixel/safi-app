@@ -147,11 +147,11 @@ private fun HadithBookView(id: String, initialQuery: String = "", onBack: () -> 
 @Composable
 private fun SectionView(book: HadithBook, section: HadithSection, onBack: () -> Unit) {
     val list = remember(section) { book.hadiths.filter { it.section == section.number } }
-    ScreenScaffold(section.name, onBack = onBack) { pad ->
+    ReadingTheme { ScreenScaffold(section.name, onBack = onBack, actions = { ReadingSettingsButton() }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(list) { h -> HadithCard(h) }
         }
-    }
+    } }
 }
 
 @Composable
@@ -163,14 +163,14 @@ private fun FavouritesView(onBack: () -> Unit) {
             if (fav.none { it.startsWith("$id:") }) emptyList() else runCatching { Hadiths.load(id).hadiths.filter { Hadiths.key(it) in fav } }.getOrDefault(emptyList())
         }
     }
-    ScreenScaffold("الأحاديث المحفوظة", onBack = onBack) { pad ->
+    ReadingTheme { ScreenScaffold("الأحاديث المحفوظة", onBack = onBack, actions = { ReadingSettingsButton() }) { pad ->
         val l = list
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (l == null) item { CircularProgressIndicator() }
             else if (l.isEmpty()) item { EmptyState(Icons.Default.BookmarkBorder, "دوس على علامة الحفظ في أي حديث") }
             else items(l) { h -> HadithCard(h) }
         }
-    }
+    } }
 }
 
 @Composable
