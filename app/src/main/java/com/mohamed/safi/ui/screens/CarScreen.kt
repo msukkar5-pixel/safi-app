@@ -33,7 +33,7 @@ private val defaultItems = listOf(
 )
 
 @Composable
-fun CarScreen(onBack: () -> Unit) {
+fun CarScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val dao = SafiApp.db.dao()
     val prefs = SafiApp.prefs
     val ctx = LocalContext.current
@@ -60,7 +60,7 @@ fun CarScreen(onBack: () -> Unit) {
     }
 
     ScreenScaffold(
-        "العربية", onBack = onBack,
+        "العربية", onBack = if (embedded) null else onBack, showTopBar = !embedded,
         fab = { ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("بند صيانة") }) },
     ) { pad ->
         LazyColumn(

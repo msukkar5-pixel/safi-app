@@ -47,7 +47,7 @@ fun CarpoolCard(open: (String) -> Unit) {
 }
 
 @Composable
-fun CarpoolScreen(onBack: () -> Unit) {
+fun CarpoolScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val ctx = LocalContext.current
     var cfg by remember { mutableStateOf(Carpool.load(ctx)) }
     var setup by remember { mutableStateOf(false) }
@@ -57,8 +57,9 @@ fun CarpoolScreen(onBack: () -> Unit) {
     fun save(c: CarpoolConfig) { cfg = c; Carpool.save(ctx, c) }
 
     ScreenScaffold(
-        "دور السواقة", onBack = onBack,
+        "دور السواقة", onBack = if (embedded) null else onBack, showTopBar = !embedded,
         actions = { IconButton(onClick = { setup = true }) { Icon(Icons.Default.Settings, "الإعدادات") } },
+        fab = { if (embedded) SmallFloatingActionButton(onClick = { setup = true }) { Icon(Icons.Default.Settings, "الإعدادات") } },
     ) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),

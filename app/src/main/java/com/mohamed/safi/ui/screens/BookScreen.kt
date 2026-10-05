@@ -343,9 +343,32 @@ fun BookCard(b: BookMeta, onClick: () -> Unit) {
 
 /** The whole library, by category. */
 @Composable
-fun LibraryScreen(onBack: () -> Unit, openBook: (String) -> Unit) {
+fun LibraryScreen(onBack: () -> Unit, openBook: (String) -> Unit, openRoute: (String) -> Unit = {}) {
     ScreenScaffold("المكتبة", onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                val shelves = listOf(
+                    Triple("bidaya", "البداية والنهاية", Icons.Default.Book),
+                    Triple("stories", "القصص والسير", Icons.Default.HistoryEdu),
+                    Triple("hadith", "الأحاديث الصحيحة", Icons.Default.LibraryBooks),
+                    Triple("history", "تاريخ مصر والإمارات", Icons.Default.AccountBalance),
+                    Triple("audiobooks", "الكتب المسموعة", Icons.Default.Headphones),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    shelves.chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (r, t, ic) ->
+                                GoldCard(onClick = { openRoute(r) }, modifier = Modifier.weight(1f)) {
+                                    Icon(ic, null, tint = Gold)
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(t, fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
             Books.categories.forEach { (k, name) ->
                 item { SectionTitle(name) }
                 item { BookList(listOf(k), openBook) }

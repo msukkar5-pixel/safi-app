@@ -160,7 +160,7 @@ private data class Tab(val route: String, val label: String, val icon: androidx.
 
 private val tabs = listOf(
     Tab("home", "الرئيسية", Icons.Default.Home),
-    Tab("expenses", "المصاريف", Icons.Default.Receipt),
+    Tab("finance", "الحسابات", Icons.Default.AccountBalanceWallet),
     Tab("assistant", "${com.mohamed.safi.AppName.v}", Icons.Default.Mic),
     Tab("schedule", "المواعيد", Icons.Default.Event),
     Tab("more", "المزيد", Icons.Default.GridView),
@@ -197,7 +197,7 @@ fun AppRoot() {
                 if (res.added.size == 1) "اتسجل: ${com.mohamed.safi.data.money(e.amount, e.currency)} — ${e.category}"
                 else "اتسجل ${res.added.size} عملية" + if (res.skipped > 0) " (${res.skipped} مش عمليات)" else "",
             )
-            runCatching { go(nav, "expenses") }
+            runCatching { go(nav, "finance") }
         } else if (res.duplicates > 0) {
             toast(ctx, "العمليات دي متسجلة قبل كده")
         } else if (com.mohamed.safi.ai.Claude.hasKey) {
@@ -237,6 +237,8 @@ fun AppRoot() {
             composable("welcome") { WelcomeScreen { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }
+            composable("finance") { FinanceScreen(null, open) }
+            composable("vehicle") { VehicleScreen(back, open) }
             composable("assistant") { AssistantScreen() }
             composable("schedule") { ScheduleScreen() }
             composable("more") { MoreScreen(open) }
@@ -265,7 +267,7 @@ fun AppRoot() {
             composable("stories") { StoriesScreen(back, open) }
             composable("bidaya") { BidayaScreen(back) }
             composable("quranaudio") { QuranAudioScreen(back) }
-            composable("library") { LibraryScreen(back) { nav.navigate("book/$it") } }
+            composable("library") { LibraryScreen(back, { nav.navigate("book/$it") }, open) }
             composable("book/{id}") { e ->
                 val id = e.arguments?.getString("id") ?: "bidaya"
                 val q = remember { UiBus.pendingBook.value?.takeIf { it.first == id }?.second ?: "" }
