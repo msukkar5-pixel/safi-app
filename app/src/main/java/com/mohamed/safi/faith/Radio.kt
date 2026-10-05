@@ -46,8 +46,25 @@ object Radio {
         else -> "القرّاء"
     }
 
-    /** All stations; the network list is cached for a day and used offline when the fetch fails. */
+    /** mp3quran radios that CI found playing when this version was built (tools/radios.py). */
+    private fun verified(ctx: Context): List<Station> = runCatching {
+        val a = JSONArray(ctx.assets.open("media/radio_mp3quran.json").bufferedReader().use { it.readText() })
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> Station(o.getString("id"), o.getString("name"), o.getString("url"), o.optString("group", "القرّاء")) } }
+    }.getOrDefault(emptyList())
+
+    /** Stations that failed to play on this phone recently go to the end of the list. */
+    fun markFailed(id: String) = sp().edit { putLong("fail_$id", System.currentTimeMillis()) }
+    fun markOk(id: String) = sp().edit { remove("fail_$id") }
+    fun failedRecently(id: String) = System.currentTimeMillis() - sp().getLong("fail_$id", 0L) < 24L * 3600 * 1000
+
+    /** Official stations + the checked mp3quran list; falls back to the live API only when the build has no checked list. */
     suspend fun all(ctx: Context = SafiApp.instance, force: Boolean = false): List<Station> = withContext(Dispatchers.IO) {
+        val checked = verified(ctx)
+        if (checked.isNotEmpty()) return@withContext (bundled(ctx) + checked).sortedBy { if (failedRecently(it.id)) 1 else 0 }
+        allLive(ctx, force)
+    }
+
+    private suspend fun allLive(ctx: Context, force: Boolean): List<Station> = withContext(Dispatchers.IO) {
         val f = cacheFile(ctx)
         val fresh = f.exists() && System.currentTimeMillis() - f.lastModified() < 24L * 3600 * 1000
         val net = if (fresh && !force) null else runCatching {
