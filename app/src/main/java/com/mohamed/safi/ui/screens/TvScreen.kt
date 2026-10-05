@@ -26,7 +26,8 @@ import com.mohamed.safi.faith.Shaarawy
 import com.mohamed.safi.ui.*
 import org.json.JSONArray
 
-private data class Channel(val id: String, val name: String, val url: String, val yt: String)
+/** [urls] are tried in order (CI keeps only the live ones, best first). */
+private data class Channel(val id: String, val name: String, val urls: List<String>, val yt: String)
 
 /** Free Sunni Quran & Sunnah TV channels (assets/media/tv.json, streams checked in CI by tools/check_streams.py). */
 @Composable
@@ -35,17 +36,29 @@ fun TvScreen(onBack: () -> Unit) {
     val channels = remember {
         runCatching {
             val a = JSONArray(ctx.assets.open("media/tv.json").bufferedReader().use { it.readText() })
-            (0 until a.length()).map { a.getJSONObject(it).let { o -> Channel(o.getString("id"), o.getString("name"), o.getString("url"), o.optString("yt")) } }
+            (0 until a.length()).mapNotNull { i ->
+                val o = a.getJSONObject(i)
+                val list = o.optJSONArray("urls")?.let { u -> (0 until u.length()).map { u.getString(it) } } ?: listOfNotNull(o.optString("url").ifBlank { null })
+                if (list.isEmpty()) null else Channel(o.getString("id"), o.getString("name"), list, o.optString("yt"))
+            }
         }.getOrDefault(emptyList())
     }
     val player = remember { ExoPlayer.Builder(ctx).build() }
     var current by remember { mutableStateOf<Channel?>(null) }
+    var urlIndex by remember { mutableIntStateOf(0) }
     var error by remember { mutableStateOf(false) }
     var buffering by remember { mutableStateOf(false) }
     var full by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
         val l = object : androidx.media3.common.Player.Listener {
-            override fun onPlayerError(e: PlaybackException) { error = true; buffering = false }
+            override fun onPlayerError(e: PlaybackException) {
+                // try the channel's backup link before giving up
+                val c = current
+                if (c != null && urlIndex + 1 < c.urls.size) {
+                    urlIndex++
+                    player.setMediaItem(MediaItem.fromUri(c.urls[urlIndex])); player.prepare(); player.play()
+                } else { error = true; buffering = false }
+            }
             override fun onPlaybackStateChanged(state: Int) {
                 buffering = state == androidx.media3.common.Player.STATE_BUFFERING
                 if (state == androidx.media3.common.Player.STATE_READY) error = false
@@ -56,8 +69,8 @@ fun TvScreen(onBack: () -> Unit) {
     }
     fun watch(c: Channel) {
         NowPlaying.controller?.pause() // don't play two sounds at once
-        current = c; error = false
-        player.setMediaItem(MediaItem.fromUri(c.url))
+        current = c; error = false; urlIndex = 0
+        player.setMediaItem(MediaItem.fromUri(c.urls.first()))
         player.prepare()
         player.play()
     }

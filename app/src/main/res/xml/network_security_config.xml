@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Everything stays HTTPS-only, except the official Saudi broadcast server (SBA) whose
+     backup Quran/Sunnah TV streams are served over plain HTTP. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">m.live.net.sa</domain>
+    </domain-config>
+</network-security-config>

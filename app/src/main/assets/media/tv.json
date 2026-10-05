@@ -1,4 +1,18 @@
 [
-  {"id": "sa_quran_tv", "name": "قناة القرآن الكريم — السعودية (بث من المسجد الحرام)", "url": "https://win.holol.com/live/quran/playlist.m3u8", "yt": "قناة القرآن الكريم السعودية بث مباشر مكة"},
-  {"id": "sa_sunnah_tv", "name": "قناة السنة النبوية — السعودية (بث من المسجد النبوي)", "url": "https://win.holol.com/live/sunnah/playlist.m3u8", "yt": "قناة السنة النبوية بث مباشر المدينة"}
+  {"id": "sa_quran_tv", "name": "قناة القرآن الكريم — السعودية (بث من المسجد الحرام)", "yt": "قناة القرآن الكريم السعودية بث مباشر مكة",
+   "urls": ["https://cdn-globecast.akamaized.net/live/eds/saudi_quran/hls_roku/index.m3u8", "http://m.live.net.sa:1935/live/quran/playlist.m3u8"]},
+  {"id": "sa_sunnah_tv", "name": "قناة السنة النبوية — السعودية (بث من المسجد النبوي)", "yt": "قناة السنة النبوية بث مباشر المدينة",
+   "urls": ["https://cdn-globecast.akamaized.net/live/eds/saudi_sunnah/hls_roku/index.m3u8", "http://m.live.net.sa:1935/live/sunnah/playlist.m3u8"]},
+  {"id": "qa_quran_tv", "name": "قناة قطر للقرآن الكريم", "yt": "تلفزيون قطر القرآن الكريم بث مباشر",
+   "urls": ["https://qatartv.akamaized.net/hls/live/20000612/qtvquran/master.m3u8"]},
+  {"id": "iqraa_quran", "name": "قناة اقرأ للقرآن الكريم", "yt": "قناة اقرأ بث مباشر",
+   "urls": ["https://playlist.fasttvcdn.com/pl/dlkqw1ftuvuuzkcb4pxdcg/Iqraafasttv2/playlist.m3u8"]},
+  {"id": "iqraa_ar", "name": "قناة اقرأ الفضائية", "yt": "قناة اقرأ بث مباشر",
+   "urls": ["https://playlist.fasttvcdn.com/pl/dlkqw1ftuvuuzkcb4pxdcg/Iqraafasttv3/playlist.m3u8"]},
+  {"id": "iqraa_af", "name": "قناة اقرأ — أفريقيا وأوروبا", "yt": "قناة اقرأ بث مباشر",
+   "urls": ["https://playlist.fasttvcdn.com/pl/dlkqw1ftuvuuzkcb4pxdcg/Iqraafasttv1/playlist.m3u8"]},
+  {"id": "bh_quran_tv", "name": "قناة البحرين للقرآن الكريم", "yt": "قناة البحرين للقرآن الكريم بث مباشر",
+   "urls": ["https://5c7b683162943.streamlock.net/live/ngrp:bahrainquran_all/playlist.m3u8"]},
+  {"id": "huda_tv", "name": "Huda TV (بالإنجليزي)", "yt": "Huda TV live",
+   "urls": ["https://cdn.bestream.io:19360/elfaro1/elfaro1.m3u8"]}
 ]

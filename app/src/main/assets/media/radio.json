@@ -1,5 +1,38 @@
 [
-  {"id": "eg_quran", "name": "إذاعة القرآن الكريم — القاهرة", "group": "رسمية", "url": "https://n0a.radiojar.com/8s5u5tpdtwzuv"},
-  {"id": "sa_quran", "name": "إذاعة القرآن الكريم — المملكة العربية السعودية", "group": "رسمية", "url": "https://stream.radiojar.com/0tpy1h0kxtzuv"},
-  {"id": "shj_quran", "name": "إذاعة الشارقة للقرآن الكريم", "group": "رسمية", "url": "https://l3.itworkscdn.net/smcquranlive/quranradiolive/icecast.audio"}
+ {
+  "id": "eg_quran",
+  "name": "إذاعة القرآن الكريم — القاهرة",
+  "group": "رسمية",
+  "url": "https://n0a.radiojar.com/8s5u5tpdtwzuv"
+ },
+ {
+  "id": "sa_quran",
+  "name": "إذاعة القرآن الكريم — المملكة العربية السعودية",
+  "group": "رسمية",
+  "url": "https://stream.radiojar.com/0tpy1h0kxtzuv"
+ },
+ {
+  "id": "shj_quran",
+  "name": "إذاعة الشارقة للقرآن الكريم",
+  "group": "رسمية",
+  "url": "https://l3.itworkscdn.net/smcquranlive/quranradiolive/icecast.audio"
+ },
+ {
+  "id": "sa_quran_hls",
+  "name": "إذاعة القرآن الكريم — السعودية (جودة عالية)",
+  "group": "رسمية",
+  "url": "https://live.kwikmotion.com/sbrksaquranradiolive/srpksaquranradio/playlist.m3u8"
+ },
+ {
+  "id": "sa_nidaa",
+  "name": "إذاعة نداء الإسلام — مكة المكرمة",
+  "group": "رسمية",
+  "url": "https://live.kwikmotion.com/sbrksanedaradiolive/srpksanedaradio/playlist.m3u8"
+ },
+ {
+  "id": "shj_quran_hls",
+  "name": "إذاعة الشارقة للقرآن الكريم (HLS)",
+  "group": "رسمية",
+  "url": "https://live.kwikmotion.com/smcquranlive/quranradiolive/playlist.m3u8"
+ }
 ]
