@@ -15,6 +15,8 @@ android {
         targetSdk = 35
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+        // native code only for 64-bit phones (and the x86_64 test emulator): keeps the APK small
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     // Fixed key so every new build installs over the old one without losing data
