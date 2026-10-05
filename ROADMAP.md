@@ -38,3 +38,21 @@ Next (user requests, in order):
 4. Sunni Islamic radio — as MANY stations as available (mp3quran.net radios API + official Quran radios: Cairo, Saudi, Sharjah…).
 5. Free Sunni Islamic TV channels — as MANY as available (e.g., Saudi Quran & Sunnah channels; verify each stream).
 6. Merge dev → main to release.
+
+## Session of 2026-10-05 (cont.) — branch `claude/kind-cannon-ljnz50` (based on dev)
+
+Done (each pushed and built on CI):
+- WIP from the previous session compiles (dev run 35 green). Book/Azkar text sizes now use `rememberReadStyle()`.
+- Next 1 — Deen screens: `manasik` hub, `umrah` / `hajj` / `ruqyah` guides (all block types, search, continue-where-you-left, books/videos/surahs), 12 diagrams in `ui/DeenDiagrams.kt`, tools `tool/{tawaf,sai,rami,hajjplan,checklist}`, `hisn` + `hisn/{i}` (groups, search, favourites, counters, chapter audio). Code: `faith/Deen.kt`, `ui/screens/DeenScreens.kt`.
+- Next 2 — `sleep`: Hisn sleep chapters (+ audio playlist), Sunnah-before-sleep hadiths taken from the verified ruqyah guide, ruqyah surahs + calm recitation (mp3quran reciters), sleep timer (`Library.sleepAt`).
+- Next 3 — global mini player: `audio/NowPlaying.kt` (one app-wide MediaController) + `ui/MiniPlayer.kt` above the bottom bar on every screen.
+- Next 4 — `radio`: official stations in `assets/media/radio.json` + every mp3quran.net radio (cached a day).
+- Next 5 — `tv`: Saudi Quran & Sunnah channels in-app (HLS via media3-exoplayer-hls / media3-ui), YouTube fallbacks.
+  - `tools/check_streams.py` runs in CI before the build and drops dead radio/TV links from the APK (the dev container can't reach the streams).
+- Diagrams/tool tips quote only text that already exists in the verified `assets/deen` content; everything else is described, not quoted.
+- en/ur translations added for all the new strings (and the reading-mode / Quran-mode WIP strings).
+
+Still to do:
+- More TV channels: only add a stream after CI shows it alive (check_streams output in the build log).
+- Look at the emulator screenshots of the new screens (uiplan has steps for them) and fix anything off.
+- Next 6 — merge into dev, then dev → main to publish the release (needs Mohamed's go-ahead).
