@@ -70,20 +70,23 @@ fun openFile(ctx: Context, path: String) {
     }
 }
 
-/** Add / edit an expense (or income). [prefill] is used for new entries (e.g. from a receipt). */
+/**
+ * Add / edit an expense (or income). [prefill] is used for new entries (e.g. from a receipt).
+ * [startIncome]: a new entry opens as income (the finance hub's "دخل" button).
+ */
 @Composable
-fun ExpenseEditor(existing: Expense?, prefill: Expense? = null, onDismiss: () -> Unit) {
+fun ExpenseEditor(existing: Expense?, prefill: Expense? = null, startIncome: Boolean = false, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val base = existing ?: prefill
     var amount by remember { mutableStateOf(base?.amount?.let { fmt(it).replace(",", "") } ?: "") }
     var currency by remember { mutableStateOf(base?.currency ?: "AED") }
-    var category by remember { mutableStateOf(base?.category ?: Cats.FOOD) }
+    var category by remember { mutableStateOf(base?.category ?: if (startIncome) Cats.INCOME else Cats.FOOD) }
     var merchant by remember { mutableStateOf(base?.merchant ?: "") }
     var note by remember { mutableStateOf(base?.note ?: "") }
     var method by remember { mutableStateOf(base?.method ?: "cash") }
     var time by remember { mutableStateOf(base?.time ?: System.currentTimeMillis()) }
-    var income by remember { mutableStateOf(base?.isIncome ?: false) }
+    var income by remember { mutableStateOf(base?.isIncome ?: startIncome) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -306,11 +309,12 @@ fun ExpenseRow(e: Expense, onClick: () -> Unit) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        (if (e.isIncome) "+" else "") + fmt(e.amountAed),
+                        (if (e.isIncome) "+" else "") + money(e.amountAed),
                         fontWeight = FontWeight.Bold,
                         color = if (e.isIncome) Positive else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
                     )
-                    if (e.currency != "AED") Text(money(e.amount, e.currency), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    if (e.currency != "AED") Text(money(e.amount, e.currency), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
                 }
             }
         }

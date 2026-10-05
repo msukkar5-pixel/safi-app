@@ -22,8 +22,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.YearMonth
 
+/** [embedded]: shown inside the finance hub (no top bar / FAB; tools move into the list). */
 @Composable
-fun ExpensesScreen() {
+fun ExpensesScreen(embedded: Boolean = false) {
     val dao = SafiApp.db.dao()
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -45,36 +46,39 @@ fun ExpensesScreen() {
     val income = list.filter { it.isIncome }.sumOf { it.amountAed }
     val cash = list.filter { !it.isIncome && it.method == "cash" }.sumOf { it.amountAed }
 
+    fun pasteBankSms() {
+        val clip = (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
+            .primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()
+        if (clip.isNullOrBlank()) {
+            toast(ctx, "انسخ رسالة البنك (أو كذا رسالة) الأول، وبعدين دوس هنا")
+        } else {
+            importing = true
+            scope.launch {
+                val r = withContext(Dispatchers.IO) { SmsProcessor.processText(ctx, clip) }
+                importing = false
+                toast(
+                    ctx,
+                    when {
+                        r.added.isNotEmpty() -> "اتسجل ${r.added.size} عملية" + if (r.duplicates > 0) " (${r.duplicates} متسجلة قبل كده)" else ""
+                        r.duplicates > 0 -> "العمليات دي متسجلة قبل كده"
+                        else -> "مفيش عمليات جديدة في اللي نسخته"
+                    },
+                )
+            }
+        }
+    }
+
     ScreenScaffold(
         "المصاريف",
+        showTopBar = !embedded,
         actions = {
             IconButton(onClick = { searching = !searching; if (!searching) query = "" }) { Icon(Icons.Default.Search, "بحث") }
-            IconButton(onClick = {
-                val clip = (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
-                    .primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()
-                if (clip.isNullOrBlank()) {
-                    toast(ctx, "انسخ رسالة البنك (أو كذا رسالة) الأول، وبعدين دوس هنا")
-                } else {
-                    importing = true
-                    scope.launch {
-                        val r = withContext(Dispatchers.IO) { SmsProcessor.processText(ctx, clip) }
-                        importing = false
-                        toast(
-                            ctx,
-                            when {
-                                r.added.isNotEmpty() -> "اتسجل ${r.added.size} عملية" + if (r.duplicates > 0) " (${r.duplicates} متسجلة قبل كده)" else ""
-                                r.duplicates > 0 -> "العمليات دي متسجلة قبل كده"
-                                else -> "مفيش عمليات جديدة في اللي نسخته"
-                            },
-                        )
-                    }
-                }
-            }) {
+            IconButton(onClick = { pasteBankSms() }) {
                 if (importing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) else Icon(Icons.Default.ContentPaste, "الصق رسايل البنك")
             }
         },
         fab = {
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (!embedded) Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SmallFloatingActionButton(onClick = { receipt.open() }) { Icon(Icons.Default.CameraAlt, "فاتورة") }
                 ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("مصروف") })
             }
@@ -85,7 +89,19 @@ fun ExpensesScreen() {
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item { MonthSwitcher(ym) { ym = it } }
+            item {
+                if (embedded) {
+                    // the hub has no top bar: month on one side, tools on the other
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { MonthSwitcher(ym) { ym = it } }
+                        IconButton(onClick = { searching = !searching; if (!searching) query = "" }) { Icon(Icons.Default.Search, "بحث") }
+                        IconButton(onClick = { pasteBankSms() }) {
+                            if (importing) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) else Icon(Icons.Default.ContentPaste, "الصق رسايل البنك")
+                        }
+                        IconButton(onClick = { receipt.open() }) { Icon(Icons.Default.CameraAlt, "صوّر فاتورة") }
+                    }
+                } else MonthSwitcher(ym) { ym = it }
+            }
             if (searching) {
                 item {
                     OutlinedTextField(query, { query = it }, placeholder = { Text("دوّر على محل، ملاحظة، مكان…") }, singleLine = true,
@@ -95,20 +111,26 @@ fun ExpensesScreen() {
             item {
                 AppCard {
                     Row {
-                        StatBlock("المصروف", money(spent), Modifier.weight(1f))
+                        StatBlock("المصروف", money(spent), Modifier.weight(1f), sub = "${list.count { !it.isIncome }} عملية")
                         StatBlock("منه كاش", money(cash), Modifier.weight(1f))
                         if (income > 0) StatBlock("الدخل", money(income), Modifier.weight(1f), valueColor = Positive)
                     }
                 }
             }
             item { ChipsRow(cats, filter, { it }) { filter = it } }
-            if (list.isEmpty()) item { EmptyState(Icons.Default.Receipt, "مفيش مصاريف هنا") }
+            if (list.isEmpty()) item {
+                EmptyState(
+                    Icons.Default.Receipt,
+                    if (query.isNotBlank() || filter != "الكل") "مفيش نتايج — جرّب كلمة تانية أو التصنيف \"الكل\""
+                    else "مفيش مصاريف الشهر ده — دوس + وسجّل أول مصروف، أو الصق رسالة البنك",
+                )
+            }
             val byDay = list.groupBy { it.time.toLocalDate() }
             byDay.forEach { (day, dayItems) ->
                 item(key = "d$day") {
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(shortDate(dayItems.first().time), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Text(money(dayItems.filter { !it.isIncome }.sumOf { it.amountAed }), color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
+                        Text(money(dayItems.filter { !it.isIncome }.sumOf { it.amountAed }), color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 items(dayItems, key = { it.id }) { e -> ExpenseRow(e) { editing = e } }

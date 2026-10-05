@@ -51,7 +51,7 @@ private fun kindLabel(k: String) = when (k) {
 }
 
 @Composable
-fun BillsScreen(onBack: () -> Unit) {
+fun BillsScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val dao = SafiApp.db.dao()
     val bills by dao.bills().collectAsState(emptyList())
     val debts by dao.debts().collectAsState(emptyList())
@@ -64,8 +64,8 @@ fun BillsScreen(onBack: () -> Unit) {
     var paying by remember { mutableStateOf<Bill?>(null) }
 
     ScreenScaffold(
-        "الفواتير والالتزامات", onBack = onBack,
-        fab = { ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("التزام") }) },
+        "الفواتير والالتزامات", onBack = if (embedded) null else onBack, showTopBar = !embedded,
+        fab = { if (!embedded) ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("التزام") }) },
     ) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -82,7 +82,16 @@ fun BillsScreen(onBack: () -> Unit) {
                     Text("مطلوب منك في ${monthName(ym)}", color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(money(total), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     if (egp > 0) Text("منها ${money(egp, "EGP")} تحويلات مصر", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    val late = obligations.count { it.overdue }
+                    if (obligations.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Pill("${obligations.size} التزام")
+                            if (late > 0) Pill("$late متأخر", Danger)
+                        }
+                    }
                     Spacer(Modifier.height(6.dp))
+                    if (obligations.isNotEmpty()) HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
                     obligations.forEach { o ->
                         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(o.title, Modifier.weight(1f), maxLines = 1)
@@ -103,7 +112,7 @@ fun BillsScreen(onBack: () -> Unit) {
                 }
             }
             item { SectionTitle("التزاماتك") }
-            if (bills.isEmpty()) item { EmptyState(Icons.Default.Payments, "ضيف الإيجار والكهرباء والاتصالات وتحويلات مصر الشهرية") }
+            if (bills.isEmpty()) item { EmptyState(Icons.Default.Payments, "ضيف الإيجار والكهرباء والاتصالات وتحويلات مصر الشهرية — من \"ضيف بسرعة\" فوق") }
             items(bills, key = { it.id }) { b ->
                 val d = daysUntil(b.nextDue)
                 val statusColor = when {
@@ -142,7 +151,7 @@ fun BillsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun PayBillDialog(b: Bill, onDismiss: () -> Unit) {
+fun PayBillDialog(b: Bill, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var amount by remember { mutableStateOf(fmt(b.amount).replace(",", "")) }
@@ -181,6 +190,10 @@ private fun PayBillDialog(b: Bill, onDismiss: () -> Unit) {
         dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
     )
 }
+
+/** Add / edit a bill or obligation (public entry point for the finance hub). */
+@Composable
+fun ObligationEditor(existing: Bill?, onDismiss: () -> Unit) = BillEditor(existing, null, onDismiss)
 
 @Composable
 private fun BillEditor(existing: Bill?, preset: Preset?, onDismiss: () -> Unit) {
