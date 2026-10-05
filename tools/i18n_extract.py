@@ -4,7 +4,7 @@ import json, os, re, sys
 
 ROOT = "app/src/main/java/com/mohamed/safi"
 SKIP_DIRS = {"ai", "sms"}
-SKIP_FILES = {"Splash.kt", "Carpool.kt", "I18n.kt", "Digits.kt"}  # AI prompts stay as they are
+SKIP_FILES = {"Splash.kt", "Carpool.kt", "I18n.kt", "Digits.kt", "AsmaHusna.kt"}  # AI prompts stay as they are
 AR = re.compile(r"[؀-ۿ]")
 
 def decode_escapes(s):
