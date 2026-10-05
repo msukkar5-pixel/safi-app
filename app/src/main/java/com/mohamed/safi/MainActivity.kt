@@ -249,6 +249,7 @@ fun AppRoot() {
             composable("prayertracker") { PrayerTrackerScreen(back) }
             composable("islamiccalendar") { IslamicCalendarScreen(back) }
             composable("asmahusna") { AsmaHusnaScreen(back) }
+            composable("quiz") { QuizScreen(back) }
             composable("assistant") { AssistantScreen() }
             composable("schedule") { ScheduleScreen() }
             composable("more") { MoreScreen(open) }

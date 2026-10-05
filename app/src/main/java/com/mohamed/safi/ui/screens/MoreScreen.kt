@@ -35,6 +35,7 @@ private val sections = listOf(
     ),
     "المعرفة" to listOf(
         Entry("library", "المكتبة", "الكتب والسير والأحاديث والمسموع", Icons.Default.LocalLibrary, Color(0xFF5D4037)),
+        Entry("quiz", "مسابقة صافي", "أسئلة دينية وعامة ومراحل", Icons.Default.EmojiEvents, Color(0xFFB8860B)),
     ),
     "حياتي" to listOf(
         Entry("finance", "الحسابات", "مصاريف، تحويلات، التزامات، سلف، ادخار", Icons.Default.AccountBalanceWallet, Brand),
