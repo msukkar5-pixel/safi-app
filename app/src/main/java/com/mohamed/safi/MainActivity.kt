@@ -44,6 +44,7 @@ class MainActivity : FragmentActivity() {
         unlocked.value = !SafiApp.prefs.lockOn || (savedInstanceState?.getBoolean("unlocked") == true)
         splash.value = savedInstanceState == null
         handleIntent(intent)
+        runCatching { com.mohamed.safi.faith.FaithAlerts.scheduleAll(this) }
         setContent {
             SafiTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides I18n.direction) {
@@ -78,6 +79,9 @@ class MainActivity : FragmentActivity() {
             if (it == "voice") {
                 UiBus.listenNow.value = true
                 UiBus.pendingRoute.value = "assistant"
+            } else if (it.startsWith("azkar:")) {
+                UiBus.pendingAzkar.value = it.substringAfter(':')
+                UiBus.pendingRoute.value = "azkar"
             } else UiBus.pendingRoute.value = it
         }
         if (intent.action == Intent.ACTION_SEND) {
@@ -239,6 +243,7 @@ fun AppRoot() {
             composable("expenses") { ExpensesScreen() }
             composable("finance") { FinanceScreen(null, open) }
             composable("vehicle") { VehicleScreen(back, open) }
+            composable("alerts") { AlertsScreen(back) }
             composable("assistant") { AssistantScreen() }
             composable("schedule") { ScheduleScreen() }
             composable("more") { MoreScreen(open) }

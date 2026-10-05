@@ -56,7 +56,10 @@ fun WirdScreen(onBack: () -> Unit) {
 
     ScreenScaffold(
         "الورد اليومي", onBack = onBack,
-        actions = { IconButton(onClick = { settings = true }) { Icon(Icons.Default.Tune, "الإعدادات") } },
+        actions = {
+            IconButton(onClick = { UiBus.pendingRoute.value = "alerts" }) { Icon(Icons.Default.NotificationsActive, "التنبيهات") }
+            IconButton(onClick = { settings = true }) { Icon(Icons.Default.Tune, "الإعدادات") }
+        },
     ) { pad -> key(refresh) {
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {

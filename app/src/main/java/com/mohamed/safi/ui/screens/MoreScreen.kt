@@ -45,6 +45,7 @@ private val sections = listOf(
         Entry("healthrecords", "حالتي الصحية", "أدوية، تحاليل، دكاترة", Icons.Default.MonitorHeart, Color(0xFFD32F2F)),
     ),
     "الإعدادات" to listOf(
+        Entry("alerts", "التنبيهات", "الأذان، الأذكار، الورد", Icons.Default.NotificationsActive, Color(0xFF00796B)),
         Entry("settings", "الإعدادات", "اللغة، الذكاء الاصطناعي، الصوت", Icons.Default.Settings, Color(0xFF6C7A89)),
     ),
 )

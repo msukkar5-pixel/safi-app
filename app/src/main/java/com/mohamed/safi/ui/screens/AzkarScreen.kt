@@ -71,7 +71,7 @@ fun AzkarScreen(onBack: () -> Unit) {
     var evening by remember { mutableStateOf<LocalTime?>(null) }
     LaunchedEffect(Unit) { morning = Azkar.reminderTime("morning"); evening = Azkar.reminderTime("evening") }
 
-    ScreenScaffold("الأذكار والأدعية", onBack = onBack) { pad ->
+    ScreenScaffold("الأذكار والأدعية", onBack = onBack, actions = { IconButton(onClick = { UiBus.pendingRoute.value = "alerts" }) { Icon(Icons.Default.NotificationsActive, "التنبيهات") } }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 val suggested = Azkar.current(ctx)
