@@ -113,6 +113,18 @@ object FaithAlerts {
 
     fun scheduleAll(ctx: Context) = ids.forEach { runCatching { schedule(ctx, it) } }
 
+    /** Moves the old per-screen azkar / wird reminders into these alerts (once). */
+    suspend fun migrateOld(ctx: Context) {
+        if (sp().getBoolean("migrated", false)) return
+        runCatching {
+            Azkar.reminderTime("morning")?.let { setAzkarOn("morning", true); setAzkarMode("morning", "fixed"); setAzkarTime("morning", it); Azkar.setReminder(ctx, "morning", null) }
+            Azkar.reminderTime("evening")?.let { setAzkarOn("evening", true); setAzkarMode("evening", "fixed"); setAzkarTime("evening", it); Azkar.setReminder(ctx, "evening", null) }
+            Wird.reminderTime()?.let { wirdOn = true; wirdTime = it; Wird.setReminder(ctx, null) }
+        }
+        sp().edit { putBoolean("migrated", true) }
+        scheduleAll(ctx)
+    }
+
     /** Posts the notification for [id]. [test] skips the "already done" checks. */
     fun notify(ctx: Context, id: String, label: String, test: Boolean = false) {
         when (id) {

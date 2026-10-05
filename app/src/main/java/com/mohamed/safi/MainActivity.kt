@@ -45,6 +45,7 @@ class MainActivity : FragmentActivity() {
         splash.value = savedInstanceState == null
         handleIntent(intent)
         runCatching { com.mohamed.safi.faith.FaithAlerts.scheduleAll(this) }
+        SafiApp.scope.launch { runCatching { com.mohamed.safi.faith.FaithAlerts.migrateOld(this@MainActivity) } }
         setContent {
             SafiTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides I18n.direction) {

@@ -112,24 +112,15 @@ fun WirdScreen(onBack: () -> Unit) {
                 }
             }
             item { Text("دوس على الكارت عشان تعدّ. العداد بيبدأ من الصفر كل يوم.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
-            item { SectionTitle("التذكير") }
             item {
-                AppCard {
+                AppCard(onClick = { UiBus.pendingRoute.value = "alerts" }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("ذكّرني بالورد كل يوم")
-                            reminder?.let { t ->
-                                TextButton(onClick = {
-                                    pickTime(ctx, LocalDate.now().atTime(t).millis()) { h, m ->
-                                        val nt = LocalTime.of(h, m); reminder = nt; scope.launch { Wird.setReminder(ctx, nt) }
-                                    }
-                                }, contentPadding = PaddingValues(0.dp)) { Text("الساعة ${timeStr(LocalDate.now().atTime(t).millis())} • غيّر") }
-                            }
+                            Text("التنبيهات", fontWeight = FontWeight.SemiBold)
+                            Text("تذكير بالورد في الوقت اللي تختاره، ومش هيجيلك لو خلّصته", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                         }
-                        Switch(reminder != null, { on ->
-                            val t = if (on) LocalTime.of(21, 0) else null
-                            reminder = t; scope.launch { Wird.setReminder(ctx, t) }
-                        })
                     }
                 }
             }

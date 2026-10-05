@@ -106,14 +106,15 @@ fun AzkarScreen(onBack: () -> Unit) {
                     }
                 }
             }
-            item { SectionTitle("التذكير") }
             item {
-                AppCard {
-                    ReminderToggle("ذكّرني بأذكار الصباح", morning, LocalTime.of(6, 30)) { t ->
-                        morning = t; scope.launch { Azkar.setReminder(ctx, "morning", t) }
-                    }
-                    ReminderToggle("ذكّرني بأذكار المساء", evening, LocalTime.of(16, 30)) { t ->
-                        evening = t; scope.launch { Azkar.setReminder(ctx, "evening", t) }
+                AppCard(onClick = { UiBus.pendingRoute.value = "alerts" }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("التنبيهات", fontWeight = FontWeight.SemiBold)
+                            Text("وقت أذكار الصباح والمساء والنوم وبعد الصلاة — بالساعة أو بعد الصلاة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
                     }
                 }
             }
