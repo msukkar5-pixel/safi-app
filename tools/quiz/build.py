@@ -11,9 +11,11 @@ for kind in ("religion", "general"):
             q, c, w1, w2, w3, cat, lvl, exp = t
             opts = [c, w1, w2, w3]
             assert len(set(opts)) == 4, ("dup options", q)
-            assert q not in seen, ("dup question", q)
-            seen.add(q)
-            r = random.Random(q)
+            # the same wording may come back with a different answer ("which of these surahs is Medinan?")
+            if (q, c) in seen:
+                continue  # a generated question that a hand-written list already asks
+            seen.add((q, c))
+            r = random.Random(q + c)
             order = list(range(4)); r.shuffle(order)
             items.append({"q": q, "a": [opts[i] for i in order], "c": order.index(0), "cat": cat, "lvl": lvl, "exp": exp})
     json.dump(items, open(os.path.join(out, f"{kind}.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
