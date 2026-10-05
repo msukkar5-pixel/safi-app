@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <files-path name="receipts" path="receipts/" />
+    <files-path name="docs" path="docs/" />
+    <files-path name="labs" path="labs/" />
     <cache-path name="cache" path="." />
 </paths>

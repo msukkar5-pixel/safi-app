@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -59,13 +60,16 @@ fun BookScreen(bookId: String, onBack: () -> Unit, initialQuery: String = "") {
         BookToc(ov, all.size > 1, onOpen = { reading = it }) { openVol = 0 }
         return
     }
-    // single-volume books open straight on their table of contents
-    if (all != null && all.size == 1 && hits == null && q.isBlank()) {
+    // single-volume books open straight on their table of contents; search hits show in the same
+    // layout (same scaffold + text field) so the keyboard stays open while typing
+    if (all != null && all.size == 1) {
         BookToc(all[0], false, onOpen = { reading = it }, title = meta?.title ?: "", header = {
             BookHeader(meta, book, all) { reading = it }
             OutlinedTextField(q, { q = it }, placeholder = { Text("دوّر في الكتاب: اسم، حدث، كلمة…") }, singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, null) }, modifier = Modifier.fillMaxWidth())
-        }, onBack = onBack)
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                trailingIcon = { if (q.isNotEmpty()) IconButton(onClick = { q = "" }) { Icon(Icons.Default.Close, "مسح") } },
+                modifier = Modifier.fillMaxWidth())
+        }, hits = if (q.trim().length >= 2) hits else null, searching = searching && q.trim().length >= 2, onBack = onBack)
         return
     }
 
@@ -144,11 +148,28 @@ private fun BookHeader(meta: BookMeta?, book: BookData, all: List<BVolume>, onCo
 
 @Composable
 private fun BookToc(
-    v: BVolume, multi: Boolean, onOpen: (BSection) -> Unit, title: String = "", header: (@Composable () -> Unit)? = null, onBack: () -> Unit,
+    v: BVolume, multi: Boolean, onOpen: (BSection) -> Unit, title: String = "", header: (@Composable () -> Unit)? = null,
+    hits: List<BookData.Hit>? = null, searching: Boolean = false, onBack: () -> Unit,
 ) {
     ScreenScaffold(if (multi) "المجلد ${v.vol}" else title.ifBlank { "الفهرس" }, onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp)) {
-            if (header != null) item { header(); Spacer(Modifier.height(12.dp)); Text("الفهرس", fontWeight = FontWeight.Bold) }
+            if (header != null) item(key = "header") { header(); Spacer(Modifier.height(12.dp)) }
+            if (searching) item(key = "searching") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            if (hits != null) {
+                item(key = "hits") {
+                    Text(if (hits.isEmpty() && !searching) "مفيش نتايج" else "${hits.size}${if (hits.size >= 80) "+" else ""} نتيجة", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                }
+                items(hits) { hit ->
+                    AppCard(onClick = { onOpen(hit.section) }) {
+                        Text(hit.section.title, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                        Text(hit.snippet, style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+                return@LazyColumn
+            }
+            if (header != null) item(key = "toc") { Text("الفهرس", fontWeight = FontWeight.Bold) }
             items(v.sections, key = { it.idx }) { s ->
                 Row(
                     Modifier.fillMaxWidth().clickable { onOpen(s) }.padding(vertical = 10.dp).padding(start = ((s.level - 1).coerceIn(0, 4) * 14).dp),
@@ -172,19 +193,33 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
     BackHandler { onBack() }
     var sec by remember { mutableStateOf(start) }
     var body by remember { mutableStateOf<List<String>?>(null) }
+    var loadErr by remember { mutableStateOf<String?>(null) }
+    var endIdx by remember { mutableIntStateOf(start.idx) }
     var size by remember { mutableIntStateOf(Books.fontSize) }
+    val rs = rememberReadStyle()
     var marks by remember { mutableStateOf(book.marks) }
     val state = rememberLazyListState()
     LaunchedEffect(sec) {
-        body = null
-        val t = runCatching { book.text(sec.vol) }.getOrDefault(emptyList())
-        body = (t.getOrNull(sec.idx) ?: "").split('\n').filter { it.isNotBlank() }
+        body = null; loadErr = null
+        val t = runCatching { book.text(sec.vol) }.onFailure { loadErr = it.message ?: it.javaClass.simpleName }.getOrDefault(emptyList())
+        val secs = all.firstOrNull { it.vol == sec.vol }?.sections ?: emptyList()
+        // a heading with no text of its own: show the following sub-sections right away
+        val out = mutableListOf<String>()
+        var i = sec.idx
+        while (true) {
+            if (i != sec.idx) secs.getOrNull(i)?.let { out += "§" + it.title }
+            out += (t.getOrNull(i) ?: "").split('\n').filter { it.isNotBlank() }
+            if (out.any { !it.startsWith("§") } || i + 1 >= secs.size || i - sec.idx >= 6) break
+            i++
+        }
+        endIdx = i
+        body = if (out.none { !it.startsWith("§") }) emptyList() else out
         book.lastVol = sec.vol; book.lastIdx = sec.idx
         state.scrollToItem(0)
     }
     fun neighbour(d: Int): BSection? {
         val v = all.firstOrNull { it.vol == sec.vol } ?: return null
-        val i = sec.idx + d
+        val i = (if (d > 0) endIdx else sec.idx) + d
         return when {
             i in v.sections.indices -> v.sections[i]
             d > 0 -> all.firstOrNull { it.vol > sec.vol }?.sections?.firstOrNull()
@@ -193,10 +228,10 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
     }
     val key = "${sec.vol}:${sec.idx}"
 
-    ScreenScaffold(
+    ReadingTheme { ScreenScaffold(
         (if (all.size > 1) "المجلد ${sec.vol}" else "") + (if (sec.page > 0) (if (all.size > 1) " • " else "") + "ص ${sec.page}" else ""),
         onBack = onBack,
-        actions = {
+        actions = { ReadingSettingsButton();
             IconButton(onClick = { marks = if (key in marks) marks - key else marks + key; book.marks = marks }) {
                 Icon(if (key in marks) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "علامة")
             }
@@ -211,12 +246,19 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
             }
             val b = body
             if (b == null) item { CircularProgressIndicator() }
-            else if (b.isEmpty()) item { Text("(عنوان بدون نص، النص في الفصل اللي بعده)", color = MaterialTheme.colorScheme.outline) }
+            else if (b.isEmpty()) item {
+                Text(if (loadErr != null) "النص مش راضي يفتح: $loadErr" else "الجزء ده عنوان بس، دوس «التالي».", color = MaterialTheme.colorScheme.outline)
+            }
             else items(b.size) { i ->
                 val p = b[i]
+                if (p.startsWith("§")) {
+                    Text(p.drop(1), fontSize = (size + 2).sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
+                    return@items
+                }
                 val obit = p.startsWith("◆")
                 Text(
-                    p, fontSize = size.sp, lineHeight = (size * 1.75).sp, textAlign = TextAlign.Justify,
+                    p, fontSize = rs.size(size.toFloat()), lineHeight = rs.lineH(size * 1.1f), textAlign = TextAlign.Justify, fontFamily = rs.family,
                     fontWeight = if (obit) FontWeight.Bold else FontWeight.Normal,
                     color = if (obit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -231,7 +273,7 @@ private fun BookReader(book: BookData, all: List<BVolume>, start: BSection, onBa
                 }
             }
         }
-    }
+    } }
 }
 
 @Composable
@@ -302,9 +344,35 @@ fun BookCard(b: BookMeta, onClick: () -> Unit) {
 
 /** The whole library, by category. */
 @Composable
-fun LibraryScreen(onBack: () -> Unit, openBook: (String) -> Unit) {
+fun LibraryScreen(onBack: () -> Unit, openBook: (String) -> Unit, openRoute: (String) -> Unit = {}) {
     ScreenScaffold("المكتبة", onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                val shelves = listOf(
+                    Triple("bidaya", "البداية والنهاية", Icons.Default.Book),
+                    Triple("stories", "القصص والسير", Icons.Default.HistoryEdu),
+                    Triple("hadith", "الأحاديث الصحيحة", Icons.Default.LibraryBooks),
+                    Triple("history", "تاريخ مصر والإمارات", Icons.Default.AccountBalance),
+                    Triple("audiobooks", "الكتب المسموعة", Icons.Default.Headphones),
+                    Triple("hisn", "حصن المسلم", Icons.Default.Shield),
+                    Triple("manasik", "الحج والعمرة", Icons.Default.Landscape),
+                    Triple("ruqyah", "الرقية الشرعية", Icons.Default.Healing),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    shelves.chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (r, t, ic) ->
+                                GoldCard(onClick = { openRoute(r) }, modifier = Modifier.weight(1f)) {
+                                    Icon(ic, null, tint = Gold)
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(t, fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
             Books.categories.forEach { (k, name) ->
                 item { SectionTitle(name) }
                 item { BookList(listOf(k), openBook) }

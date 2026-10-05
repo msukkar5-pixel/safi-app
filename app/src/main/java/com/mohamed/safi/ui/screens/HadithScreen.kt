@@ -1,11 +1,13 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,8 +33,16 @@ fun HadithScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) { today = Hadiths.ofTheDay() }
 
     val b = bookId
-    if (b != null) { HadithBookView(b, initialQuery) { bookId = null; initialQuery = "" }; return }
-    if (showFav) { FavouritesView { showFav = false }; return }
+    if (b != null) {
+        BackHandler { bookId = null; initialQuery = "" }
+        HadithBookView(b, initialQuery) { bookId = null; initialQuery = "" }
+        return
+    }
+    if (showFav) {
+        BackHandler { showFav = false }
+        FavouritesView { showFav = false }
+        return
+    }
 
     ScreenScaffold("الأحاديث الصحيحة", onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -91,7 +101,11 @@ private fun HadithBookView(id: String, initialQuery: String = "", onBack: () -> 
     }
     val bk = book
     val s = section
-    if (bk != null && s != null) { SectionView(bk, s) { section = null }; return }
+    if (bk != null && s != null) {
+        BackHandler { section = null }
+        SectionView(bk, s) { section = null }
+        return
+    }
 
     ScreenScaffold(Hadiths.bookTitle(id), onBack = onBack) { pad ->
         if (bk == null) {
@@ -133,11 +147,11 @@ private fun HadithBookView(id: String, initialQuery: String = "", onBack: () -> 
 @Composable
 private fun SectionView(book: HadithBook, section: HadithSection, onBack: () -> Unit) {
     val list = remember(section) { book.hadiths.filter { it.section == section.number } }
-    ScreenScaffold(section.name, onBack = onBack) { pad ->
+    ReadingTheme { ScreenScaffold(section.name, onBack = onBack, actions = { ReadingSettingsButton() }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(list) { h -> HadithCard(h) }
         }
-    }
+    } }
 }
 
 @Composable
@@ -149,14 +163,14 @@ private fun FavouritesView(onBack: () -> Unit) {
             if (fav.none { it.startsWith("$id:") }) emptyList() else runCatching { Hadiths.load(id).hadiths.filter { Hadiths.key(it) in fav } }.getOrDefault(emptyList())
         }
     }
-    ScreenScaffold("الأحاديث المحفوظة", onBack = onBack) { pad ->
+    ReadingTheme { ScreenScaffold("الأحاديث المحفوظة", onBack = onBack, actions = { ReadingSettingsButton() }) { pad ->
         val l = list
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (l == null) item { CircularProgressIndicator() }
             else if (l.isEmpty()) item { EmptyState(Icons.Default.BookmarkBorder, "دوس على علامة الحفظ في أي حديث") }
             else items(l) { h -> HadithCard(h) }
         }
-    }
+    } }
 }
 
 @Composable

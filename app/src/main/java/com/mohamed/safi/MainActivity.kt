@@ -10,6 +10,7 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,24 +41,32 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        unlocked.value = !SafiApp.prefs.lockOn
+        unlocked.value = !SafiApp.prefs.lockOn || (savedInstanceState?.getBoolean("unlocked") == true)
         splash.value = savedInstanceState == null
         handleIntent(intent)
+        runCatching { com.mohamed.safi.faith.FaithAlerts.scheduleAll(this) }
+        SafiApp.scope.launch { runCatching { com.mohamed.safi.faith.FaithAlerts.migrateOld(this@MainActivity) } }
         setContent {
             SafiTheme {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    when {
-                        splash.value -> DedicationSplash {
+                CompositionLocalProvider(LocalLayoutDirection provides I18n.direction) {
+                    // the app stays composed underneath, so returning from the camera / a picker never loses state
+                    Box(Modifier.fillMaxSize()) {
+                        AppRoot()
+                        if (!unlocked.value && !splash.value) LockScreen { authenticate() }
+                        if (splash.value) DedicationSplash {
                             splash.value = false
                             if (!unlocked.value) authenticate()
                         }
-                        unlocked.value -> AppRoot()
-                        else -> LockScreen { authenticate() }
                     }
                 }
             }
         }
         if (!unlocked.value && !splash.value) authenticate()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("unlocked", unlocked.value)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -71,6 +80,9 @@ class MainActivity : FragmentActivity() {
             if (it == "voice") {
                 UiBus.listenNow.value = true
                 UiBus.pendingRoute.value = "assistant"
+            } else if (it.startsWith("azkar:")) {
+                UiBus.pendingAzkar.value = it.substringAfter(':')
+                UiBus.pendingRoute.value = "azkar"
             } else UiBus.pendingRoute.value = it
         }
         if (intent.action == Intent.ACTION_SEND) {
@@ -81,7 +93,6 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(this) }
-        if (SafiApp.prefs.lockOn && !isChangingConfigurations) unlocked.value = false
         if (!isChangingConfigurations) stoppedAt = System.currentTimeMillis()
     }
 
@@ -89,7 +100,10 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (stoppedAt > 0 && System.currentTimeMillis() - stoppedAt > 5 * 60_000) splash.value = true
+        val away = if (stoppedAt > 0) System.currentTimeMillis() - stoppedAt else 0L
+        if (away > 5 * 60_000) splash.value = true
+        // re-lock only after a real absence (not a quick trip to the camera or a file picker)
+        if (SafiApp.prefs.lockOn && away > 2 * 60_000) unlocked.value = false
         if (!unlocked.value && SafiApp.prefs.lockOn && !splash.value) authenticate()
     }
 
@@ -151,7 +165,7 @@ private data class Tab(val route: String, val label: String, val icon: androidx.
 
 private val tabs = listOf(
     Tab("home", "الرئيسية", Icons.Default.Home),
-    Tab("expenses", "المصاريف", Icons.Default.Receipt),
+    Tab("finance", "الحسابات", Icons.Default.AccountBalanceWallet),
     Tab("assistant", "${com.mohamed.safi.AppName.v}", Icons.Default.Mic),
     Tab("schedule", "المواعيد", Icons.Default.Event),
     Tab("more", "المزيد", Icons.Default.GridView),
@@ -167,6 +181,10 @@ fun AppRoot() {
     val current = entry?.destination?.route
     val pendingRoute by UiBus.pendingRoute.collectAsState()
 
+    DisposableEffect(Unit) {
+        com.mohamed.safi.audio.NowPlaying.connect(ctx)
+        onDispose { com.mohamed.safi.audio.NowPlaying.release() }
+    }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             if (System.currentTimeMillis() - SafiApp.prefs.rateUpdated > 6 * 3_600_000L) Fx.refresh()
@@ -188,7 +206,9 @@ fun AppRoot() {
                 if (res.added.size == 1) "اتسجل: ${com.mohamed.safi.data.money(e.amount, e.currency)} — ${e.category}"
                 else "اتسجل ${res.added.size} عملية" + if (res.skipped > 0) " (${res.skipped} مش عمليات)" else "",
             )
-            runCatching { go(nav, "expenses") }
+            runCatching { go(nav, "finance") }
+        } else if (res.duplicates > 0) {
+            toast(ctx, "العمليات دي متسجلة قبل كده")
         } else if (com.mohamed.safi.ai.Claude.hasKey) {
             UiBus.pendingVoice.value = text
             runCatching { go(nav, "assistant") }
@@ -205,6 +225,8 @@ fun AppRoot() {
 
     Scaffold(
         bottomBar = {
+            Column {
+            MiniPlayer(current) { r -> runCatching { go(nav, r) } }
             if (current in tabs.map { it.route }) {
                 NavigationBar {
                     tabs.forEach { t ->
@@ -217,6 +239,7 @@ fun AppRoot() {
                     }
                 }
             }
+            }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { pad ->
@@ -226,6 +249,14 @@ fun AppRoot() {
             composable("welcome") { WelcomeScreen { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }
+            composable("finance") { FinanceScreen(null, open) }
+            composable("vehicle") { VehicleScreen(back, open) }
+            composable("alerts") { AlertsScreen(back) }
+            composable("vitals") { VitalsScreen(back) }
+            composable("prayertracker") { PrayerTrackerScreen(back) }
+            composable("islamiccalendar") { IslamicCalendarScreen(back) }
+            composable("asmahusna") { AsmaHusnaScreen(back) }
+            composable("quiz") { QuizScreen(back) }
             composable("assistant") { AssistantScreen() }
             composable("schedule") { ScheduleScreen() }
             composable("more") { MoreScreen(open) }
@@ -253,7 +284,8 @@ fun AppRoot() {
             composable("wird") { WirdScreen(back) }
             composable("stories") { StoriesScreen(back, open) }
             composable("bidaya") { BidayaScreen(back) }
-            composable("library") { LibraryScreen(back) { nav.navigate("book/$it") } }
+            composable("quranaudio") { QuranAudioScreen(back) }
+            composable("library") { LibraryScreen(back, { nav.navigate("book/$it") }, open) }
             composable("book/{id}") { e ->
                 val id = e.arguments?.getString("id") ?: "bidaya"
                 val q = remember { UiBus.pendingBook.value?.takeIf { it.first == id }?.second ?: "" }
@@ -262,6 +294,16 @@ fun AppRoot() {
             }
             composable("history") { HistoryScreen(back, open) }
             composable("audiobooks") { AudiobooksScreen(back) }
+            composable("manasik") { ManasikScreen(back, open) }
+            composable("umrah") { GuideScreen("umrah", back, open) }
+            composable("hajj") { GuideScreen("hajj", back, open) }
+            composable("ruqyah") { GuideScreen("ruqyah", back, open) }
+            composable("hisn") { HisnScreen(back, open) }
+            composable("hisn/{i}") { e -> HisnScreen(back, open, e.arguments?.getString("i")?.toIntOrNull()) }
+            composable("sleep") { SleepScreen(back, open) }
+            composable("radio") { RadioScreen(back) }
+            composable("tv") { TvScreen(back) }
+            composable("tool/{id}") { e -> DeenToolScreen(e.arguments?.getString("id") ?: "", back) }
         }
     }
 }

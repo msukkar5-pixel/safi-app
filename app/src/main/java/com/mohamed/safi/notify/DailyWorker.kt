@@ -54,7 +54,7 @@ class DailyWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
                 .build()
             WorkManager.getInstance(ctx).enqueueUniquePeriodicWork(
                 "daily_brief",
-                if (replace) ExistingPeriodicWorkPolicy.UPDATE else ExistingPeriodicWorkPolicy.KEEP,
+                if (replace) ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE else ExistingPeriodicWorkPolicy.KEEP,
                 req,
             )
         }
@@ -156,11 +156,16 @@ object Brief {
     }
 
     /** Alert when a category crosses 80% or 100% of its monthly budget. */
-    suspend fun checkBudget(ctx: Context, category: String, justAdded: Double) {
+    suspend fun checkBudget(ctx: Context, category: String, justAdded: Double, time: Long? = null) {
         val dao = SafiApp.db.dao()
         val budget: Budget = dao.budgetFor(category) ?: return
         val (from, to) = monthRange(YearMonth.now(zone))
-        val spent = dao.expensesBetweenNow(from, to).filter { it.category == category && !it.isIncome }.sumOf { it.amountAed }
+        // A back-dated (or future-dated) expense doesn't touch this month's budget.
+        if (time != null && time !in from..to) return
+        val monthItems = dao.expensesBetweenNow(from, to).filter { it.category == category && !it.isIncome }
+        // Callers that don't pass the time: if no matching expense landed in this month, it was back-dated.
+        if (time == null && monthItems.none { Math.abs(it.amountAed - justAdded) < 0.005 }) return
+        val spent = monthItems.sumOf { it.amountAed }
         val before = spent - justAdded
         val limit = budget.monthlyLimit
         if (limit <= 0) return
@@ -169,6 +174,6 @@ object Brief {
             before < limit * 0.8 && spent >= limit * 0.8 -> "قربت تخلص ميزانية $category: ${money(spent)} من ${money(limit)}"
             else -> return
         }
-        Notifier.show(ctx, 600 + category.hashCode() % 100, Notifier.CH_MONEY, "تنبيه الميزانية", text, route = "reports")
+        Notifier.show(ctx, 600 + Math.floorMod(category.hashCode(), 100), Notifier.CH_MONEY, "تنبيه الميزانية", text, route = "reports")
     }
 }

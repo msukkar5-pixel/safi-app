@@ -123,11 +123,30 @@ object ExerciseDb {
                 val http = OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build()
                 http.newCall(Request.Builder().url(URL).build()).execute().use { r ->
                     if (!r.isSuccessful) throw IllegalStateException("تحميل الموسوعة فشل (${r.code})")
-                    val body = r.body?.string() ?: throw IllegalStateException("تحميل الموسوعة فشل")
-                    f.writeText(body)
+                    val body = r.body ?: throw IllegalStateException("تحميل الموسوعة فشل")
+                    // Write to a temp file and rename on success, so a cut-off download never looks complete.
+                    val tmp = File(f.parentFile, f.name + ".tmp")
+                    try {
+                        tmp.outputStream().use { out -> body.byteStream().use { it.copyTo(out) } }
+                        if (tmp.length() < 10_000) throw IllegalStateException("تحميل الموسوعة فشل")
+                        f.delete()
+                        if (!tmp.renameTo(f)) {
+                            tmp.copyTo(f, overwrite = true)
+                            tmp.delete()
+                        }
+                    } catch (e: Exception) {
+                        tmp.delete()
+                        throw e
+                    }
                 }
             }
-            val list = parse(f.readText()).sortedBy { it.name }
+            val list = try {
+                parse(f.readText()).sortedBy { it.name }
+            } catch (e: Exception) {
+                // Corrupt cache: drop it so the next call downloads again.
+                f.delete()
+                throw IllegalStateException("ملف الموسوعة بايظ، جرّب تاني", e)
+            }
             cache = list
             list
         }

@@ -13,7 +13,10 @@ import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-data class Ayah(val n: Int, val text: String, val juz: Int, val page: Int, val sajda: Boolean)
+data class Ayah(val n: Int, val text: String, val juz: Int, val page: Int, val sajda: Boolean) {
+    /** Diacritic-free text for search, computed once at load. */
+    val plain: String = Quran.plain(text)
+}
 data class Surah(val number: Int, val name: String, val english: String, val revelation: String, val ayahs: List<Ayah>) {
     val revelationAr get() = if (revelation.equals("Meccan", true)) "مكية" else "مدنية"
 }
@@ -70,13 +73,16 @@ object Quran {
     }
 
     private fun stripBasmala(t: String): String {
-        val words = t.trim().split(Regex("\\s+"))
+        val words = t.trim().split(spaces)
         return if (words.size > 4 && plain(words.take(4).joinToString(" ")).startsWith("بسم الله الرحمن الرحيم")) words.drop(4).joinToString(" ") else t
     }
 
+    private val marks = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u08D3-\\u08FF]")
+    private val spaces = Regex("\\s+")
+
     /** Removes diacritics/Quranic marks for searching. */
     fun plain(s: String): String = s
-        .replace(Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u08D3-\\u08FF]"), "")
+        .replace(marks, "")
         .replace('ٱ', 'ا').replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
         .replace('ى', 'ي').replace('ة', 'ه').replace("ـ", "")
 
@@ -87,7 +93,7 @@ object Quran {
         if (qq.length < 2) return emptyList()
         val out = mutableListOf<Hit>()
         for (s in list) for (a in s.ayahs) {
-            if (plain(a.text).contains(qq)) {
+            if (a.plain.contains(qq)) {
                 out += Hit(s, a)
                 if (out.size >= limit) return out
             }
@@ -102,6 +108,11 @@ object Quran {
     var lastSurah: Int get() = sp().getInt("lastSurah", 0); set(v) = sp().edit { putInt("lastSurah", v) }
     var lastAyah: Int get() = sp().getInt("lastAyah", 1); set(v) = sp().edit { putInt("lastAyah", v) }
     var fontSize: Int get() = sp().getInt("fontSize", 26); set(v) = sp().edit { putInt("fontSize", v) }
+    /** mushaf | flow | ayat | tafsir */
+    var viewMode: String get() = sp().getString("viewMode", "mushaf")!!; set(v) = sp().edit { putString("viewMode", v) }
+    /** amiri | system */
+    var quranFont: String get() = sp().getString("quranFont", "amiri")!!; set(v) = sp().edit { putString("quranFont", v) }
+    var autoSpeed: Int get() = sp().getInt("autoSpeed", 2); set(v) = sp().edit { putInt("autoSpeed", v) }
     var bookmarks: Set<String> get() = sp().getStringSet("bookmarks", emptySet()) ?: emptySet(); set(v) = sp().edit { putStringSet("bookmarks", v) }
 
     fun hasFont(ctx: Context) = runCatching { ctx.assets.list("fonts")?.contains("quran.ttf") == true }.getOrDefault(false)

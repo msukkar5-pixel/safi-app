@@ -11,11 +11,40 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 object Supps {
+    /** Arabic-Indic / Persian digits to 0-9 and '٫' to '.', keeping the Arabic comma '،' as a separator. */
+    fun normalizeTimeDigits(s: String): String = buildString(s.length) {
+        for (c in s) append(
+            when (c) {
+                in '٠'..'٩' -> '0' + (c - '٠')
+                in '۰'..'۹' -> '0' + (c - '۰')
+                '٫' -> '.'
+                else -> c
+            },
+        )
+    }
+
+    private val timeRe = Regex(
+        "(?<![\\d:.])(\\d{1,2})(?:\\s*[:.]\\s*(\\d{2}))?\\s*(a\\.?m\\.?|p\\.?m\\.?|صباحاً|صباحا|صباح|مساءً|مساءا|مساء|ص|م)?(?![\\p{L}\\d])",
+        RegexOption.IGNORE_CASE,
+    )
+
+    /** Accepts "08:00, 20:00", "٨:٠٠ ، ٨:٣٠", "8", "8:30", "8 pm", "8 م", "8 ص". */
     fun parseTimes(s: String): List<LocalTime> =
-        s.split(",", "،", " ").mapNotNull { t ->
-            val x = t.trim()
-            runCatching { LocalTime.parse(if (x.length == 4) "0$x" else x) }.getOrNull()
-        }.distinct().sorted()
+        timeRe.findAll(normalizeTimeDigits(s)).mapNotNull { m ->
+            var h = m.groupValues[1].toIntOrNull() ?: return@mapNotNull null
+            val min = m.groupValues[2].ifEmpty { "0" }.toIntOrNull() ?: return@mapNotNull null
+            val suf = m.groupValues[3].lowercase().replace(".", "")
+            if (min > 59) return@mapNotNull null
+            when {
+                suf.isEmpty() -> if (h > 23) return@mapNotNull null
+                else -> {
+                    if (h !in 1..12) return@mapNotNull null
+                    val pm = suf == "pm" || suf.startsWith("م")
+                    h = if (pm) (if (h == 12) 12 else h + 12) else (if (h == 12) 0 else h)
+                }
+            }
+            LocalTime.of(h, min)
+        }.distinct().sorted().toList()
 
     /** Saves the supplement and replaces its daily reminders. */
     suspend fun save(ctx: Context, s: Supplement): Long {
@@ -23,6 +52,7 @@ object Supps {
         val dao = SafiApp.db.dao()
         dao.remindersFor("supp", id).forEach {
             ReminderScheduler.cancel(ctx, it.id)
+            ReminderScheduler.forget(ctx, it.id)
             dao.deleteReminder(it)
         }
         if (s.active) {
@@ -46,6 +76,7 @@ object Supps {
         val dao = SafiApp.db.dao()
         dao.remindersFor("supp", s.id).forEach {
             ReminderScheduler.cancel(ctx, it.id)
+            ReminderScheduler.forget(ctx, it.id)
             dao.deleteReminder(it)
         }
         Fit.dao.deleteSupplement(s)

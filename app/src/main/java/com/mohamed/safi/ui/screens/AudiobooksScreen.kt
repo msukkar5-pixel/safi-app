@@ -1,5 +1,6 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -8,6 +9,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +33,11 @@ import kotlinx.coroutines.delay
 fun AudiobooksScreen(onBack: () -> Unit) {
     var book by remember { mutableStateOf<AudioBook?>(null) }
     val b = book
-    if (b != null) { BookPlayer(b) { book = null }; return }
+    if (b != null) {
+        BackHandler { book = null }
+        BookPlayer(b) { book = null }
+        return
+    }
 
     var tab by remember { mutableIntStateOf(if (Library.shelf.isEmpty()) 1 else 0) }
     var q by remember { mutableStateOf("") }
@@ -43,33 +49,30 @@ fun AudiobooksScreen(onBack: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
     var shelf by remember { mutableStateOf(Library.shelf) }
 
-    val source = if (tab == 1) "archive" else "librivox"
-    val effLang = if (tab == 1) "ara" else lang
-    LaunchedEffect(tab, q, effLang, page) {
+    LaunchedEffect(tab, q, lang, page) {
         if (tab == 0) return@LaunchedEffect
         delay(400); loading = true; err = null
-        runCatching { Library.search(source, q, effLang, page) }
+        runCatching { Library.search("archive", q, lang, page) }
             .onSuccess { (l, n) -> results = if (page == 1) l else results + l; total = n }
             .onFailure { err = it.message ?: "مفيش نت؟" }
         loading = false
     }
 
-    ScreenScaffold("الكتب المسموعة", onBack = onBack) { pad ->
+    ScreenScaffold("الكتب الإسلامية المسموعة", onBack = onBack) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
             TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
                 Tab(tab == 0, { tab = 0; shelf = Library.shelf }, text = { Text("مكتبتي") })
-                Tab(tab == 1, { tab = 1; page = 1 }, text = { Text("عربي") })
-                Tab(tab == 2, { tab = 2; page = 1 }, text = { Text("LibriVox") })
+                Tab(tab == 1, { tab = 1; page = 1 }, text = { Text("الكتب الإسلامية") })
             }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (tab == 0) {
-                    if (shelf.isEmpty()) item { EmptyState(Icons.Default.Headphones, "لسه مفيش كتب في مكتبتك. دوّر في «عربي» أو «LibriVox» وافتح أي كتاب.") }
+                    if (shelf.isEmpty()) item { EmptyState(Icons.Default.Headphones, "لسه مفيش كتب في مكتبتك. افتح «الكتب الإسلامية» واختار كتاب.") }
                     items(shelf, key = { "s" + it.id }) { bk ->
                         val p = Library.progress(bk.id)
                         BookRow(bk, if (p != null) "وقفت عند الفصل ${p.first + 1}" else null) { book = bk }
                     }
                     item {
-                        Text("الكتب كلها مجانية وقانونية: ملكية عامة أو رخصة المشاع الإبداعي (LibriVox و Internet Archive).",
+                        Text("كتب إسلامية بس (سيرة، أنبياء، صحابة، تفسير، حديث، فقه…) بلغات كتير، بتتشغّل من أرشيف الإنترنت. القرآن المسموع ليه قسم لوحده.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     }
                 } else {
@@ -79,15 +82,18 @@ fun AudiobooksScreen(onBack: () -> Unit) {
                     }
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            if (tab == 1) items(Library.arabicSuggestions) { s ->
-                                FilterChip(q == s, { q = if (q == s) "" else s; page = 1 }, label = { Text(s) })
-                            } else items(Library.languages.entries.toList()) { (code, name) ->
+                            items(Library.languages.entries.toList()) { (code, name) ->
                                 FilterChip(lang == code, { lang = code; page = 1 }, label = { Text(name) })
                             }
                         }
                     }
-                    if (tab == 1) item {
-                        Text("الكتب العربية المجانية محدودة؛ معظمها تسجيلات تطوعية من أرشيف الإنترنت.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(Library.suggestions[if (lang == "ara") "ara" else ""] ?: emptyList()) { s ->
+                                AssistChip(onClick = { q = if (q == s) "" else s; page = 1 }, label = { Text(s) },
+                                    colors = if (q == s) AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.secondaryContainer) else AssistChipDefaults.assistChipColors())
+                            }
+                        }
                     }
                     if (loading && page == 1) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                     err?.let { e -> item { Text(e, color = MaterialTheme.colorScheme.error) } }
@@ -138,7 +144,7 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
     var dur by remember { mutableLongStateOf(0L) }
     var playing by remember { mutableStateOf(false) }
     var speed by remember { mutableFloatStateOf(Library.speed) }
-    var sleepAt by remember { mutableLongStateOf(0L) }
+    var sleepAt by remember { mutableLongStateOf(Library.sleepAt.let { if (it > System.currentTimeMillis()) it else 0L }) }
     var mine by remember { mutableStateOf(false) } // controller currently holds this book
 
     LaunchedEffect(b.id) {
@@ -146,9 +152,15 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
             .onFailure { err = it.message }
     }
     DisposableEffect(Unit) {
-        var c: MediaController? = null
-        Player.connect(ctx) { c = it; ctrl = it }
-        onDispose { c?.release() }
+        val f = Player.connect(ctx) { ctrl = it }
+        onDispose {
+            ctrl?.let { c ->
+                val id = c.currentMediaItem?.mediaId ?: ""
+                if (id.startsWith(b.id + "#")) Library.saveProgress(b.id, id.substringAfterLast('#').toIntOrNull() ?: 0, c.currentPosition.coerceAtLeast(0L))
+            }
+            ctrl = null
+            MediaController.releaseFuture(f)
+        }
     }
     LaunchedEffect(ctrl) {
         val c = ctrl ?: return@LaunchedEffect
@@ -159,9 +171,9 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
                 cur = id.substringAfter('#').toIntOrNull() ?: 0
                 pos = c.currentPosition; dur = c.duration.coerceAtLeast(0)
                 playing = c.isPlaying
-                if (playing) Library.saveProgress(b.id, cur, pos)
-                if (sleepAt > 0 && System.currentTimeMillis() >= sleepAt) { c.pause(); sleepAt = 0 }
             } else { playing = false }
+            // progress saving and the sleep timer run in PlaybackService; just mirror the timer here
+            sleepAt = Library.sleepAt.let { if (it > System.currentTimeMillis()) it else 0L }
             delay(1000)
         }
     }
@@ -229,6 +241,7 @@ private fun BookPlayer(b: AudioBook, onBack: () -> Unit) {
                             val left = if (sleepAt > now) (sleepAt - now) / 60000 + 1 else 0
                             val next = when { left <= 0 -> 15L; left <= 15 -> 30L; left <= 30 -> 60L; else -> 0L }
                             sleepAt = if (next == 0L) 0 else now + next * 60000
+                            Library.sleepAt = sleepAt
                             toast(ctx, if (next == 0L) "مؤقت النوم اتلغى" else "هيقف بعد $next دقيقة")
                         }) {
                             Icon(Icons.Default.Bedtime, null); Spacer(Modifier.width(4.dp))

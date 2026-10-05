@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -289,7 +290,7 @@ private fun SuppDialog(existing: Supplement?, onDismiss: () -> Unit) {
                 Row {
                     TextButton(onClick = {
                         pickTime(ctx, System.currentTimeMillis()) { h, m ->
-                            val t = "%02d:%02d".format(h, m)
+                            val t = String.format(java.util.Locale.US, "%02d:%02d", h, m)
                             times = (Supps.parseTimes(times).map { it.toString() } + t).distinct().sorted().joinToString(", ")
                         }
                     }) { Icon(Icons.Default.Schedule, null); Text("ضيف ميعاد") }

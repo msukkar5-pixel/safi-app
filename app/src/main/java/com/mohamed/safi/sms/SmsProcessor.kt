@@ -18,8 +18,24 @@ object SmsProcessor {
     fun hash(sender: String, body: String): String {
         val md = MessageDigest.getInstance("SHA-1")
         return md.digest((sender.lowercase().trim() + "|" + body.trim()).toByteArray())
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { String.format(java.util.Locale.US, "%02x", it) }
     }
+
+    private const val CONSUMED_KEY = "consumed_sms_hashes"
+    private fun sp() = SafiApp.instance.getSharedPreferences("safi_sms", Context.MODE_PRIVATE)
+
+    /** Hashes of bank SMS whose expense was turned into something else (e.g. an Egypt transfer) and must not be re-imported. */
+    fun markConsumed(hash: String) {
+        val set = HashSet(sp().getStringSet(CONSUMED_KEY, emptySet()) ?: emptySet())
+        if (set.add(hash)) sp().edit().putStringSet(CONSUMED_KEY, set).apply()
+    }
+
+    fun isConsumed(hash: String): Boolean =
+        sp().getStringSet(CONSUMED_KEY, emptySet())?.contains(hash) == true
+
+    /** Already imported (still in the DB) or consumed by a conversion. */
+    suspend fun isDuplicate(hash: String): Boolean =
+        SafiApp.db.dao().countHash(hash) > 0 || isConsumed(hash)
 
     /** Ask Claude to read a bank SMS the rule parser couldn't handle. */
     private suspend fun claudeParse(bank: String, body: String): BankSmsParser.Parsed? {
@@ -54,7 +70,7 @@ object SmsProcessor {
     suspend fun process(ctx: Context, sender: String, body: String, time: Long, notify: Boolean, useClaude: Boolean = true, trusted: Boolean = false): Expense? {
         val dao = SafiApp.db.dao()
         val h = hash(sender, body)
-        if (dao.countHash(h) > 0) return null
+        if (dao.countHash(h) > 0 || isConsumed(h)) return null
         val bank = BankSmsParser.bankFor(sender, body) ?: (if (trusted) "" else return null)
         val ruleParsed: BankSmsParser.Parsed? = BankSmsParser.parse(bank, body)
         val first: BankSmsParser.Parsed = ruleParsed
@@ -140,17 +156,23 @@ object SmsProcessor {
         return if (txLines.size > 1) txLines else listOf(text.trim())
     }
 
-    data class ImportResult(val added: List<Expense>, val skipped: Int)
+    /** [skipped]: messages that weren't transactions; [duplicates]: already recorded before. */
+    data class ImportResult(val added: List<Expense>, val skipped: Int, val duplicates: Int = 0)
 
     /** Messages Mohamed shared or pasted into the app. */
     suspend fun processText(ctx: Context, text: String, useClaude: Boolean = Claude.hasKey): ImportResult {
         val added = mutableListOf<Expense>()
         var skipped = 0
-        for (msg in split(text)) {
+        var duplicates = 0
+        for (msg in split(com.mohamed.safi.ui.normalizeDigits(text))) {
+            if (runCatching { isDuplicate(hash("shared", msg)) }.getOrDefault(false)) {
+                duplicates++
+                continue
+            }
             val time = dateIn(msg) ?: System.currentTimeMillis()
             val e = runCatching { process(ctx, "shared", msg, time, notify = false, useClaude = useClaude, trusted = true) }.getOrNull()
             if (e != null) added += e else skipped++
         }
-        return ImportResult(added, skipped)
+        return ImportResult(added, skipped, duplicates)
     }
 }

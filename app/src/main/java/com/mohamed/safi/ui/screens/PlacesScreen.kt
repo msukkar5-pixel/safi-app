@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.mohamed.safi.SafiApp
 import com.mohamed.safi.data.*
 import com.mohamed.safi.location.LocationLogger
@@ -45,6 +47,28 @@ fun PlacesScreen(onBack: () -> Unit) {
     var naming by remember { mutableStateOf<LocationLog?>(null) }
     var showPassing by remember { mutableStateOf(false) }
     val perms by rememberPermState()
+    var locOk by remember(perms) { mutableStateOf(perms.location) }
+    var paused by remember { mutableStateOf(LocationService.isPaused(ctx)) }
+    LifecycleResumeEffect(Unit) {
+        paused = LocationService.isPaused(ctx)
+        onPauseOrDispose { }
+    }
+    // The service clears/sets the flag asynchronously after start(), so follow it live.
+    DisposableEffect(Unit) {
+        val unregister = LocationService.observePaused(ctx) { paused = it }
+        onDispose { unregister() }
+    }
+    val askLoc = rememberPermRequester(LOCATION_PERMS) { ok ->
+        locOk = ok
+        if (ok) {
+            tracking = true
+            prefs.locationOn = true
+            runCatching { LocationService.start(ctx) }
+            paused = LocationService.isPaused(ctx)
+        } else {
+            toast(ctx, "اسمح بالموقع علشان يسجل أماكنك")
+        }
+    }
 
     val shown = stays.filter { showPassing || it.endTime - it.startTime >= 5 * 60_000L }
 
@@ -67,22 +91,25 @@ fun PlacesScreen(onBack: () -> Unit) {
                         Column(Modifier.weight(1f)) {
                             Text("تسجيل الأماكن", fontWeight = FontWeight.SemiBold)
                             Text(
-                                if (!perms.location) "محتاج صلاحية الموقع"
+                                if (!locOk) "محتاج صلاحية الموقع"
+                                else if (tracking && paused) "متوقف — افتح التطبيق"
                                 else if (tracking) "بيسجل كل ${prefs.locationIntervalMin} دقايق" else "متوقف",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (tracking && locOk && paused) Warn else MaterialTheme.colorScheme.outline,
                             )
                         }
-                        Switch(checked = tracking && perms.location, onCheckedChange = { on ->
-                            if (on && !perms.location) {
-                                toast(ctx, "اسمح بالموقع من الإعدادات")
+                        Switch(checked = tracking && locOk, onCheckedChange = { on ->
+                            if (on && !locOk) {
+                                askLoc()
                             } else {
                                 tracking = on
                                 prefs.locationOn = on
-                                if (on) LocationService.start(ctx) else LocationService.stop(ctx)
+                                if (on) runCatching { LocationService.start(ctx) } else LocationService.stop(ctx)
+                                paused = LocationService.isPaused(ctx)
                             }
                         })
                     }
-                    if (tracking && perms.location && !perms.bgLocation) {
+                    if (tracking && locOk && !perms.bgLocation) {
                         Text("علشان يسجل والتطبيق مقفول اسمح بالموقع \"طول الوقت\" من الإعدادات.", style = MaterialTheme.typography.bodySmall, color = Warn)
                     }
                 }

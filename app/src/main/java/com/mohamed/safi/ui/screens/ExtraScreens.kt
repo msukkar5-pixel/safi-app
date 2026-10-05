@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,156 +36,46 @@ import java.time.temporal.ChronoUnit
 private val docPresets = listOf("الهوية الإماراتية", "الإقامة", "الجواز", "رخصة السواقة", "ملكية العربية", "تأمين العربية", "التأمين الصحي", "عقد الإيجار (إيجاري)", "بطاقة العمل")
 
 @Composable
-fun DocumentsScreen(onBack: () -> Unit) {
-    val docs by ExtraDb.dao.docs().collectAsState(emptyList())
-    var editing by remember { mutableStateOf<Doc?>(null) }
-    var adding by remember { mutableStateOf<String?>(null) }
-    val ctx = LocalContext.current
-    ScreenScaffold(
-        "المستندات", onBack = onBack,
-        fab = { ExtendedFloatingActionButton(onClick = { adding = "" }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("مستند") }) },
-    ) { pad ->
-        LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                Text("هفكرك قبل ما أي مستند ينتهي. كل حاجة متخزنة على تليفونك بس.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                Spacer(Modifier.height(6.dp))
-                ChipsRow(docPresets.filter { p -> docs.none { it.title == p } }, null, { it }) { adding = it }
-            }
-            if (docs.isEmpty()) item { EmptyState(Icons.Default.Badge, "ضيف الهوية والإقامة والجواز والرخصة") }
-            items(docs, key = { it.id }) { d ->
-                val days = d.expiry?.let { daysUntil(it) }
-                val color = when {
-                    days == null -> MaterialTheme.colorScheme.outline
-                    days < 0 -> Danger
-                    days <= d.remindDays -> Warn
-                    else -> Positive
-                }
-                AppCard(onClick = { editing = d }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CatBadge(d.title, 40, Icons.Default.Badge, color)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(d.title + if (d.owner.isNotBlank()) " — ${d.owner}" else "", fontWeight = FontWeight.SemiBold)
-                            if (d.number.isNotBlank()) Text(d.number, style = MaterialTheme.typography.bodySmall)
-                            d.expiry?.let {
-                                Text(
-                                    "ينتهي ${shortDate(it)} • " + when {
-                                        days!! < 0 -> "منتهي من ${-days} يوم"
-                                        days == 0L -> "النهارده"
-                                        days < 60 -> "فاضل $days يوم"
-                                        else -> "فاضل ${days / 30} شهر"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall, color = color,
-                                )
-                            }
-                        }
-                        d.photoPath?.let { p -> IconButton(onClick = { openFile(ctx, p) }) { Icon(Icons.Default.Image, "الصورة") } }
-                    }
-                }
-            }
-        }
-    }
-    adding?.let { t -> DocDialog(null, t) { adding = null } }
-    editing?.let { d -> DocDialog(d, d.title) { editing = null } }
-}
-
-@Composable
-private fun DocDialog(existing: Doc?, preset: String, onDismiss: () -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var title by remember { mutableStateOf(existing?.title ?: preset) }
-    var owner by remember { mutableStateOf(existing?.owner ?: "") }
-    var number by remember { mutableStateOf(existing?.number ?: "") }
-    var expiry by remember { mutableStateOf(existing?.expiry) }
-    var remind by remember { mutableStateOf((existing?.remindDays ?: 30).toString()) }
-    var note by remember { mutableStateOf(existing?.note ?: "") }
-    var photo by remember { mutableStateOf(existing?.photoPath) }
-    var camUri by remember { mutableStateOf<Uri?>(null) }
-    var camFile by remember { mutableStateOf<File?>(null) }
-    var confirmDel by remember { mutableStateOf(false) }
-
-    fun keep(src: Uri) {
-        val dir = File(ctx.filesDir, "docs").apply { mkdirs() }
-        val f = File(dir, "doc_${System.currentTimeMillis()}.jpg")
-        runCatching { ctx.contentResolver.openInputStream(src)?.use { i -> f.outputStream().use { i.copyTo(it) } }; photo = f.absolutePath }
-    }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) camFile?.let { photo = it.absolutePath } }
-    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { it?.let(::keep) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) "مستند جديد" else existing.title) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("المستند") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(owner, { owner = it }, label = { Text("بتاع مين (انا، مراتي، الأولاد…)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(number, { number = it }, label = { Text("الرقم (اختياري)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                DateField("تاريخ الانتهاء", expiry, withTime = false) { expiry = it }
-                NumberField("فكرني قبلها بكام يوم", remind) { remind = it }
-                OutlinedTextField(note, { note = it }, label = { Text("ملاحظة") }, modifier = Modifier.fillMaxWidth())
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = {
-                        val dir = File(ctx.filesDir, "docs").apply { mkdirs() }
-                        val f = File(dir, "doc_${System.currentTimeMillis()}.jpg")
-                        camFile = f
-                        val u = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f)
-                        camUri = u
-                        runCatching { camera.launch(u) }
-                    }) { Icon(Icons.Default.CameraAlt, null); Text(" صوّر") }
-                    OutlinedButton(onClick = { gallery.launch("image/*") }) { Icon(Icons.Default.PhotoLibrary, null); Text(" من الصور") }
-                }
-                photo?.let { p ->
-                    TextButton(onClick = { openFile(ctx, p) }) { Icon(Icons.Default.Image, null); Text(" شوف الصورة") }
-                }
-                if (existing != null) TextButton(onClick = { confirmDel = true }, colors = ButtonDefaults.textButtonColors(contentColor = Danger)) {
-                    Icon(Icons.Default.Delete, null); Text("امسح")
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (title.isBlank()) toast(ctx, "اكتب اسم المستند") else scope.launch {
-                    ExtraDb.dao.upsertDoc(
-                        Doc(
-                            id = existing?.id ?: 0, title = title.trim(), owner = owner.trim(), number = number.trim(),
-                            expiry = expiry?.toLocalDate()?.millisAt(9), remindDays = remind.toIntOrNull() ?: 30, photoPath = photo, note = note.trim(),
-                        ),
-                    )
-                    onDismiss()
-                }
-            }) { Text("حفظ", fontWeight = FontWeight.Bold) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
-    )
-    if (confirmDel && existing != null) {
-        ConfirmDialog("مسح ${existing.title}؟", "", "امسح", { confirmDel = false }) {
-            scope.launch {
-                existing.photoPath?.let { File(it).delete() }
-                ExtraDb.dao.deleteDoc(existing); onDismiss()
-            }
-        }
-    }
-}
-
-// ======================================================================= Savings goals
-
-@Composable
-fun SavingsScreen(onBack: () -> Unit) {
+fun SavingsScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val goals by ExtraDb.dao.goals().collectAsState(emptyList())
     var editing by remember { mutableStateOf<SavingGoal?>(null) }
     var adding by remember { mutableStateOf(false) }
     var deposit by remember { mutableStateOf<SavingGoal?>(null) }
+    val savedAed = goals.sumOf { Fx.toAed(it.saved, it.currency) }
+    val targetAed = goals.sumOf { Fx.toAed(it.target, it.currency) }
     ScreenScaffold(
-        "أهداف الادخار", onBack = onBack,
-        fab = { ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("هدف") }) },
+        "أهداف الادخار", onBack = if (embedded) null else onBack, showTopBar = !embedded,
+        fab = { if (!embedded) ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("هدف") }) },
     ) { pad ->
-        LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (goals.isEmpty()) item { EmptyState(Icons.Default.Savings, "مثلاً: عايز أحوّش 20,000 درهم لحد ديسمبر") }
+        LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (goals.isNotEmpty()) item {
+                AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text("محوّش في كل الأهداف", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(money(savedAed), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        "من ${money(targetAed)} • ${goals.size} هدف" + if (targetAed > 0) " • ${(savedAed / targetAed * 100).toInt().coerceIn(0, 100)}%" else "",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    if (embedded) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = { adding = true }) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("هدف جديد") }
+                    }
+                }
+            }
+            if (goals.isEmpty()) item {
+                EmptyState(Icons.Default.Savings, "مثلاً: عايز أحوّش 20,000 درهم لحد ديسمبر")
+                if (embedded) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    Button(onClick = { adding = true }) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("ضيف أول هدف") }
+                }
+            }
             items(goals, key = { it.id }) { g ->
                 val left = (g.target - g.saved).coerceAtLeast(0.0)
                 val months = g.deadline?.let { ChronoUnit.MONTHS.between(LocalDate.now(zone).withDayOfMonth(1), it.toLocalDate().withDayOfMonth(1)).coerceAtLeast(1) }
+                val frac = if (g.target > 0) (g.saved / g.target).toFloat().coerceIn(0f, 1f) else 0f
                 AppCard(onClick = { editing = g }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        CatBadge(g.name, 40, Icons.Default.Savings, Positive)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(g.name, fontWeight = FontWeight.Bold)
                             Text("${money(g.saved, g.currency)} من ${money(g.target, g.currency)}", style = MaterialTheme.typography.bodySmall)
@@ -192,54 +83,72 @@ fun SavingsScreen(onBack: () -> Unit) {
                         FilledTonalButton(onClick = { deposit = g }) { Text("حوّشت") }
                     }
                     Spacer(Modifier.height(8.dp))
-                    LinearProgressIndicator(progress = { (g.saved / g.target).toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = Positive)
+                    LinearProgressIndicator(progress = { frac }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = Positive, trackColor = Positive.copy(alpha = 0.14f))
                     Spacer(Modifier.height(6.dp))
-                    Text(
-                        when {
-                            left <= 0 -> "وصلت للهدف ✓"
-                            months != null -> "محتاج تحوّش ${money(left / months, g.currency)} كل شهر لحد ${shortDate(g.deadline!!)}"
-                            else -> "فاضل ${money(left, g.currency)}"
-                        },
-                        style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            when {
+                                left <= 0 -> "وصلت للهدف ✓"
+                                months != null -> "محتاج تحوّش ${money(left / months, g.currency)} كل شهر لحد ${shortDate(g.deadline!!)}"
+                                else -> "فاضل ${money(left, g.currency)}"
+                            },
+                            style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f),
+                        )
+                        Text("${(frac * 100).toInt()}%", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = Positive)
+                    }
                 }
             }
         }
     }
     if (adding) GoalDialog(null) { adding = false }
     editing?.let { g -> GoalDialog(g) { editing = null } }
-    deposit?.let { g ->
-        val scope = rememberCoroutineScope()
-        var amt by remember(g.id) { mutableStateOf("") }
-        var withdraw by remember(g.id) { mutableStateOf(false) }
-        AlertDialog(
-            onDismissRequest = { deposit = null },
-            title = { Text(g.name) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(!withdraw, { withdraw = false }, label = { Text("حوّشت") })
-                        FilterChip(withdraw, { withdraw = true }, label = { Text("سحبت منه") })
-                    }
-                    NumberField("المبلغ", amt, suffix = curLabel(g.currency)) { amt = it }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val a = amt.toDoubleOrNull() ?: 0.0
-                    scope.launch {
-                        if (a > 0) ExtraDb.dao.upsertGoal(g.copy(saved = (g.saved + if (withdraw) -a else a).coerceAtLeast(0.0)))
-                        deposit = null
-                    }
-                }) { Text("حفظ") }
-            },
-            dismissButton = { TextButton(onClick = { deposit = null }) { Text("إلغاء") } },
-        )
-    }
+    deposit?.let { g -> GoalDepositDialog(g) { deposit = null } }
 }
 
+/** Put money into (or take it out of) a saving goal. */
 @Composable
-private fun GoalDialog(existing: SavingGoal?, onDismiss: () -> Unit) {
+fun GoalDepositDialog(g: SavingGoal, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var amt by remember(g.id) { mutableStateOf("") }
+    var withdraw by remember(g.id) { mutableStateOf(false) }
+    var busy by remember(g.id) { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(g.name) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("محوّش ${money(g.saved, g.currency)} من ${money(g.target, g.currency)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(!withdraw, { withdraw = false }, label = { Text("حوّشت") })
+                    FilterChip(withdraw, { withdraw = true }, label = { Text("سحبت منه") })
+                }
+                NumberField("المبلغ", amt, suffix = curLabel(g.currency)) { amt = it }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !busy, onClick = {
+                val a = amt.toDoubleOrNull() ?: 0.0
+                if (busy) return@TextButton
+                if (a <= 0) { toast(ctx, "اكتب المبلغ"); return@TextButton }
+                busy = true
+                scope.launch {
+                    try {
+                        ExtraDb.dao.upsertGoal(g.copy(saved = (g.saved + if (withdraw) -a else a).coerceAtLeast(0.0)))
+                        onDismiss()
+                    } finally {
+                        busy = false
+                    }
+                }
+            }) { Text("حفظ", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+    )
+}
+
+/** Add / edit a saving goal. */
+@Composable
+fun GoalDialog(existing: SavingGoal?, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf(existing?.name ?: "") }
@@ -287,7 +196,7 @@ private fun GoalDialog(existing: SavingGoal?, onDismiss: () -> Unit) {
 // ======================================================================= Kids' lessons (Egypt)
 
 @Composable
-fun LessonsScreen(onBack: () -> Unit) {
+fun LessonsScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val lessons by ExtraDb.dao.lessons().collectAsState(emptyList())
@@ -300,15 +209,15 @@ fun LessonsScreen(onBack: () -> Unit) {
     val cat = SafiApp.prefs.transferCats.firstOrNull { it.contains("دروس") } ?: "دروس الأولاد"
 
     ScreenScaffold(
-        "دروس الأولاد", onBack = onBack,
-        fab = { ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("درس") }) },
+        "دروس الأولاد", onBack = if (embedded) null else onBack, showTopBar = !embedded,
+        fab = { if (!embedded) ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("درس") }) },
     ) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 100.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
                     Text("الدروس في الشهر", color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(money(total, "EGP"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text("≈ ${money(total / rate)}", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("≈ ${money(total / rate)} • ${active.size} درس شغّال", color = MaterialTheme.colorScheme.onPrimaryContainer)
                     if (total > 0) {
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = { payAll = true }) { Text("سجّل تحويل الدروس للشهر ده") }
@@ -317,7 +226,12 @@ fun LessonsScreen(onBack: () -> Unit) {
             }
             if (lessons.isEmpty()) item { EmptyState(Icons.Default.School, "ضيف دروس كل واحد من الأولاد بالمدرس والمواعيد والسعر") }
             lessons.groupBy { it.child }.forEach { (child, ls) ->
-                item { Text("$child — ${money(ls.filter { it.active }.sumOf { it.monthlyFeeEgp }, "EGP")}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+                item(key = "child_$child") {
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(child, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Text(money(ls.filter { it.active }.sumOf { it.monthlyFeeEgp }, "EGP"), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.outline)
+                    }
+                }
                 items(ls, key = { it.id }) { l ->
                     AppCard(onClick = { editing = l }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -329,6 +243,7 @@ fun LessonsScreen(onBack: () -> Unit) {
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(money(l.monthlyFeeEgp, "EGP"), fontWeight = FontWeight.Bold)
+                                if (l.monthlyFeeEgp > 0) Text("≈ ${money(l.monthlyFeeEgp / rate)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                                 if (l.sessionsPerMonth > 0) Text("${l.sessionsPerMonth} حصة", style = MaterialTheme.typography.bodySmall)
                                 if (!l.active) Pill("متوقف", MaterialTheme.colorScheme.outline)
                             }
@@ -348,8 +263,9 @@ fun LessonsScreen(onBack: () -> Unit) {
     }
 }
 
+/** Add / edit a kid's lesson. [children]: names already used, offered as chips. */
 @Composable
-private fun LessonDialog(existing: Lesson?, children: List<String>, onDismiss: () -> Unit) {
+fun LessonDialog(existing: Lesson?, children: List<String>, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var child by remember { mutableStateOf(existing?.child ?: children.firstOrNull() ?: "") }
@@ -403,7 +319,7 @@ private fun LessonDialog(existing: Lesson?, children: List<String>, onDismiss: (
 // ======================================================================= Zakat
 
 @Composable
-fun ZakatScreen(onBack: () -> Unit) {
+fun ZakatScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val ctx = LocalContext.current
     val sp = remember { ctx.getSharedPreferences("safi_zakat", android.content.Context.MODE_PRIVATE) }
     fun g(k: String) = sp.getString(k, "") ?: ""
@@ -428,8 +344,12 @@ fun ZakatScreen(onBack: () -> Unit) {
     val nisab = 85 * d(price)
     val due = if (d(price) > 0 && total >= nisab) total * 0.025 else 0.0
 
-    ScreenScaffold("حاسبة الزكاة", onBack = onBack) { pad ->
-        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ScreenScaffold("حاسبة الزكاة", onBack = if (embedded) null else onBack, showTopBar = !embedded) { pad ->
+        Column(
+            Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = if (embedded) 100.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
                 Text("الزكاة المستحقة", color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Text(money(due), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)

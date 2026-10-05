@@ -2,6 +2,7 @@ package com.mohamed.safi.location
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -97,6 +98,7 @@ object LocationLogger {
 class LocationService : Service(), LocationListener {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var lm: LocationManager? = null
+    private var failed = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -114,9 +116,13 @@ class LocationService : Service(), LocationListener {
         try {
             ServiceCompat.startForeground(this, 4242, n, type)
         } catch (e: Exception) {
+            // Typically: API 34+ started from the background without ACCESS_BACKGROUND_LOCATION.
+            failed = true
+            setPaused(this, true)
             stopSelf()
             return
         }
+        setPaused(this, false)
         startUpdates()
     }
 
@@ -149,7 +155,8 @@ class LocationService : Service(), LocationListener {
     override fun onProviderEnabled(provider: String) {}
     override fun onProviderDisabled(provider: String) {}
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
+        if (failed) START_NOT_STICKY else START_STICKY
 
     override fun onDestroy() {
         runCatching { lm?.removeUpdates(this) }
@@ -162,12 +169,53 @@ class LocationService : Service(), LocationListener {
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
+        private const val PREFS = "safi_location"
+        const val KEY_PAUSED = "location_paused"
+
+        private fun sp(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+        /** True when tracking is on but Android blocked the service from starting in the background. */
+        fun isPaused(ctx: Context) = sp(ctx).getBoolean(KEY_PAUSED, false)
+
+        fun setPaused(ctx: Context, paused: Boolean) {
+            sp(ctx).edit().putBoolean(KEY_PAUSED, paused).apply()
+        }
+
+        /** Calls [onChange] whenever the paused flag changes; returns the unregister function (keep it referenced). */
+        fun observePaused(ctx: Context, onChange: (Boolean) -> Unit): () -> Unit {
+            val prefs = sp(ctx)
+            val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+                if (key == KEY_PAUSED) onChange(p.getBoolean(KEY_PAUSED, false))
+            }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            return { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+        }
+
+        fun hasBackgroundPermission(ctx: Context) = Build.VERSION.SDK_INT < 29 ||
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        private fun appVisible(): Boolean {
+            val info = ActivityManager.RunningAppProcessInfo()
+            ActivityManager.getMyMemoryState(info)
+            return info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
+        }
+
         fun start(ctx: Context) {
             if (!hasPermission(ctx)) return
-            ContextCompat.startForegroundService(ctx, Intent(ctx, LocationService::class.java))
+            // API 34+: a location FGS can't start from the background (e.g. boot) without background location.
+            if (Build.VERSION.SDK_INT >= 34 && !hasBackgroundPermission(ctx) && !appVisible()) {
+                setPaused(ctx, true)
+                return
+            }
+            try {
+                ContextCompat.startForegroundService(ctx, Intent(ctx, LocationService::class.java))
+            } catch (e: Exception) {
+                setPaused(ctx, true)
+            }
         }
 
         fun stop(ctx: Context) {
+            setPaused(ctx, false)
             ctx.stopService(Intent(ctx, LocationService::class.java))
         }
 

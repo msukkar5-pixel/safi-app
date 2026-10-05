@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,6 +46,7 @@ object UiBus {
     /** Route requested by a notification tap. */
     val pendingRoute = MutableStateFlow<String?>(null)
     val pendingAzkar = MutableStateFlow<String?>(null)
+    val pendingQuranAudio = MutableStateFlow<Int?>(null) // surah to play
     val pendingBook = MutableStateFlow<Pair<String, String>?>(null) // bookId to search query
     /** Bank message(s) shared into the app from Messages. */
     val pendingShare = MutableStateFlow<String?>(null)
@@ -56,7 +58,7 @@ object UiBus {
     val pendingHadith = MutableStateFlow<String?>(null)
 }
 
-fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
+fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, tr(msg), Toast.LENGTH_SHORT).show()
 
 fun openFile(ctx: Context, path: String) {
     runCatching {
@@ -68,20 +70,23 @@ fun openFile(ctx: Context, path: String) {
     }
 }
 
-/** Add / edit an expense (or income). [prefill] is used for new entries (e.g. from a receipt). */
+/**
+ * Add / edit an expense (or income). [prefill] is used for new entries (e.g. from a receipt).
+ * [startIncome]: a new entry opens as income (the finance hub's "دخل" button).
+ */
 @Composable
-fun ExpenseEditor(existing: Expense?, prefill: Expense? = null, onDismiss: () -> Unit) {
+fun ExpenseEditor(existing: Expense?, prefill: Expense? = null, startIncome: Boolean = false, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val base = existing ?: prefill
     var amount by remember { mutableStateOf(base?.amount?.let { fmt(it).replace(",", "") } ?: "") }
     var currency by remember { mutableStateOf(base?.currency ?: "AED") }
-    var category by remember { mutableStateOf(base?.category ?: Cats.FOOD) }
+    var category by remember { mutableStateOf(base?.category ?: if (startIncome) Cats.INCOME else Cats.FOOD) }
     var merchant by remember { mutableStateOf(base?.merchant ?: "") }
     var note by remember { mutableStateOf(base?.note ?: "") }
     var method by remember { mutableStateOf(base?.method ?: "cash") }
     var time by remember { mutableStateOf(base?.time ?: System.currentTimeMillis()) }
-    var income by remember { mutableStateOf(base?.isIncome ?: false) }
+    var income by remember { mutableStateOf(base?.isIncome ?: startIncome) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -134,7 +139,10 @@ fun ExpenseEditor(existing: Expense?, prefill: Expense? = null, onDismiss: () ->
                     if (existing != null) {
                         dao.updateExpense(
                             existing.copy(
-                                amount = a, currency = currency, amountAed = Fx.toAed(a, currency), category = cat,
+                                amount = a, currency = currency,
+                                // keep the rate from the day it was spent unless the amount/currency changed
+                                amountAed = if (Math.abs(a - existing.amount) < 0.005 && currency == existing.currency) existing.amountAed else Fx.toAed(a, currency),
+                                category = cat,
                                 merchant = merchant.trim(), note = note.trim(), method = method, time = time, isIncome = income,
                             ),
                         )
@@ -301,11 +309,12 @@ fun ExpenseRow(e: Expense, onClick: () -> Unit) {
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        (if (e.isIncome) "+" else "") + fmt(e.amountAed),
+                        (if (e.isIncome) "+" else "") + money(e.amountAed),
                         fontWeight = FontWeight.Bold,
                         color = if (e.isIncome) Positive else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
                     )
-                    if (e.currency != "AED") Text(money(e.amount, e.currency), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    if (e.currency != "AED") Text(money(e.amount, e.currency), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
                 }
             }
         }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,6 +47,16 @@ fun SettingsScreen(onBack: () -> Unit) {
             Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            SectionTitle("لغة التطبيق")
+            AppCard {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    I18n.languages.forEach { (code, label) ->
+                        FilterChip(I18n.lang.value == code, { I18n.set(ctx, code) }, label = { androidx.compose.material3.Text(label) })
+                    }
+                }
+                Text("القرآن والأذكار والأحاديث والكتب بتفضل بلغتها الأصلية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+
             SectionTitle("الصلاحيات")
             PermissionsList()
 
@@ -333,16 +344,43 @@ private fun VoiceSettingsCard() {
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(engine == "ai", { engine = "ai"; com.mohamed.safi.ui.VoicePrefs.engine = "ai" }, enabled = canAi)
+            RadioButton(engine == "ai", { engine = "ai"; com.mohamed.safi.ui.VoicePrefs.engine = "ai" })
             Column(Modifier.weight(1f)) {
                 Text("بالذكاء الاصطناعي (أدق)")
-                Text(
-                    if (canAi) "بيسجّل كلامك كله وبعدين يحوّله. أدق في اللهجات والجمل الطويلة، وبيتحسب من رصيد الـ API."
-                    else "متاح مع OpenAI أو Gemini أو Groq بس. اختار واحد منهم من قسم الذكاء الاصطناعي.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
-                )
+                Text("بيسجّل كلامك كله وبعدين يحوّله لكتابة. أدق في اللهجات والجمل الطويلة. بيشتغل بمفتاح منفصل حتى لو مساعدك Claude.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
+        if (engine == "ai") SttKeyBox()
         Text("المساعد بيرد بنفس اللغة اللي بتكلمه بيها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+    }
+}
+
+@Composable
+private fun SttKeyBox() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val vp = com.mohamed.safi.ui.VoicePrefs
+    var prov by remember { mutableStateOf(vp.sttProvider) }
+    var key by remember(prov) { mutableStateOf(SafiApp.prefs.keyOf(prov)) }
+    var show by remember { mutableStateOf(false) }
+    val links = mapOf("gemini" to "https://aistudio.google.com/apikey", "groq" to "https://console.groq.com/keys", "openai" to "https://platform.openai.com/api-keys")
+    Column(Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        ChoiceField("خدمة تحويل الصوت", prov, vp.sttProviders.keys.toList(), display = { vp.sttProviders[it] ?: it }) {
+            prov = it; vp.sttProvider = it
+        }
+        OutlinedTextField(
+            key, { key = it }, label = { Text("مفتاح ${vp.sttProviders[prov]?.substringBefore(" (")}") }, singleLine = true,
+            visualTransformation = if (show) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            trailingIcon = { IconButton(onClick = { show = !show }) { Icon(if (show) Icons.Default.VisibilityOff else Icons.Default.Visibility, null) } },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { SafiApp.prefs.setKeyOf(prov, key); vp.sttProvider = prov; toast(ctx, "اتحفظ") }) { Text("حفظ") }
+            OutlinedButton(onClick = { com.mohamed.safi.faith.Shaarawy.openUrl(ctx, links[prov] ?: "") }) { Text("هات مفتاح") }
+        }
+        Text(
+            if (prov == "gemini") "مفتاح Gemini بيتعمل من حساب جوجل في دقيقة، وفيه استخدام مجاني بحدود يومية." else if (prov == "groq") "Groq فيه استخدام مجاني بحدود يومية." else "OpenAI بالدفع حسب الاستخدام.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+        )
     }
 }

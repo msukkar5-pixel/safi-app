@@ -26,6 +26,9 @@ import com.mohamed.safi.location.LocationLogger
 import com.mohamed.safi.location.LocationService
 import com.mohamed.safi.notify.Brief
 import com.mohamed.safi.notify.ReminderScheduler
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -62,7 +65,7 @@ object Assistant {
             .joinToString("; ") { "${it.key}: ${fmt(it.value)}" }
 
         return buildString {
-            appendLine("NOW: ${now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm EEEE"))} (Asia/Dubai)")
+            appendLine("NOW: ${now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm EEEE", java.util.Locale.US))} (${zone.id})")
             appendLine("USER: ${prefs.userName}, lives in UAE, family in Egypt. Default currency AED.")
             appendLine("RATE: 1 AED = ${prefs.egpPerAed} EGP")
             appendLine("EXPENSE CATEGORIES: ${Cats.expense.joinToString(", ")}")
@@ -160,7 +163,7 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
 - {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
 - {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
-- {"type":"open_screen","screen":"quran|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"open_screen","screen":"radio|tv|sleep|hisn|manasik|umrah|hajj|ruqyah|quiz|prayertracker|islamiccalendar|asmahusna|alerts|vitals|finance|vehicle|quran|quranaudio|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
 - {"type":"add_diary","text":"the diary text exactly as he said it, cleaned punctuation only","mood":"one emoji or empty"}   (when he says سجّل في مذكراتي / اكتب في المذكرات)
 - {"type":"add_document","title":"","owner":"","expiry":"YYYY-MM-DD"}
 - {"type":"add_medication","name":"","dose":"","times":"08:00, 20:00","with_food":"قبل الأكل|بعد الأكل|مع الأكل|","reason":"","end":"YYYY-MM-DD or empty"}
@@ -181,44 +184,67 @@ Rules:
 - Confirm what you did in reply in one short line. Never invent data you don't have.
 """.trimIndent()
 
+    private val _busy = MutableStateFlow(false)
+    /** True while a request is in flight; survives leaving and reopening the chat screen. */
+    val busy: StateFlow<Boolean> = _busy
+
+    /** Pulls "reply" out of a truncated or malformed JSON answer so raw JSON is never shown. */
+    private fun replyFromBroken(raw: String): String? {
+        val m = Regex("\"reply\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)").find(raw) ?: return null
+        val body = m.groupValues[1]
+        val text = runCatching { JSONObject("{\"r\":\"$body\"}").getString("r") }.getOrNull() ?: body
+        return text.trim().takeIf { it.isNotBlank() }
+    }
+
     suspend fun ask(ctx: Context, userText: String): Result {
         val dao = SafiApp.db.dao()
-        dao.insertChat(ChatMsg(role = "user", text = userText))
-
-        // Build alternating history ending with this user message
-        val history = dao.chatRecent(14)
-        val msgs = JSONArray()
-        var lastRole = ""
-        val sb = StringBuilder()
-        fun flush() {
-            if (lastRole.isNotEmpty() && sb.isNotEmpty()) {
-                msgs.put(JSONObject().put("role", lastRole).put("content", sb.toString()))
-            }
-            sb.clear()
-        }
-        for (m in history) {
-            if (msgs.length() == 0 && lastRole.isEmpty() && m.role != "user") continue
-            if (m.role != lastRole) {
-                flush()
-                lastRole = m.role
-            } else sb.append("\n")
-            sb.append(m.text)
-        }
-        flush()
-
-        val system = SYSTEM + "\n\n=== USER DATA ===\n" + context()
+        _busy.value = true
         return try {
-            val raw = Claude.call(system, msgs, SafiApp.prefs.model, 2048)
+            dao.insertChat(ChatMsg(role = "user", text = userText))
+
+            // Build alternating history ending with this user message.
+            // Past assistant turns are replayed in the JSON shape so the model keeps answering in JSON.
+            val history = dao.chatRecent(14)
+            val msgs = JSONArray()
+            var lastRole = ""
+            val parts = mutableListOf<String>()
+            fun flush() {
+                if (lastRole.isNotEmpty() && parts.isNotEmpty()) {
+                    val content = if (lastRole == "assistant")
+                        JSONObject().put("reply", parts.joinToString("\n")).put("actions", JSONArray()).toString()
+                    else parts.joinToString("\n")
+                    msgs.put(JSONObject().put("role", lastRole).put("content", content))
+                }
+                parts.clear()
+            }
+            for (m in history) {
+                if (msgs.length() == 0 && lastRole.isEmpty() && m.role != "user") continue
+                if (m.role != lastRole) {
+                    flush()
+                    lastRole = m.role
+                }
+                parts += m.text
+            }
+            flush()
+
+            val system = SYSTEM + "\n\n=== USER DATA ===\n" + context()
+            val raw = Claude.call(system, msgs, SafiApp.prefs.model, 4096, json = true)
             val json = Claude.extractJson(raw)
-            val reply = json?.optString("reply")?.takeIf { it.isNotBlank() } ?: raw.trim()
+            val reply = json?.optString("reply")?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+                ?: replyFromBroken(raw)
+                ?: (if (json != null) "تمام" else raw.trim())
             val actions = json?.optJSONArray("actions") ?: JSONArray()
             val done = execute(ctx, actions)
             dao.insertChat(ChatMsg(role = "assistant", text = reply, actions = done.joinToString("\n")))
             Result(reply, done)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             val msg = e.message ?: "حصلت مشكلة"
-            dao.insertChat(ChatMsg(role = "assistant", text = "⚠️ $msg"))
+            runCatching { dao.insertChat(ChatMsg(role = "assistant", text = "⚠️ $msg")) }
             Result("⚠️ $msg", emptyList())
+        } finally {
+            _busy.value = false
         }
     }
 
@@ -231,7 +257,9 @@ Rules:
         val done = mutableListOf<String>()
         for (i in 0 until actions.length()) {
             val a = actions.optJSONObject(i) ?: continue
-            runCatching {
+            val type = a.str("type")
+            val before = done.size
+            val outcome = runCatching {
                 when (a.str("type")) {
                     "add_expense", "add_income" -> {
                         val income = a.str("type") == "add_income"
@@ -351,6 +379,7 @@ Rules:
                         val d = dao.debt(a.optLong("id")) ?: return@runCatching
                         val amt = a.dbl("amount") ?: d.remaining
                         val updated = Debts.pay(ctx, d, amt)
+                        com.mohamed.safi.data.Obligations.markInstalmentPaid(d.id)
                         done += "✓ سداد ${money(amt, d.currency)} — ${d.person} (باقي ${money(updated.remaining, d.currency)})"
                     }
                     "add_bill" -> {
@@ -365,7 +394,8 @@ Rules:
                             frequency = a.str("frequency").ifBlank { "monthly" }, nextDue = next,
                             remindDaysBefore = a.optInt("remind_days", 2),
                         )
-                        dao.upsertBill(b)
+                        val billId = dao.upsertBill(b)
+                        runCatching { com.mohamed.safi.data.Obligations.setAnchor(billId, next) }
                         done += "✓ التزام: ${b.name} ${money(amount, b.currency)} (${freqLabel(b.frequency)})"
                     }
                     "pay_bill" -> {
@@ -384,7 +414,7 @@ Rules:
                     }
                     "play_music" -> {
                         val q = a.str("query")
-                        if (q.isNotBlank()) done += "✓ ${Apps.playMusic(ctx, q, a.str("app").ifBlank { null })}: $q"
+                        if (q.isNotBlank()) done += Apps.playMusic(ctx, q, a.str("app").ifBlank { null })?.let { "✓ $it: $q" } ?: "✗ مش قادر أشغل: $q"
                     }
                     "open_app" -> {
                         val name = a.str("name")
@@ -475,6 +505,8 @@ Rules:
                 }
                 Unit
             }
+            outcome.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+            if (outcome.isFailure || done.size == before) done += "✗ ${type.ifBlank { "?" }}"
         }
         return done
     }

@@ -4,10 +4,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mohamed.safi.SafiApp
@@ -18,16 +21,16 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 @Composable
-fun ReportsScreen(onBack: () -> Unit) {
+fun ReportsScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val dao = SafiApp.db.dao()
     val scope = rememberCoroutineScope()
     var ym by remember { mutableStateOf(YearMonth.now(zone)) }
     val (from, to) = remember(ym) { monthRange(ym) }
     val (pFrom, pTo) = remember(ym) { monthRange(ym.minusMonths(1)) }
-    val list by dao.expensesBetween(from, to).collectAsState(emptyList())
-    val prev by dao.expensesBetween(pFrom, pTo).collectAsState(emptyList())
-    val transfers by dao.transfersBetween(from, to).collectAsState(emptyList())
-    val budgets by dao.budgets().collectAsState(emptyList())
+    val list by remember(from, to) { dao.expensesBetween(from, to) }.collectAsState(emptyList())
+    val prev by remember(pFrom, pTo) { dao.expensesBetween(pFrom, pTo) }.collectAsState(emptyList())
+    val transfers by remember(from, to) { dao.transfersBetween(from, to) }.collectAsState(emptyList())
+    val budgets by remember { dao.budgets() }.collectAsState(emptyList())
     var budgetFor by remember { mutableStateOf<String?>(null) }
 
     val out = list.filter { !it.isIncome }
@@ -43,10 +46,13 @@ fun ReportsScreen(onBack: () -> Unit) {
         .map { (_, v) -> v.first().merchant to v.sumOf { it.amountAed } }.sortedByDescending { it.second }.take(6)
     val cashTotal = out.filter { it.method == "cash" }.sumOf { it.amountAed }
 
-    ScreenScaffold("التقارير والميزانية", onBack = onBack) { pad ->
+    val totalBudget = budgets.sumOf { it.monthlyLimit }
+    val budgetedSpent = out.filter { it.category in budgetMap }.sumOf { it.amountAed }
+
+    ScreenScaffold("التقارير والميزانية", onBack = if (embedded) null else onBack, showTopBar = !embedded) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 40.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = if (embedded) 100.dp else 40.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item { MonthSwitcher(ym) { ym = it } }
@@ -82,6 +88,32 @@ fun ReportsScreen(onBack: () -> Unit) {
                         StatBlock("متوسط اليوم", money(spent / days.coerceAtLeast(1)), Modifier.weight(1f))
                         StatBlock("كاش", money(cashTotal), Modifier.weight(1f))
                     }
+                }
+            }
+            if (totalBudget > 0) item {
+                AppCard {
+                    val frac = (budgetedSpent / totalBudget).toFloat()
+                    val c = when {
+                        budgetedSpent >= totalBudget -> Danger
+                        budgetedSpent >= totalBudget * 0.8 -> Warn
+                        else -> Positive
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("الميزانية", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.outline, modifier = Modifier.weight(1f))
+                        Text("${money(budgetedSpent)} من ${money(totalBudget)}", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { frac.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = c, trackColor = c.copy(alpha = 0.14f),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    val left = totalBudget - budgetedSpent
+                    Text(
+                        if (left >= 0) "فاضل ${money(left)} في التصنيفات اللي ليها ميزانية" else "عديت الميزانية بـ ${money(-left)}",
+                        style = MaterialTheme.typography.bodySmall, color = if (left >= 0) MaterialTheme.colorScheme.outline else Danger,
+                    )
                 }
             }
             item {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -19,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.health.connect.client.HealthConnectClient
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.mohamed.safi.ai.Claude
 import com.mohamed.safi.data.*
 import com.mohamed.safi.fitness.*
@@ -30,7 +33,9 @@ import java.time.LocalDate
 fun FitnessScreen(onBack: () -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var profile by remember { mutableStateOf(Fit.prefs.heightCm <= 0) }
-    val tabs = listOf("اليوم", "التمرين", "الموسوعة", "الأكل", "الوزن")
+    // Bumped when the profile dialog closes so tabs that read Fit.prefs recompute.
+    var profileRev by remember { mutableIntStateOf(0) }
+    val tabs = listOf("اليوم", "القلب والضغط", "التمرين", "الموسوعة", "الأكل", "الوزن")
     ScreenScaffold(
         "الجيم والصحة", onBack = onBack,
         actions = { IconButton(onClick = { profile = true }) { Icon(Icons.Default.Person, "ملفي") } },
@@ -40,21 +45,22 @@ fun FitnessScreen(onBack: () -> Unit) {
                 tabs.forEachIndexed { i, t -> Tab(tab == i, { tab = i }, text = { Text(t) }) }
             }
             when (tab) {
-                0 -> TodayTab { tab = it }
-                1 -> WorkoutTab()
-                2 -> EncyclopediaTab()
-                3 -> FoodTab()
-                else -> WeightTab()
+                0 -> TodayTab(profileRev) { tab = if (it >= 1) it + 1 else it }
+                1 -> VitalsSummary()
+                2 -> WorkoutTab()
+                3 -> EncyclopediaTab()
+                4 -> FoodTab()
+                else -> WeightTab(profileRev)
             }
         }
     }
-    if (profile) ProfileDialog { profile = false }
+    if (profile) ProfileDialog { profile = false; profileRev++ }
 }
 
 // ---------------------------------------------------------------- Today
 
 @Composable
-private fun TodayTab(goTab: (Int) -> Unit) {
+private fun TodayTab(profileRev: Int, goTab: (Int) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val today = LocalDate.now(zone)
@@ -66,7 +72,7 @@ private fun TodayTab(goTab: (Int) -> Unit) {
     var hcGranted by remember { mutableStateOf(false) }
     var reportBusy by remember { mutableStateOf(false) }
     var report by remember { mutableStateOf(Fit.prefs.lastReport) }
-    val hcAvailable = remember { Health.available(ctx) }
+    var hcAvailable by remember { mutableStateOf(Health.available(ctx)) }
 
     suspend fun refreshHealth() {
         hcGranted = Health.hasAny(ctx)
@@ -78,16 +84,29 @@ private fun TodayTab(goTab: (Int) -> Unit) {
 
     val hcLauncher = rememberLauncherForActivityResult(Health.permissionContract()) { granted ->
         Fit.prefs.healthConnected = granted.isNotEmpty()
+        if (granted.isEmpty()) {
+            // Denied twice: Android stops showing the dialog, so send him to Health Connect's own screen.
+            toast(ctx, "اسمح لـ${com.mohamed.safi.AppName.v} من Health Connect")
+            val opened = runCatching { ctx.startActivity(Health.manageIntent(ctx)) }.isSuccess ||
+                runCatching { ctx.startActivity(android.content.Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)) }.isSuccess
+            if (!opened) toast(ctx, "افتح Health Connect واسمح بالقراية")
+        }
         scope.launch { refreshHealth() }
     }
-    LaunchedEffect(Unit) { refreshHealth() }
+    // Re-check on every resume (e.g. coming back from installing Health Connect or its settings).
+    LifecycleResumeEffect(Unit) {
+        hcAvailable = Health.available(ctx)
+        val job = scope.launch { refreshHealth() }
+        onPauseOrDispose { job.cancel() }
+    }
 
-    val t = Fit.targets(weights.firstOrNull()?.kg)
+    val t = remember(weights, profileRev) { Fit.targets(weights.firstOrNull()?.kg) }
     val kcal = foods.sumOf { it.kcal }
     val protein = foods.sumOf { it.protein }
     val cups = water?.cups ?: 0
 
-    LazyColumn(
+    // key(): lazy items read Fit.prefs directly, so rebuild them after the profile changes.
+    key(profileRev) { LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -129,6 +148,7 @@ private fun TodayTab(goTab: (Int) -> Unit) {
                         Text("ساعة سامسونج", fontWeight = FontWeight.Bold)
                         Text(
                             when {
+                                !Health.supported -> "الموبايل ده مش بيدعم Health Connect (محتاج أندرويد 9 أو أحدث)"
                                 !hcAvailable -> "محتاج تطبيق Health Connect"
                                 !hcGranted -> "مش متوصلة لسه"
                                 else -> "من Samsung Health عن طريق Health Connect"
@@ -138,7 +158,9 @@ private fun TodayTab(goTab: (Int) -> Unit) {
                     }
                     if (hcGranted) IconButton(onClick = { scope.launch { refreshHealth() } }) { Icon(Icons.Default.Refresh, "تحديث") }
                 }
-                if (!hcAvailable) {
+                if (!Health.supported) {
+                    // Health Connect can't be installed below Android 9; nothing to offer.
+                } else if (!hcAvailable) {
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = { runCatching { ctx.startActivity(Health.installIntent()) } }) { Text("نزّل Health Connect") }
                 } else if (!hcGranted) {
@@ -219,7 +241,7 @@ private fun TodayTab(goTab: (Int) -> Unit) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
             )
         }
-    }
+    } }
 }
 
 @Composable
@@ -237,15 +259,15 @@ private fun RingStat(label: String, value: String, sub: String?, fraction: Float
 // ---------------------------------------------------------------- Weight
 
 @Composable
-private fun WeightTab() {
+private fun WeightTab(profileRev: Int) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val weights by Fit.dao.weights().collectAsState(emptyList())
     var adding by remember { mutableStateOf(false) }
     var del by remember { mutableStateOf<WeightEntry?>(null) }
-    val t = Fit.targets(weights.firstOrNull()?.kg)
+    val t = remember(weights, profileRev) { Fit.targets(weights.firstOrNull()?.kg) }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    key(profileRev) { LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             AppCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -309,7 +331,7 @@ private fun WeightTab() {
                 }
             }
         }
-    }
+    } }
 
     if (adding) {
         var kg by remember { mutableStateOf("") }

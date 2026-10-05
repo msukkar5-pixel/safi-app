@@ -59,6 +59,11 @@ object Wird {
 
     fun markDone() {
         if (doneToday) return
+        // Snapshot so undo() can restore exactly.
+        sp().edit {
+            putInt("u_next", nextPage); putString("u_lastDone", lastDoneDay)
+            putInt("u_streak", streak); putInt("u_khatmas", khatmas); putString("u_day", today())
+        }
         val y = LocalDate.now(zone).minusDays(1).toString()
         streak = if (lastDoneDay == y) streak + 1 else 1
         lastDoneDay = today()
@@ -68,10 +73,22 @@ object Wird {
 
     fun undo() {
         if (!doneToday) return
-        val back = (nextPage - pagesPerDay).let { if (it < 1) TOTAL_PAGES - pagesPerDay + 1 else it }
-        nextPage = back
-        lastDoneDay = ""
-        streak = (streak - 1).coerceAtLeast(0)
+        val p = sp()
+        if (p.getString("u_day", null) != today()) {
+            // No snapshot (marked before this version): best-effort rollback.
+            if (nextPage == 1 && khatmas > 0) {
+                khatmas -= 1
+                nextPage = TOTAL_PAGES - (TOTAL_PAGES - 1) % pagesPerDay
+            } else nextPage = (nextPage - pagesPerDay).coerceAtLeast(1)
+            lastDoneDay = ""
+            streak = (streak - 1).coerceAtLeast(0)
+            return
+        }
+        nextPage = p.getInt("u_next", nextPage)
+        lastDoneDay = p.getString("u_lastDone", "") ?: ""
+        streak = p.getInt("u_streak", 0)
+        khatmas = p.getInt("u_khatmas", khatmas)
+        p.edit { remove("u_day") }
     }
 
     fun daysToFinish(): Int {
@@ -94,7 +111,7 @@ object Wird {
 
     suspend fun setReminder(ctx: Context, time: LocalTime?) {
         val dao = SafiApp.db.dao()
-        dao.remindersFor("wird", 1).forEach { ReminderScheduler.cancel(ctx, it.id); dao.deleteReminder(it) }
+        dao.remindersFor("wird", 1).forEach { ReminderScheduler.cancel(ctx, it.id); ReminderScheduler.forget(ctx, it.id); dao.deleteReminder(it) }
         if (time == null) return
         var at = LocalDate.now(zone).atTime(time)
         if (!at.isAfter(LocalDateTime.now(zone))) at = at.plusDays(1)

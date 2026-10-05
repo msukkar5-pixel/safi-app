@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,14 +22,19 @@ import kotlinx.coroutines.launch
 import java.time.YearMonth
 
 @Composable
-fun TransfersScreen(onBack: () -> Unit) {
+fun TransfersScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val dao = SafiApp.db.dao()
     val prefs = SafiApp.prefs
     val scope = rememberCoroutineScope()
     var ym by remember { mutableStateOf(YearMonth.now(zone)) }
     val (from, to) = remember(ym) { monthRange(ym) }
-    val list by dao.transfersBetween(from, to).collectAsState(emptyList())
-    val fromBank by dao.expensesInCategory(Cats.TRANSFER).collectAsState(emptyList())
+    val list by remember(from, to) { dao.transfersBetween(from, to) }.collectAsState(emptyList())
+    val transferExpenses by remember { dao.expensesInCategory(Cats.TRANSFER) }.collectAsState(emptyList())
+    // Only recent bank-SMS transfers need classifying; manual/old ones can't be cleared from here.
+    val fromBank = remember(transferExpenses) {
+        val since = System.currentTimeMillis() - 60L * 86_400_000L
+        transferExpenses.filter { it.source == "sms" && it.time >= since }
+    }
     var editing by remember { mutableStateOf<Transfer?>(null) }
     var adding by remember { mutableStateOf(false) }
     var classify by remember { mutableStateOf<Expense?>(null) }
@@ -40,8 +46,8 @@ fun TransfersScreen(onBack: () -> Unit) {
         .entries.sortedByDescending { it.value.first }
 
     ScreenScaffold(
-        "تحويلات مصر", onBack = onBack,
-        fab = { ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("تحويل") }) },
+        "تحويلات مصر", onBack = if (embedded) null else onBack, showTopBar = !embedded,
+        fab = { if (!embedded) ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("تحويل") }) },
     ) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -53,8 +59,16 @@ fun TransfersScreen(onBack: () -> Unit) {
                 AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
                     Text("اتحول لمصر في ${monthName(ym)}", color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(money(totalEgp, "EGP"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    Text("= ${money(totalAed)}" + if (fees > 0) " + رسوم ${money(fees)}" else "", color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text("السعر الحالي: 1 درهم = ${prefs.egpPerAed} جنيه", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Text("≈ ${money(totalAed)}" + if (fees > 0) " + رسوم ${money(fees)}" else "", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.SemiBold)
+                    if (list.isNotEmpty()) {
+                        val avgRate = if (totalAed > 0) totalEgp / totalAed else 0.0
+                        Text(
+                            "${list.size} تحويل • متوسط سعرك ${fmt(avgRate)} • السعر النهارده ${fmt(prefs.egpPerAed)}",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+                        )
+                    } else {
+                        Text("السعر النهارده: 1 د.إ = ${fmt(prefs.egpPerAed)} ج.م", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f))
+                    }
                 }
             }
             if (fromBank.isNotEmpty()) {
@@ -89,23 +103,8 @@ fun TransfersScreen(onBack: () -> Unit) {
                 }
             }
             item { SectionTitle("كل التحويلات") }
-            if (list.isEmpty()) item { EmptyState(Icons.Default.SwapHoriz, "مفيش تحويلات الشهر ده") }
-            items(list, key = { it.id }) { t ->
-                AppCard(onClick = { editing = t }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CatBadge(t.category, 40, Icons.Default.Person)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(t.category + if (t.recipient.isNotBlank()) " • ${t.recipient}" else "", fontWeight = FontWeight.SemiBold)
-                            Text(dateTimeStr(t.time) + if (t.note.isNotBlank()) " • ${t.note}" else "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(money(t.amountEgp, "EGP"), fontWeight = FontWeight.Bold)
-                            Text("${money(t.amountAed)} @${t.rate}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                        }
-                    }
-                }
-            }
+            if (list.isEmpty()) item { EmptyState(Icons.Default.SwapHoriz, "مفيش تحويلات الشهر ده — دوس + وسجّل تحويل لمصر بالجنيه، والدرهم بيتحسب لوحده") }
+            items(list, key = { it.id }) { t -> TransferRow(t) { editing = t } }
         }
     }
 
@@ -113,6 +112,31 @@ fun TransfersScreen(onBack: () -> Unit) {
     editing?.let { t -> TransferEditor(t, null) { editing = null } }
     classify?.let { e ->
         TransferEditor(null, e) { classify = null }
+    }
+}
+
+/** One transfer: EGP big, the AED it cost (with fees) and the rate it was sent at underneath. */
+@Composable
+fun TransferRow(t: Transfer, onClick: () -> Unit) {
+    AppCard(onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CatBadge(t.category, 40, Icons.Default.Person)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(t.category + if (t.recipient.isNotBlank()) " • ${t.recipient}" else "", fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(dateTimeStr(t.time), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                if (t.note.isNotBlank()) Text(t.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(money(t.amountEgp, "EGP"), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                Text(
+                    "≈ " + money(t.amountAed) + if (t.feesAed > 0) " + ${money(t.feesAed)} رسوم" else "",
+                    style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary, maxLines = 1,
+                )
+                Text("بسعر ${fmt(t.rate)} ج.م للدرهم", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -161,7 +185,11 @@ fun TransferEditor(existing: Transfer?, fromExpense: Expense?, onDismiss: () -> 
                 val e = egp.toDoubleOrNull()
                 val r = rate.toDoubleOrNull()
                 if (e != null && r != null && r > 0) {
-                    Text("= ${money(e / r)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    val f = fees.toDoubleOrNull() ?: 0.0
+                    Text(
+                        "${money(e, "EGP")} = ${money(e / r)}" + if (f > 0) " • بالرسوم ${money(e / r + f)}" else "",
+                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+                    )
                 }
                 OutlinedTextField(recipient, { recipient = it }, label = { Text("اسم المستلم (اختياري)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(note, { note = it }, label = { Text("ملاحظة") }, modifier = Modifier.fillMaxWidth())
@@ -185,7 +213,11 @@ fun TransferEditor(existing: Transfer?, fromExpense: Expense?, onDismiss: () -> 
                         note = note.trim(), time = time,
                     )
                     dao.upsertTransfer(t)
-                    if (fromExpense != null) dao.deleteExpense(fromExpense)
+                    if (fromExpense != null) {
+                        // remember the SMS so pasting/receiving it again doesn't re-import it as an expense
+                        fromExpense.smsHash?.let { com.mohamed.safi.sms.SmsProcessor.markConsumed(it) }
+                        dao.deleteExpense(fromExpense)
+                    }
                     onDismiss()
                 }
             }) { Text("حفظ", fontWeight = FontWeight.Bold) }

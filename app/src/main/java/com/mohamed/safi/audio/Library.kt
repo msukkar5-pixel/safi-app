@@ -3,6 +3,9 @@ package com.mohamed.safi.audio
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.media3.common.AudioAttributes
@@ -14,6 +17,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
 import com.mohamed.safi.SafiApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,38 +42,39 @@ object Library {
     private val http = OkHttpClient.Builder().readTimeout(40, TimeUnit.SECONDS).build()
 
     val languages = linkedMapOf(
-        "" to "كل اللغات", "ara" to "عربي", "eng" to "English", "fra" to "Français",
-        "deu" to "Deutsch", "spa" to "Español", "ita" to "Italiano", "urd" to "اردو",
+        "ara" to "عربي", "eng" to "English", "urd" to "اردو", "fra" to "Français", "ind" to "Indonesia",
+        "tur" to "Türkçe", "msa" to "Melayu", "ben" to "বাংলা", "deu" to "Deutsch", "spa" to "Español", "" to "كل اللغات",
     )
     private val langQ = mapOf(
         "ara" to "(Arabic OR ara)", "eng" to "(English OR eng)", "fra" to "(French OR fre OR fra)",
-        "deu" to "(German OR ger OR deu)", "spa" to "(Spanish OR spa)", "ita" to "(Italian OR ita)", "urd" to "(Urdu OR urd)",
+        "deu" to "(German OR ger OR deu)", "spa" to "(Spanish OR spa)", "urd" to "(Urdu OR urd)",
+        "ind" to "(Indonesian OR ind)", "tur" to "(Turkish OR tur)", "msa" to "(Malay OR msa OR may)", "ben" to "(Bengali OR ben)",
     )
 
-    val arabicSuggestions = listOf("كتاب مسموع", "رواية", "قصص", "السيرة النبوية", "رياض الصالحين", "تفسير", "شعر", "تاريخ", "كليلة ودمنة", "الأدب")
+    val suggestions = mapOf(
+        "ara" to listOf("السيرة النبوية", "قصص الأنبياء", "الصحابة", "تفسير", "رياض الصالحين", "الأربعين النووية", "العقيدة", "الفقه", "الرقائق", "التاريخ الإسلامي"),
+        "" to listOf("Seerah", "Prophets", "Sahaba", "Tafsir", "Hadith", "Riyad as-Salihin", "Aqeedah", "Fiqh", "Islamic history"),
+    )
+
+    // Islamic subjects only (in several languages)
+    private const val ISLAMIC = "(islam OR islamic OR muslim OR muslims OR إسلام OR الإسلام OR إسلامي OR إسلامية OR الاسلام OR اسلامي OR سيرة OR السيرة OR النبوية OR الرسول OR الأنبياء OR الانبياء OR الصحابة OR حديث OR الحديث OR فقه OR الفقه OR تفسير OR التفسير OR عقيدة OR العقيدة OR seerah OR sirah OR hadith OR tafsir OR fiqh OR aqeedah OR sunnah OR muhammad OR prophets OR islami OR islamique OR islamisch)"
 
     private fun esc(s: String) = s.replace(Regex("[\\\\\"():^~*?+\\-!{}\\[\\]/]"), " ").trim()
 
-    /**
-     * source = "librivox": public-domain LibriVox recordings.
-     * source = "archive": any Internet Archive audio with a public-domain / CC licence (good for Arabic).
-     */
+    /** Islamic audiobooks and lectures-as-books from the Internet Archive (incl. LibriVox). */
     suspend fun search(source: String, text: String, lang: String, page: Int): Pair<List<AudioBook>, Int> = withContext(Dispatchers.IO) {
         val parts = mutableListOf<String>()
-        if (source == "librivox") parts += "collection:librivoxaudio"
-        else {
-            parts += "mediatype:audio"
-            parts += "(licenseurl:*publicdomain* OR licenseurl:*creativecommons* OR collection:librivoxaudio)"
-            parts += "NOT collection:(etree OR georgeblood OR 78rpm OR audio_music OR opensource_audio_music)"
-        }
+        parts += "mediatype:audio"
+        parts += "NOT collection:(etree OR georgeblood OR 78rpm OR audio_music OR opensource_audio_music OR podcasts)"
+        parts += "(subject:$ISLAMIC OR title:$ISLAMIC)"
+        // books, not recitations / nasheed / music
+        parts += "NOT subject:(bible OR christian OR christianity OR gospel OR jesus OR church OR catholic OR fiction OR poetry OR novel)"
+        parts += "NOT title:(bible OR gospel OR gibran OR famine)"
+        parts += "NOT subject:(تلاوة OR تلاوات OR مرتل OR مجود OR recitation OR qiraat OR nasheed OR نشيد OR اناشيد OR أناشيد OR music OR موسيقى OR song OR songs)"
         langQ[lang]?.let { parts += "language:$it" }
         val t = esc(text)
         if (t.isNotBlank()) parts += "(title:($t) OR creator:($t) OR subject:($t))"
-        if (source != "librivox") {
-            // real audiobooks only: no Quran recitations, songs or random clips
-            parts += "(subject:(audiobook OR audiobooks OR \"كتاب مسموع\" OR \"كتب مسموعة\" OR \"كتاب صوتي\" OR \"كتب صوتية\" OR librivox) OR title:(\"كتاب مسموع\" OR \"كتاب صوتي\" OR audiobook) OR collection:librivoxaudio)"
-            parts += "NOT subject:(quran OR قرآن OR تلاوة OR نشيد OR اناشيد OR music OR موسيقى)"
-        }
+        parts += "(subject:(audiobook OR audiobooks OR book OR books OR كتاب OR كتب OR \"كتاب مسموع\" OR \"كتب مسموعة\" OR \"كتاب صوتي\" OR librivox OR lecture OR lectures OR دروس OR شرح OR سلسلة) OR title:(كتاب OR كتب OR شرح OR سلسلة OR book OR audiobook) OR collection:librivoxaudio)"
         val url = "https://archive.org/advancedsearch.php".toHttpUrl().newBuilder()
             .addQueryParameter("q", parts.joinToString(" AND "))
             .addQueryParameter("fl[]", "identifier").addQueryParameter("fl[]", "title")
@@ -101,9 +106,9 @@ object Library {
             val j = JSONObject(r.body?.string() ?: "{}")
             val server = "https://archive.org/download/$id/"
             val files = j.optJSONArray("files") ?: JSONArray()
-            val all = (0 until files.length()).map { files.getJSONObject(it) }.filter { it.optString("name").endsWith(".mp3", true) }
+            val all = (0 until files.length()).map { files.getJSONObject(it) }.filter { f -> listOf(".mp3", ".ogg", ".m4a", ".opus", ".flac", ".wav", ".aac").any { f.optString("name").endsWith(it, true) } }
             // prefer one quality per chapter: 64kb > VBR > 128kb > anything
-            val preferred = listOf("64Kbps MP3", "VBR MP3", "128Kbps MP3")
+            val preferred = listOf("64Kbps MP3", "VBR MP3", "128Kbps MP3", "MP3", "Ogg Vorbis")
             val chosen = preferred.firstNotNullOfOrNull { fmt -> all.filter { it.optString("format") == fmt }.takeIf { it.isNotEmpty() } } ?: all
             chosen.sortedWith(compareBy({ it.optString("track").substringBefore('/').toIntOrNull() ?: Int.MAX_VALUE }, { it.optString("name") }))
                 .map {
@@ -133,11 +138,43 @@ object Library {
     fun saveProgress(id: String, track: Int, posMs: Long) = sp().edit { putString("p_$id", "$track:$posMs"); putString("last", id) }
     fun progress(id: String): Pair<Int, Long>? = sp().getString("p_$id", null)?.split(":")?.let { (it[0].toIntOrNull() ?: 0) to (it.getOrNull(1)?.toLongOrNull() ?: 0L) }
     var speed: Float get() = sp().getFloat("speed", 1f); set(v) = sp().edit { putFloat("speed", v) }
+
+    /** Wall-clock millis at which the sleep timer pauses playback; 0 = off. Enforced by [PlaybackService]. */
+    var sleepAt: Long get() = sp().getLong("sleep_at", 0L); set(v) = sp().edit { putLong("sleep_at", v) }
 }
 
 /** Plays in the background with lock-screen / notification controls. */
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private var lastSave = 0L
+
+    /** Audiobook items use mediaId "bookId#index"; Quran ("quran#...") and other items ("deen#...", "radio#...") are skipped. */
+    private fun saveProgress(p: androidx.media3.common.Player) {
+        val id = p.currentMediaItem?.mediaId ?: return
+        if (id.startsWith("quran#") || id.startsWith("deen#") || id.startsWith("radio#")) return
+        val cut = id.lastIndexOf('#')
+        if (cut <= 0) return
+        val index = id.substring(cut + 1).toIntOrNull() ?: return
+        Library.saveProgress(id.substring(0, cut), index, p.currentPosition.coerceAtLeast(0L))
+        lastSave = SystemClock.elapsedRealtime()
+    }
+
+    private val tick = object : Runnable {
+        override fun run() {
+            val p = session?.player ?: return
+            val sleep = Library.sleepAt
+            if (sleep > 0 && System.currentTimeMillis() >= sleep) {
+                Library.sleepAt = 0L
+                p.pause() // onIsPlayingChanged(false) saves progress and stops the ticker
+                return
+            }
+            if (p.isPlaying) {
+                if (SystemClock.elapsedRealtime() - lastSave >= 15_000L) saveProgress(p)
+                handler.postDelayed(this, 5_000L)
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -145,6 +182,20 @@ class PlaybackService : MediaSessionService() {
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_SPEECH).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .build()
+        player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                handler.removeCallbacks(tick)
+                if (isPlaying) {
+                    // a timer that expired while paused is stale: don't stop the new session immediately
+                    val sleep = Library.sleepAt
+                    if (sleep > 0 && System.currentTimeMillis() >= sleep) Library.sleepAt = 0L
+                    lastSave = SystemClock.elapsedRealtime()
+                    handler.postDelayed(tick, 5_000L)
+                } else saveProgress(player)
+            }
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { saveProgress(player) }
+        })
         session = MediaSession.Builder(this, player).build()
     }
 
@@ -156,6 +207,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(tick)
+        session?.let { saveProgress(it.player) }
         session?.run { player.release(); release() }
         session = null
         super.onDestroy()
@@ -163,10 +216,53 @@ class PlaybackService : MediaSessionService() {
 }
 
 object Player {
-    fun connect(ctx: Context, onReady: (MediaController) -> Unit) {
+    /** Release with [MediaController.releaseFuture] when done. */
+    fun connect(ctx: Context, onReady: (MediaController) -> Unit): ListenableFuture<MediaController> {
         val token = SessionToken(ctx, ComponentName(ctx, PlaybackService::class.java))
         val f = MediaController.Builder(ctx, token).buildAsync()
-        f.addListener({ runCatching { onReady(f.get()) } }, ContextCompat.getMainExecutor(ctx))
+        f.addListener({ if (!f.isCancelled) runCatching { onReady(f.get()) } }, ContextCompat.getMainExecutor(ctx))
+        return f
+    }
+
+    fun loadQuran(c: MediaController, reciter: String, m: com.mohamed.safi.faith.Moshaf, names: Map<Int, String>, startSurah: Int) {
+        val items = m.surahs.sorted().map { n ->
+            MediaItem.Builder().setUri(m.url(n)).setMediaId("quran#${m.id}#$n")
+                .setMediaMetadata(
+                    MediaMetadata.Builder().setTitle("سورة " + (names[n] ?: n.toString())).setArtist(reciter).setAlbumTitle(m.name).build(),
+                ).build()
+        }
+        val idx = m.surahs.sorted().indexOf(startSurah).coerceAtLeast(0)
+        c.setMediaItems(items, idx, 0L)
+        c.setPlaybackSpeed(1f)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+        c.prepare()
+        c.play()
+    }
+
+    /** One recording (a Hisn al-Muslim chapter, a dua…); mediaId should start with "deen#". */
+    fun loadSingle(c: MediaController, mediaId: String, url: String, title: String, album: String) {
+        val item = MediaItem.Builder().setUri(url).setMediaId(mediaId)
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(album).setAlbumTitle(album).build())
+            .build()
+        c.setMediaItem(item)
+        c.setPlaybackSpeed(1f)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+        c.prepare()
+        c.play()
+    }
+
+    /** A short playlist of (mediaId, url, title) — sleep duas, ruqyah surahs, calm recitation. */
+    fun loadList(c: MediaController, items: List<Triple<String, String, String>>, artist: String, album: String) {
+        if (items.isEmpty()) return
+        c.setMediaItems(items.map { (id, url, title) ->
+            MediaItem.Builder().setUri(url).setMediaId(id)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album).build())
+                .build()
+        }, 0, 0L)
+        c.setPlaybackSpeed(1f)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+        c.prepare()
+        c.play()
     }
 
     fun load(c: MediaController, book: AudioBook, tracks: List<Track>, startIndex: Int, startMs: Long) {
@@ -179,6 +275,7 @@ object Player {
         }
         c.setMediaItems(items, startIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)), startMs)
         c.setPlaybackSpeed(Library.speed)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
         c.prepare()
         c.play()
     }

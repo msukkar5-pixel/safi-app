@@ -1,5 +1,6 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.os.Build
 import android.os.VibrationEffect
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,15 +55,23 @@ fun AzkarScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) { UiBus.pendingAzkar.value = null }
     var tasbeeh by remember { mutableStateOf(false) }
     val o = open
-    if (o != null) { ZikrReader(o) { open = null }; return }
-    if (tasbeeh) { TasbeehView { tasbeeh = false }; return }
+    if (o != null) {
+        BackHandler { open = null }
+        ZikrReader(o) { open = null }
+        return
+    }
+    if (tasbeeh) {
+        BackHandler { tasbeeh = false }
+        TasbeehView { tasbeeh = false }
+        return
+    }
 
     val scope = rememberCoroutineScope()
     var morning by remember { mutableStateOf<LocalTime?>(null) }
     var evening by remember { mutableStateOf<LocalTime?>(null) }
     LaunchedEffect(Unit) { morning = Azkar.reminderTime("morning"); evening = Azkar.reminderTime("evening") }
 
-    ScreenScaffold("الأذكار والأدعية", onBack = onBack) { pad ->
+    ScreenScaffold("الأذكار والأدعية", onBack = onBack, actions = { IconButton(onClick = { UiBus.pendingRoute.value = "alerts" }) { Icon(Icons.Default.NotificationsActive, "التنبيهات") } }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 val suggested = Azkar.current(ctx)
@@ -96,14 +106,15 @@ fun AzkarScreen(onBack: () -> Unit) {
                     }
                 }
             }
-            item { SectionTitle("التذكير") }
             item {
-                AppCard {
-                    ReminderToggle("ذكّرني بأذكار الصباح", morning, LocalTime.of(6, 30)) { t ->
-                        morning = t; scope.launch { Azkar.setReminder(ctx, "morning", t) }
-                    }
-                    ReminderToggle("ذكّرني بأذكار المساء", evening, LocalTime.of(16, 30)) { t ->
-                        evening = t; scope.launch { Azkar.setReminder(ctx, "evening", t) }
+                AppCard(onClick = { UiBus.pendingRoute.value = "alerts" }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("التنبيهات", fontWeight = FontWeight.SemiBold)
+                            Text("وقت أذكار الصباح والمساء والنوم وبعد الصلاة — بالساعة أو بعد الصلاة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
                     }
                 }
             }
@@ -142,10 +153,11 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
     val left = remember(c.name) { mutableStateListOf(*c.items.map { it.count }.toTypedArray()) }
     val done = left.count { it == 0 }
     var size by remember { mutableIntStateOf(22) }
+    val rs = rememberReadStyle()
 
-    ScreenScaffold(
+    ReadingTheme { ScreenScaffold(
         c.name, onBack = onBack,
-        actions = {
+        actions = { ReadingSettingsButton();
             IconButton(onClick = { size = (size - 2).coerceAtLeast(14) }) { Icon(Icons.Default.ZoomOut, "أصغر") }
             IconButton(onClick = { size = (size + 2).coerceAtMost(40) }) { Icon(Icons.Default.ZoomIn, "أكبر") }
         },
@@ -170,7 +182,7 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
                         ),
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text(z.text, fontFamily = family, fontSize = size.sp, lineHeight = (size * 1.8).sp, textAlign = TextAlign.Justify)
+                            Text(z.text, fontFamily = family, fontSize = rs.size(size.toFloat()), lineHeight = rs.lineH(size.toFloat()), textAlign = TextAlign.Justify)
                             if (z.desc.isNotBlank()) {
                                 Spacer(Modifier.height(8.dp))
                                 Text(z.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
@@ -200,7 +212,7 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
                 }
             }
         }
-    }
+    } }
 }
 
 private val tasbeehPhrases = listOf("سبحان الله", "الحمد لله", "الله أكبر", "لا إله إلا الله", "أستغفر الله", "سبحان الله وبحمده", "لا حول ولا قوة إلا بالله", "اللهم صلِّ على محمد")

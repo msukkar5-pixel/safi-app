@@ -14,7 +14,10 @@ import java.io.File
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
-data class Hadith(val book: String, val number: Int, val section: Int, val text: String)
+data class Hadith(val book: String, val number: Int, val section: Int, val text: String) {
+    /** Diacritic-free text for search, computed once at load. */
+    val plain: String = Quran.plain(text)
+}
 data class HadithSection(val number: Int, val name: String, val first: Int, val last: Int)
 data class HadithBook(val id: String, val title: String, val sections: List<HadithSection>, val hadiths: List<Hadith>)
 
@@ -100,8 +103,8 @@ object Hadiths {
     fun search(book: HadithBook, q: String, limit: Int = 150): List<Hadith> {
         val qq = Quran.plain(q.trim())
         if (qq.length < 2) return emptyList()
-        val words = qq.split(Regex("\\s+")).filter { it.isNotBlank() }
-        return book.hadiths.asSequence().filter { h -> val p = Quran.plain(h.text); words.all { it in p } }.take(limit).toList()
+        val words = qq.split(' ', '\n', '\t').filter { it.isNotBlank() }
+        return book.hadiths.asSequence().filter { h -> words.all { it in h.plain } }.take(limit).toList()
     }
 
     /** Same hadith all day, changes daily. */

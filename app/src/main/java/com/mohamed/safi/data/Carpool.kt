@@ -28,7 +28,7 @@ data class CarpoolConfig(
     val mode: String = "auto",                          // manual | auto
     val manual: Map<LocalDate, String> = emptyMap(),
     val repeatManual: Boolean = true,
-    val days: Set<Int> = setOf(1, 2, 3, 4, 5),          // auto mode working days, ISO 1 = Monday
+    val days: Set<Int> = setOf(1, 2, 3, 4),             // auto mode working days, ISO 1 = Monday (Mon–Thu, Friday off)
     val anchorDate: LocalDate = LocalDate.now(zone),
     val anchorIndex: Int = 0,
     val hour: Int = 20,
@@ -43,6 +43,13 @@ data class CarpoolConfig(
     private val manualStart: LocalDate? get() = manual.keys.minOrNull()?.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     private val manualEnd: LocalDate? get() = manual.keys.maxOrNull()?.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
     val manualLast: LocalDate? get() = manual.keys.maxOrNull()
+
+    /** True when [d] lies inside the manual table's date range (editing it there won't shift the repeat cycle). */
+    fun inManualRange(d: LocalDate): Boolean {
+        val first = manual.keys.minOrNull() ?: return false
+        val last = manualLast ?: return false
+        return !d.isBefore(first) && !d.isAfter(last)
+    }
 
     private fun fromTable(d: LocalDate): String? {
         manual[d]?.let { return it }
@@ -127,7 +134,7 @@ data class CarpoolConfig(
                 mode = j.optString("mode", "auto"),
                 manual = dateMap(j.optJSONObject("manual")),
                 repeatManual = j.optBoolean("repeatManual", true),
-                days = (0 until d.length()).map { d.getInt(it) }.toSet(),
+                days = (0 until d.length()).map { d.getInt(it) }.toSet().ifEmpty { setOf(1, 2, 3, 4) },
                 anchorDate = LocalDate.parse(j.optString("anchorDate", LocalDate.now(zone).toString())),
                 anchorIndex = j.optInt("anchorIndex", 0),
                 hour = j.optInt("hour", 20),
@@ -151,7 +158,7 @@ data class CarpoolConfig(
             ).associate { (d, n) -> LocalDate.of(y, 10, d) to n }
             return CarpoolConfig(
                 members = listOf("صبحي", "اسلام", "احمد", "سكر"), me = 3, mode = "manual", manual = t,
-                repeatManual = true, days = setOf(1, 2, 3, 4, 5), anchorDate = LocalDate.of(y, 11, 2), anchorIndex = 0,
+                repeatManual = true, days = setOf(1, 2, 3, 4), anchorDate = LocalDate.of(y, 11, 2), anchorIndex = 0,
                 hour = 20, minute = 0, enabled = true,
             )
         }
@@ -173,7 +180,7 @@ data class CarpoolConfig(
             var lastMonth: Int? = null
             var lastYear = today.year
             val re = Regex("(\\d{1,2})(?:\\s*[/\\-.]\\s*(\\d{1,2}))?(?:\\s*[/\\-.]\\s*(\\d{2,4}))?\\s*[:：\\-–]?\\s*([\\p{L}]+(?:\\s+[\\p{L}]+)?)")
-            for (raw in text.lines()) {
+            for (raw in com.mohamed.safi.ui.normalizeDigits(text).lines()) {
                 val line = toWestern(raw).replace("•", " ").replace("\t", " ").trim()
                 if (line.isEmpty()) continue
                 val m = re.find(line) ?: continue
@@ -214,6 +221,15 @@ object Carpool {
             val seeded = CarpoolConfig.seed()
             sp(ctx).edit { putString("cfg", seeded.toJson()); putBoolean("seeded", true) }
             return seeded
+        }
+        // One-time fix: older builds defaulted to Mon–Fri, but Friday is off.
+        if (!sp(ctx).getBoolean("fri_off_v1", false)) {
+            sp(ctx).edit { putBoolean("fri_off_v1", true) }
+            if (c.days == setOf(1, 2, 3, 4, 5)) {
+                val fixed = c.copy(days = setOf(1, 2, 3, 4))
+                sp(ctx).edit { putString("cfg", fixed.toJson()) }
+                return fixed
+            }
         }
         return c
     }

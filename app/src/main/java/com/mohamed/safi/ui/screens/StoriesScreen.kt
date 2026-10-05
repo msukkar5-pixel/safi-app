@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -78,7 +79,7 @@ private fun StoryDetail(s: StoryItem, sources: String, tab: Int, open: (String) 
     val ctx = LocalContext.current
     var surahNames by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     LaunchedEffect(Unit) { surahNames = runCatching { Quran.surahs(ctx).associate { it.number to it.name } }.getOrDefault(emptyMap()) }
-    ScreenScaffold(s.title, onBack = onBack) { pad ->
+    ReadingTheme { ScreenScaffold(s.title, onBack = onBack, actions = { ReadingSettingsButton() }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(s.subtitle, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
             Text(s.body, style = MaterialTheme.typography.bodyLarge, lineHeight = 30.sp)
@@ -111,4 +112,4 @@ private fun StoryDetail(s: StoryItem, sources: String, tab: Int, open: (String) 
             Text(sources, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         }
     }
-}
+} }

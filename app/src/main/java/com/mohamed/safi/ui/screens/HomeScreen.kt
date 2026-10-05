@@ -1,11 +1,16 @@
 package com.mohamed.safi.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -71,23 +76,11 @@ fun HomeScreen(open: (String) -> Unit) {
     }
 
     LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(greet + (prefs.userName.takeIf { it.isNotBlank() }?.let { " يا $it" } ?: ""), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                    Text(dateStr(System.currentTimeMillis()), color = MaterialTheme.colorScheme.outline)
-                }
-                AssistChip(
-                    onClick = { open("settings") },
-                    label = { Text("1 د.إ = ${prefs.egpPerAed} ج") },
-                    leadingIcon = { Icon(Icons.Default.SwapHoriz, null, Modifier.size(18.dp)) },
-                )
-            }
-        }
+        item { HomeHeader(greet + (prefs.userName.takeIf { it.isNotBlank() }?.let { " يا $it" } ?: ""), open) }
 
         if (!perms.essentialsOk) {
             item {
@@ -102,10 +95,11 @@ fun HomeScreen(open: (String) -> Unit) {
         }
 
         item { WirdHomeCard(open) }
+        item { PrayerTrackerHomeCard(open) }
         item { NextUpCard(reminders, open) }
+        item { OccasionHomeCard(open) }
 
         item { CarpoolCard(open) }
-        item { PrayerCard(open) }
 
         // Quick actions
         item {
@@ -157,36 +151,33 @@ private fun WirdHomeCard(open: (String) -> Unit) {
     var done by remember { mutableStateOf(com.mohamed.safi.faith.Wird.doneToday) }
     val w = com.mohamed.safi.faith.Wird
     val r = w.todayRange()
-    AppCard(onClick = { open("wird") }, color = MaterialTheme.colorScheme.primary) {
-        val onP = MaterialTheme.colorScheme.onPrimary
+    val pct = ((w.nextPage - 1).toFloat() / com.mohamed.safi.faith.Wird.TOTAL_PAGES).coerceIn(0f, 1f)
+    GoldCard(onClick = { open("wird") }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.AutoStories, null, tint = onP)
+            Icon(Icons.Default.AutoStories, null, tint = Gold)
             Spacer(Modifier.width(8.dp))
-            Text("وردك اليومي", color = onP, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
-            if (w.streak > 0) Text("🔥 ${w.streak} يوم", color = onP.copy(alpha = 0.9f), style = MaterialTheme.typography.labelLarge)
+            Text("وردك اليومي", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.weight(1f))
+            if (w.streak > 0) Text("${w.streak} يوم متتالي", color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.labelLarge)
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         if (done) {
-            Text("✓ خلّصت وردك النهارده، ربنا يتقبل", color = onP, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-            Text("بكرة من صفحة ${w.nextPage}", color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+            Text("خلّصت وردك النهارده، تقبّل الله", fontFamily = Amiri, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
+            Text("بكرة من صفحة ${w.nextPage}", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
         } else {
-            Text("من صفحة ${r.first} لـ ${r.last}", color = onP, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-            Text("${r.last - r.first + 1} صفحات من المصحف", color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall)
+            Text("من صفحة ${r.first} إلى ${r.last}", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 26.sp, color = MaterialTheme.colorScheme.primary)
+            Text("${r.last - r.first + 1} صفحات من المصحف", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(10.dp))
-        LinearProgressIndicator(
-            progress = { ((w.nextPage - 1).toFloat() / com.mohamed.safi.faith.Wird.TOTAL_PAGES).coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth(), color = onP, trackColor = onP.copy(alpha = 0.25f),
-        )
+        LinearProgressIndicator(progress = { pct }, modifier = Modifier.fillMaxWidth().height(6.dp), color = Gold, trackColor = MaterialTheme.colorScheme.outlineVariant, drawStopIndicator = {})
         Text(
-            "الختمة: ${((w.nextPage - 1) * 100 / com.mohamed.safi.faith.Wird.TOTAL_PAGES)}%" + if (w.khatmas > 0) " • ختمت ${w.khatmas} مرة" else "",
-            color = onP.copy(alpha = 0.85f), style = MaterialTheme.typography.bodySmall,
+            "الختمة ${(pct * 100).toInt()}%" + if (w.khatmas > 0) " • ختمت ${w.khatmas} مرة" else "",
+            color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp),
         )
         if (!done) {
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { open("wird") }, colors = ButtonDefaults.buttonColors(containerColor = onP, contentColor = MaterialTheme.colorScheme.primary)) { Text("اقرأ") }
-                OutlinedButton(onClick = { w.markDone(); done = true }, colors = ButtonDefaults.outlinedButtonColors(contentColor = onP)) { Text("قريته ✓") }
+                Button(onClick = { open("wird") }) { Icon(Icons.Default.MenuBook, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("اقرأ") }
+                OutlinedButton(onClick = { w.markDone(); done = true }) { Text("قريته") }
             }
         }
     }
@@ -241,7 +232,7 @@ private fun AzkarHomeCard(open: (String) -> Unit) {
     fun save() { sp.edit().putInt(key + "_i", idx).putInt(key + "_c", cnt).apply() }
     val finished = idx >= cat.items.size
     val z = cat.items.getOrNull(idx)
-    AppCard(
+    GoldCard(
         onClick = {
             if (z != null) {
                 cnt++
@@ -249,12 +240,11 @@ private fun AzkarHomeCard(open: (String) -> Unit) {
                 save()
             }
         },
-        color = MaterialTheme.colorScheme.secondaryContainer,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(com.mohamed.safi.faith.Azkar.icon(cat.name), fontSize = 22.sp)
             Spacer(Modifier.width(8.dp))
-            Text(cat.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+            Text(cat.name, fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.weight(1f))
             Text("${minOf(idx + 1, cat.items.size)}/${cat.items.size}", style = MaterialTheme.typography.labelLarge)
         }
         Spacer(Modifier.height(8.dp))
@@ -262,7 +252,7 @@ private fun AzkarHomeCard(open: (String) -> Unit) {
             Text("✓ خلّصت ${cat.name}، تقبّل الله", fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             TextButton(onClick = { idx = 0; cnt = 0; save() }) { Text("من الأول") }
         } else {
-            Text(z.text, fontSize = 18.sp, lineHeight = 32.sp, maxLines = 10, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(z.text, fontFamily = Amiri, fontSize = 20.sp, lineHeight = 38.sp, maxLines = 10, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             if (z.desc.isNotBlank()) Text(z.desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -276,5 +266,95 @@ private fun AzkarHomeCard(open: (String) -> Unit) {
             }
         }
         TextButton(onClick = { UiBus.pendingAzkar.value = cat.name; open("azkar") }) { Text("كل الأذكار") }
+    }
+}
+
+/** Calm header: greeting, Hijri + Gregorian date, next prayer with countdown, over a subtle geometric pattern. */
+@Composable
+private fun HomeHeader(greeting: String, open: (String) -> Unit) {
+    var now by remember { mutableStateOf(java.time.LocalDateTime.now(zone)) }
+    var next by remember { mutableStateOf(com.mohamed.safi.faith.Prayer.nextPrayer()) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(20_000); now = java.time.LocalDateTime.now(zone); next = com.mohamed.safi.faith.Prayer.nextPrayer() } }
+    val hijri = remember(now.toLocalDate()) { hijriText(now.toLocalDate()) }
+    val left = java.time.Duration.between(now, next.second)
+    Box(
+        Modifier
+            .layout { m, c ->
+                val extra = 32.dp.roundToPx()
+                val w = c.maxWidth + extra
+                val p = m.measure(c.copy(minWidth = w, maxWidth = w))
+                layout(c.maxWidth, p.height) { p.place(-extra / 2, 0) }
+            }
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(BrandDeep, Brand)))
+            .clickable { open("prayer") },
+    ) {
+        IslamicPattern(Modifier.matchParentSize(), GoldSoft.copy(alpha = 0.10f))
+        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
+            Text(greeting, color = Color.White, fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 26.sp)
+            Text(hijri, color = GoldSoft, fontFamily = Amiri, fontSize = 17.sp)
+            Text(dateStr(System.currentTimeMillis()), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Column(Modifier.weight(1f)) {
+                    Text("الصلاة الجاية", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
+                    Text(next.first, color = Color.White, fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 30.sp)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(t12(next.second), color = Gold, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                    Text(leftText(left), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+/** "باقي ساعتين و٥ دقايق" style countdown without "0 ساعة". */
+fun leftText(d: java.time.Duration): String {
+    val total = d.toMinutes().coerceAtLeast(0)
+    val h = total / 60; val m = total % 60
+    val hs = when (h) { 0L -> ""; 1L -> "ساعة"; 2L -> "ساعتين"; in 3..10 -> "$h ساعات"; else -> "$h ساعة" }
+    val ms = when (m) { 0L -> ""; 1L -> "دقيقة"; 2L -> "دقيقتين"; in 3..10 -> "$m دقايق"; else -> "$m دقيقة" }
+    return when {
+        hs.isEmpty() && ms.isEmpty() -> "دلوقتي"
+        hs.isEmpty() -> "باقي $ms"
+        ms.isEmpty() -> "باقي $hs"
+        else -> "باقي $hs و$ms"
+    }
+}
+
+fun hijriText(d: java.time.LocalDate): String = runCatching {
+    val h = java.time.chrono.HijrahDate.from(d)
+    val months = listOf("محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة", "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة")
+    val day = h.get(java.time.temporal.ChronoField.DAY_OF_MONTH)
+    val month = h.get(java.time.temporal.ChronoField.MONTH_OF_YEAR)
+    val year = h.get(java.time.temporal.ChronoField.YEAR)
+    "$day ${months[month - 1]} $year هـ"
+}.getOrDefault("")
+
+/** Subtle eight-pointed-star lattice, drawn with lines. */
+@Composable
+fun IslamicPattern(modifier: Modifier, color: Color, cell: androidx.compose.ui.unit.Dp = 44.dp) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val c = cell.toPx()
+        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.2f)
+        var y = -c / 2
+        while (y < size.height + c) {
+            var x = -c / 2
+            while (x < size.width + c) {
+                val r = c * 0.36f
+                val p1 = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(x - r, y - r); lineTo(x + r, y - r); lineTo(x + r, y + r); lineTo(x - r, y + r); close()
+                }
+                val d = r * 1.414f
+                val p2 = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(x, y - d); lineTo(x + d, y); lineTo(x, y + d); lineTo(x - d, y); close()
+                }
+                drawPath(p1, color, style = stroke)
+                drawPath(p2, color, style = stroke)
+                x += c
+            }
+            y += c
+        }
     }
 }

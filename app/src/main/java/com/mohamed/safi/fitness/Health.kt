@@ -48,6 +48,8 @@ object Health {
         HealthPermission.getReadPermission(BodyFatRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(androidx.health.connect.client.records.BloodPressureRecord::class),
+        HealthPermission.getReadPermission(androidx.health.connect.client.records.OxygenSaturationRecord::class),
     )
 
     fun status(ctx: Context): Int = HealthConnectClient.getSdkStatus(ctx, HC_PACKAGE)
@@ -64,6 +66,18 @@ object Health {
 
     fun installIntent(): Intent =
         Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$HC_PACKAGE&url=healthconnect%3A%2F%2Fonboarding"))
+
+    /** Health Connect needs Android 9 (API 28) or newer. */
+    val supported get() = android.os.Build.VERSION.SDK_INT >= 28
+
+    /** Opens Health Connect's permission screen for this app (used after the dialog is denied twice). */
+    fun manageIntent(ctx: Context): Intent =
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS")
+                .putExtra(Intent.EXTRA_PACKAGE_NAME, ctx.packageName)
+        } else {
+            Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
+        }
 
     private fun range(d: LocalDate): TimeRangeFilter {
         val s = d.atStartOfDay(zone).toInstant()

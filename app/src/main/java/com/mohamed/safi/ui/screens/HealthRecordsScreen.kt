@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,16 +37,18 @@ fun HealthRecordsScreen(onBack: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     ScreenScaffold("حالتي الصحية", onBack = onBack) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-            TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
-                Tab(tab == 0, { tab = 0 }, text = { Text("الأدوية") })
-                Tab(tab == 1, { tab = 1 }, text = { Text("التحاليل") })
-                Tab(tab == 2, { tab = 2 }, text = { Text("الدكاترة") })
-                Tab(tab == 3, { tab = 3 }, text = { Text("ملخص") })
+            ScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp, containerColor = MaterialTheme.colorScheme.background) {
+                Tab(tab == 0, { tab = 0 }, text = { Text("القلب والضغط") })
+                Tab(tab == 1, { tab = 1 }, text = { Text("الأدوية") })
+                Tab(tab == 2, { tab = 2 }, text = { Text("التحاليل") })
+                Tab(tab == 3, { tab = 3 }, text = { Text("الدكاترة") })
+                Tab(tab == 4, { tab = 4 }, text = { Text("ملخص") })
             }
             when (tab) {
-                0 -> MedsTab()
-                1 -> LabsTab()
-                2 -> VisitsTab()
+                0 -> VitalsSummary()
+                1 -> MedsTab()
+                2 -> LabsTab()
+                3 -> VisitsTab()
                 else -> HealthSummaryTab()
             }
         }
@@ -119,7 +122,7 @@ private fun MedDialog(existing: Medication?, onDismiss: () -> Unit) {
                 Row {
                     TextButton(onClick = {
                         pickTime(ctx, System.currentTimeMillis()) { h, m ->
-                            times = (Meds.times(times).map { it.toString() } + "%02d:%02d".format(h, m)).distinct().sorted().joinToString(", ")
+                            times = (Meds.times(times).map { it.toString() } + String.format(java.util.Locale.US, "%02d:%02d", h, m)).distinct().sorted().joinToString(", ")
                         }
                     }) { Icon(Icons.Default.Schedule, null); Text("ضيف ميعاد") }
                     if (times.isNotBlank()) TextButton(onClick = { times = "" }) { Text("امسح") }
@@ -138,7 +141,9 @@ private fun MedDialog(existing: Medication?, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = {
-                if (name.isBlank()) toast(ctx, "اكتب اسم الدوا") else scope.launch {
+                if (name.isBlank()) toast(ctx, "اكتب اسم الدوا")
+                else if (times.isNotBlank() && Meds.times(times).isEmpty()) toast(ctx, "مفهمتش المواعيد — اكتبها زي 8:00 أو 8 م")
+                else scope.launch {
                     Meds.save(
                         ctx,
                         Medication(

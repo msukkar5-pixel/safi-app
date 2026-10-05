@@ -135,6 +135,18 @@ def main():
     if m:
         W, H = int(m.group(1)), int(m.group(2))
     note(f"screen {W}x{H}")
+    # behave like the user's phone: Arabic locale (Arabic-Indic digits) + Dubai time
+    adb("root"); time.sleep(3); adb("wait-for-device")
+    sh("setprop persist.sys.locale ar-AE; setprop persist.sys.timezone Asia/Dubai")
+    sh("settings put global auto_time_zone 0")
+    sh("stop; sleep 2; start", timeout=120)
+    time.sleep(10); adb("wait-for-device")
+    for _ in range(60):
+        if sh("getprop sys.boot_completed").strip() == "1":
+            break
+        time.sleep(3)
+    time.sleep(10)
+    note("locale " + sh("getprop persist.sys.locale").strip() + " tz " + sh("getprop persist.sys.timezone").strip())
     note(adb("install", "-r", "-g", apk, timeout=300))
     for p in ["POST_NOTIFICATIONS", "RECORD_AUDIO", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "CAMERA"]:
         sh(f"pm grant {PKG} android.permission.{p}")

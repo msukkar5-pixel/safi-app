@@ -76,7 +76,7 @@ fun shortDate(t: Long): String {
 
 fun dateTimeStr(t: Long) = "${shortDate(t)} ${timeStr(t)}"
 
-fun isoLocal(t: Long): String = t.toLdt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+fun isoLocal(t: Long): String = t.toLdt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", java.util.Locale.US))
 
 /** "بعد 3 أيام" / "متأخرة يومين" */
 fun dueText(due: Long): String {
@@ -93,10 +93,21 @@ fun dueText(due: Long): String {
 fun daysUntil(t: Long): Long =
     java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(zone), t.toLocalDate())
 
-/** Parse "2026-10-05T09:00", "2026-10-05 09:00" or "2026-10-05". */
+private val isoLoose = Regex("^(\\d{4})-(\\d{1,2})-(\\d{1,2})(?:[T ]+(\\d{1,2}):(\\d{2}))?")
+
+/** Parse "2026-10-05T09:00", "2026-10-05 09:00", "2026-10-05 7:30" or "2026-10-05" (Arabic-Indic digits OK). */
 fun parseIso(s: String?): Long? {
     if (s.isNullOrBlank()) return null
-    val t = s.trim().replace(" ", "T")
+    val n = com.mohamed.safi.ui.normalizeDigits(s).trim()
+    val loose = isoLoose.find(n)?.let { m ->
+        val g = m.groupValues
+        runCatching {
+            val date = LocalDate.of(g[1].toInt(), g[2].toInt(), g[3].toInt())
+            if (g[4].isNotEmpty()) date.atTime(g[4].toInt(), g[5].toInt()).millis() else date.millisAt(9)
+        }.getOrNull()
+    }
+    if (loose != null) return loose
+    val t = n.replace(" ", "T")
     return runCatching { LocalDateTime.parse(t.take(16)).millis() }.getOrNull()
         ?: runCatching { LocalDate.parse(t.take(10)).millisAt(9) }.getOrNull()
 }
@@ -122,6 +133,11 @@ object Fx {
             "USD" -> 0.2723
             "SAR" -> 1.0211
             "EUR" -> 0.25
+            "GBP" -> 0.20
+            "QAR" -> 0.991
+            "KWD" -> 0.0837
+            "OMR" -> 0.1048
+            "BHD" -> 0.1026
             else -> 1.0
         }
     }

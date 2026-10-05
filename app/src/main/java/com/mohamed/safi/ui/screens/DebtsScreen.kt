@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,7 +24,7 @@ import com.mohamed.safi.ui.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun DebtsScreen(onBack: () -> Unit) {
+fun DebtsScreen(onBack: () -> Unit, embedded: Boolean = false) {
     val dao = SafiApp.db.dao()
     val all by dao.debts().collectAsState(emptyList())
     var tab by remember { mutableIntStateOf(0) }
@@ -38,13 +39,13 @@ fun DebtsScreen(onBack: () -> Unit) {
     val totalOwed = all.filter { it.direction == "owed_to_me" && !it.closed }.sumOf { Fx.toAed(it.remaining, it.currency) }
 
     ScreenScaffold(
-        "السلف والديون", onBack = onBack,
+        "السلف والديون", onBack = if (embedded) null else onBack, showTopBar = !embedded,
         actions = {
             IconButton(onClick = { showClosed = !showClosed }) {
                 Icon(if (showClosed) Icons.Default.VisibilityOff else Icons.Default.Visibility, "اللي اتقفل")
             }
         },
-        fab = { ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("سلفة") }) },
+        fab = { if (!embedded) ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("سلفة") }) },
     ) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -63,11 +64,21 @@ fun DebtsScreen(onBack: () -> Unit) {
                     }
                 }
             }
+            if (embedded) item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    FilterChip(
+                        selected = showClosed, onClick = { showClosed = !showClosed },
+                        label = { Text("اعرض اللي اتقفل") },
+                        leadingIcon = { Icon(if (showClosed) Icons.Default.VisibilityOff else Icons.Default.Visibility, null, Modifier.size(18.dp)) },
+                    )
+                }
+            }
             if (list.isEmpty()) item {
                 EmptyState(Icons.Default.People, if (tab == 0) "مفيش فلوس عليك 👌" else "محدش مستلف منك")
             }
             items(list, key = { it.id }) { d ->
                 val frac = if (d.amount > 0) (d.paid / d.amount).toFloat() else 0f
+                val pct = (frac.coerceIn(0f, 1f) * 100).toInt()
                 AppCard(onClick = { editing = d }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CatBadge(d.person, 42, Icons.Default.Person, if (d.direction == "i_owe") Danger else Positive)
@@ -86,16 +97,28 @@ fun DebtsScreen(onBack: () -> Unit) {
                             if (d.note.isNotBlank()) Text(d.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(money(d.remaining, d.currency), fontWeight = FontWeight.Bold)
-                            Text("من ${money(d.amount, d.currency)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            Text(money(d.remaining, d.currency), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text(if (d.closed) "خلصت" else "باقي", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            if (d.currency != "AED") Text("≈ ${money(Fx.toAed(d.remaining, d.currency))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
+                    val barColor = if (d.direction == "i_owe") Danger else Positive
                     LinearProgressIndicator(
                         progress = { frac.coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                        color = if (d.direction == "i_owe") Danger else Positive,
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                        color = barColor,
+                        trackColor = barColor.copy(alpha = 0.14f),
                     )
+                    Spacer(Modifier.height(4.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            if (d.direction == "i_owe") "سددت ${money(d.paid, d.currency)} من ${money(d.amount, d.currency)}"
+                            else "رجعلك ${money(d.paid, d.currency)} من ${money(d.amount, d.currency)}",
+                            style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f),
+                        )
+                        Text("$pct%", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = barColor)
+                    }
                     if (!d.closed) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                             TextButton(onClick = { paying = d }) { Text(if (d.direction == "i_owe") "سددت جزء / كله" else "رجّعلي جزء / كله") }
@@ -112,10 +135,11 @@ fun DebtsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun PayDebtDialog(d: Debt, onDismiss: () -> Unit) {
+fun PayDebtDialog(d: Debt, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var amount by remember { mutableStateOf(fmt(d.monthlyInstallment?.coerceAtMost(d.remaining) ?: d.remaining).replace(",", "")) }
+    var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (d.direction == "i_owe") "سداد لـ ${d.person}" else "${d.person} رجّع") },
@@ -126,12 +150,22 @@ private fun PayDebtDialog(d: Debt, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = {
+            TextButton(enabled = !busy, onClick = {
                 val a = amount.toDoubleOrNull() ?: 0.0
-                if (a <= 0) toast(ctx, "اكتب المبلغ") else scope.launch {
-                    val u = Debts.pay(ctx, d, a)
-                    toast(ctx, if (u.closed) "خلصت السلفة 🎉" else "باقي ${money(u.remaining, d.currency)}")
-                    onDismiss()
+                if (busy) return@TextButton
+                if (a <= 0) toast(ctx, "اكتب المبلغ") else {
+                    busy = true
+                    scope.launch {
+                        try {
+                            val u = Debts.pay(ctx, d, a)
+                            // this month's instalment is done; don't list it as due any more
+                            if (d.direction == "i_owe" && d.monthlyInstallment != null) Obligations.markInstalmentPaid(d.id)
+                            toast(ctx, if (u.closed) "خلصت السلفة 🎉" else "باقي ${money(u.remaining, d.currency)}")
+                            onDismiss()
+                        } finally {
+                            busy = false
+                        }
+                    }
                 }
             }) { Text("تأكيد", fontWeight = FontWeight.Bold) }
         },
@@ -139,8 +173,9 @@ private fun PayDebtDialog(d: Debt, onDismiss: () -> Unit) {
     )
 }
 
+/** Add / edit a loan. [defaultDir]: i_owe | owed_to_me (the editor lets the user switch). */
 @Composable
-private fun DebtEditor(existing: Debt?, defaultDir: String, onDismiss: () -> Unit) {
+fun DebtEditor(existing: Debt?, defaultDir: String, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var dir by remember { mutableStateOf(existing?.direction ?: defaultDir) }
