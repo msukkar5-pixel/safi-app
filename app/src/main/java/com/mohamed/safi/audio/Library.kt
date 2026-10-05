@@ -57,7 +57,7 @@ object Library {
     )
 
     // Islamic subjects only (in several languages)
-    private const val ISLAMIC = "(islam OR islamic OR muslim OR muslims OR إسلام OR الإسلام OR إسلامي OR إسلامية OR الاسلام OR اسلامي OR سيرة OR السيرة OR النبوية OR الرسول OR الأنبياء OR الانبياء OR الصحابة OR حديث OR الحديث OR فقه OR الفقه OR تفسير OR التفسير OR عقيدة OR العقيدة OR seerah OR sirah OR hadith OR tafsir OR fiqh OR aqeedah OR sunnah OR prophet OR muhammad OR islami OR islamique OR islamisch)"
+    private const val ISLAMIC = "(islam OR islamic OR muslim OR muslims OR إسلام OR الإسلام OR إسلامي OR إسلامية OR الاسلام OR اسلامي OR سيرة OR السيرة OR النبوية OR الرسول OR الأنبياء OR الانبياء OR الصحابة OR حديث OR الحديث OR فقه OR الفقه OR تفسير OR التفسير OR عقيدة OR العقيدة OR seerah OR sirah OR hadith OR tafsir OR fiqh OR aqeedah OR sunnah OR muhammad OR prophets OR islami OR islamique OR islamisch)"
 
     private fun esc(s: String) = s.replace(Regex("[\\\\\"():^~*?+\\-!{}\\[\\]/]"), " ").trim()
 
@@ -68,6 +68,8 @@ object Library {
         parts += "NOT collection:(etree OR georgeblood OR 78rpm OR audio_music OR opensource_audio_music OR podcasts)"
         parts += "(subject:$ISLAMIC OR title:$ISLAMIC)"
         // books, not recitations / nasheed / music
+        parts += "NOT subject:(bible OR christian OR christianity OR gospel OR jesus OR church OR catholic OR fiction OR poetry OR novel)"
+        parts += "NOT title:(bible OR gospel OR gibran OR famine)"
         parts += "NOT subject:(تلاوة OR تلاوات OR مرتل OR مجود OR recitation OR qiraat OR nasheed OR نشيد OR اناشيد OR أناشيد OR music OR موسيقى OR song OR songs)"
         langQ[lang]?.let { parts += "language:$it" }
         val t = esc(text)

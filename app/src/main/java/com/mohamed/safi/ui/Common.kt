@@ -89,12 +89,13 @@ fun ScreenScaffold(
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     fab: @Composable () -> Unit = {},
+    showTopBar: Boolean = true,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     if (onBack != null) androidx.activity.compose.BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
-            TopAppBar(
+            if (showTopBar) TopAppBar(
                 title = { Text(title, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     if (onBack != null) IconButton(onClick = onBack) {

@@ -41,24 +41,30 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        unlocked.value = !SafiApp.prefs.lockOn
+        unlocked.value = !SafiApp.prefs.lockOn || (savedInstanceState?.getBoolean("unlocked") == true)
         splash.value = savedInstanceState == null
         handleIntent(intent)
         setContent {
             SafiTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides I18n.direction) {
-                    when {
-                        splash.value -> DedicationSplash {
+                    // the app stays composed underneath, so returning from the camera / a picker never loses state
+                    Box(Modifier.fillMaxSize()) {
+                        AppRoot()
+                        if (!unlocked.value && !splash.value) LockScreen { authenticate() }
+                        if (splash.value) DedicationSplash {
                             splash.value = false
                             if (!unlocked.value) authenticate()
                         }
-                        unlocked.value -> AppRoot()
-                        else -> LockScreen { authenticate() }
                     }
                 }
             }
         }
         if (!unlocked.value && !splash.value) authenticate()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("unlocked", unlocked.value)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -82,7 +88,6 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(this) }
-        if (SafiApp.prefs.lockOn && !isChangingConfigurations) unlocked.value = false
         if (!isChangingConfigurations) stoppedAt = System.currentTimeMillis()
     }
 
@@ -90,7 +95,10 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (stoppedAt > 0 && System.currentTimeMillis() - stoppedAt > 5 * 60_000) splash.value = true
+        val away = if (stoppedAt > 0) System.currentTimeMillis() - stoppedAt else 0L
+        if (away > 5 * 60_000) splash.value = true
+        // re-lock only after a real absence (not a quick trip to the camera or a file picker)
+        if (SafiApp.prefs.lockOn && away > 2 * 60_000) unlocked.value = false
         if (!unlocked.value && SafiApp.prefs.lockOn && !splash.value) authenticate()
     }
 
