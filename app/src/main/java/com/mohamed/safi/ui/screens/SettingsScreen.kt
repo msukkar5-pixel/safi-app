@@ -49,12 +49,26 @@ fun SettingsScreen(onBack: () -> Unit) {
         ) {
             SectionTitle("لغة التطبيق")
             AppCard {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val scope = rememberCoroutineScope()
+                val prog by AutoTranslate.progress.collectAsState()
+                val err by AutoTranslate.error.collectAsState()
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     I18n.languages.forEach { (code, label) ->
-                        FilterChip(I18n.lang.value == code, { I18n.set(ctx, code) }, label = { androidx.compose.material3.Text(label) })
+                        FilterChip(I18n.lang.value == code, {
+                            I18n.set(ctx, code)
+                            if (!I18n.ready(ctx, code) && prog == null) scope.launch {
+                                if (AutoTranslate.build(ctx, code)) I18n.set(ctx, code)
+                            }
+                        }, label = { androidx.compose.material3.Text(label) })
                     }
                 }
-                Text("القرآن والأذكار والأحاديث والكتب بتفضل بلغتها الأصلية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                prog?.let { p ->
+                    Text("بجهّز اللغة على تليفونك… ${(p * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                    LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth())
+                }
+                err?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                Text("العربي والإنجليزي والأوردو جاهزين. باقي اللغات بتتترجم على تليفونك مرة واحدة (محتاج نت أول مرة بس) وبعدها تشتغل من غير نت. القرآن والأذكار والأحاديث والكتب بتفضل بلغتها الأصلية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
 
             SectionTitle("الصلاحيات")

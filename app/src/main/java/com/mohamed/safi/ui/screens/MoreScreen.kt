@@ -58,12 +58,15 @@ private val sections = listOf(
     "الإعدادات" to listOf(
         Entry("alerts", "التنبيهات", "الأذان، الأذكار، الورد", Icons.Default.NotificationsActive, Color(0xFF00796B)),
         Entry("settings", "الإعدادات", "اللغة، الذكاء الاصطناعي، الصوت", Icons.Default.Settings, Color(0xFF6C7A89)),
+        Entry("settings", "لغة التطبيق", "عربي، English، اردو و١٨ لغة تانية", Icons.Default.Translate, Color(0xFF3F6EB5)),
     ),
 )
 
 @Composable
 fun MoreScreen(open: (String) -> Unit) {
-    ScreenScaffold("المزيد") { pad ->
+    ScreenScaffold("المزيد", actions = {
+        IconButton(onClick = { UiBus.customizeNav.value = true }) { Icon(Icons.Default.Tune, "خصّص القايمة اللي تحت") }
+    }) { pad ->
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize().padding(pad),

@@ -313,8 +313,8 @@ private fun BookDownload(bookId: String, meta: BookMeta?, onBack: () -> Unit, in
 fun BookList(cats: List<String>, openBook: (String) -> Unit) {
     val ctx = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) { if (Books.refreshCatalog(ctx)) tick++ }
-    val books = remember(tick) { Books.catalog(ctx).filter { it.cat in cats } }
+    LaunchedEffect(Unit) { if (Books.refreshOnce(ctx)) tick++ }
+    val books = remember(tick, cats) { Books.catalog(ctx).filter { it.cat in cats } }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         books.forEach { b -> BookCard(b) { openBook(b.id) } }
         if (books.isEmpty()) Text("الكتب لسه بتتجهز، افتح الصفحة دي تاني بعد شوية.", color = MaterialTheme.colorScheme.outline)
@@ -373,7 +373,7 @@ fun LibraryScreen(onBack: () -> Unit, openBook: (String) -> Unit, openRoute: (St
                     }
                 }
             }
-            Books.categories.forEach { (k, name) ->
+            Books.categories.filterKeys { it !in Books.sectionCats }.forEach { (k, name) ->
                 item { SectionTitle(name) }
                 item { BookList(listOf(k), openBook) }
             }

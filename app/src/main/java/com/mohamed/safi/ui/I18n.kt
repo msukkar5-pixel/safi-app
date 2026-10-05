@@ -24,7 +24,18 @@ import org.json.JSONObject
  * assets/i18n/<lang>.json — exact strings plus template patterns ("صرفت {0} في {1}").
  */
 object I18n {
-    val languages = linkedMapOf("ar" to "العربية", "en" to "English", "ur" to "اردو")
+    /** ar/en/ur ship with the app; the others are translated on the phone once (ML Kit, offline after a one-time download). */
+    val languages = linkedMapOf(
+        "ar" to "العربية", "en" to "English", "ur" to "اردو", "fr" to "Français", "es" to "Español", "de" to "Deutsch",
+        "tr" to "Türkçe", "id" to "Bahasa Indonesia", "ms" to "Bahasa Melayu", "hi" to "हिन्दी", "bn" to "বাংলা",
+        "fa" to "فارسی", "ru" to "Русский", "zh" to "中文", "it" to "Italiano", "pt" to "Português", "tl" to "Filipino",
+        "sw" to "Kiswahili", "nl" to "Nederlands", "ja" to "日本語", "ko" to "한국어",
+    )
+    val bundled = setOf("ar", "en", "ur")
+    private val rtl = setOf("ar", "ur", "fa")
+
+    /** Translated on this phone already (or shipped). */
+    fun ready(ctx: Context, code: String) = code in bundled || AutoTranslate.file(ctx, code).exists()
     private fun sp() = SafiApp.instance.getSharedPreferences("safi_i18n", Context.MODE_PRIVATE)
 
     val lang = mutableStateOf("ar")
@@ -41,7 +52,13 @@ object I18n {
         synchronized(cache) { cache.clear() }
         if (code == "ar") { exact = emptyMap(); patterns = emptyList() }
         else runCatching {
-            val j = JSONObject(ctx.assets.open("i18n/$code.json").bufferedReader().use { it.readText() })
+            // a language not translated yet shows English until the phone finishes translating it
+            val src = when {
+                code in bundled -> ctx.assets.open("i18n/$code.json").bufferedReader().use { it.readText() }
+                AutoTranslate.file(ctx, code).exists() -> AutoTranslate.file(ctx, code).readText()
+                else -> ctx.assets.open("i18n/en.json").bufferedReader().use { it.readText() }
+            }
+            val j = JSONObject(src)
             val ex = HashMap<String, String>()
             val pats = ArrayList<Pat>()
             j.keys().forEach { k ->
@@ -71,7 +88,7 @@ object I18n {
         sp().edit().putString("lang", code).apply()
     }
 
-    val isRtl get() = lang.value != "en"
+    val isRtl get() = lang.value in rtl
     val direction get() = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     fun tr(s: String, depth: Int = 0): String {

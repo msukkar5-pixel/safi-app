@@ -294,8 +294,8 @@ class BootReceiver : BroadcastReceiver() {
                 ReminderScheduler.rescheduleAll(context)
                 DailyWorker.schedule(context, replace = false)
                 runCatching { com.mohamed.safi.data.Carpool.schedule(context) }
-                runCatching { com.mohamed.safi.faith.Prayer.schedule(context) }
-                runCatching { com.mohamed.safi.faith.FaithAlerts.scheduleAll(context) }
+                // also on time-zone change: follow the new place's prayer times
+                runCatching { com.mohamed.safi.faith.Prayer.autoUpdate(context) }
                 if (SafiApp.prefs.locationOn) {
                     runCatching { com.mohamed.safi.location.LocationService.start(context) }
                 }

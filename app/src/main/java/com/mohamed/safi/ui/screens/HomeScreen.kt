@@ -101,16 +101,6 @@ fun HomeScreen(open: (String) -> Unit) {
 
         item { CarpoolCard(open) }
 
-        // Quick actions
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickAction(Icons.Default.Mic, "سجّل بالصوت", Brand, Modifier.weight(1f)) { voice() }
-                QuickAction(Icons.Default.CameraAlt, "صوّر فاتورة", Color2, Modifier.weight(1f)) { receipt.open() }
-                QuickAction(Icons.Default.Payments, "مصروف كاش", Positive, Modifier.weight(1f)) { adding = true }
-                QuickAction(Icons.Default.SwapHoriz, "تحويل مصر", Warn, Modifier.weight(1f)) { open("transfers") }
-            }
-        }
-
         if (soon.isNotEmpty()) {
             item {
                 AppCard(color = MaterialTheme.colorScheme.tertiaryContainer) {

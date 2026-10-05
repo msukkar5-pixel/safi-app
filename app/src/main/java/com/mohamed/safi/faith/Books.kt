@@ -105,7 +105,18 @@ object Books {
         "adhkar" to "الأذكار والرقية والطب النبوي",
         "egypt" to "تاريخ مصر",
         "uae" to "تاريخ الإمارات",
+        "aqeedah" to "العقيدة",
+        "tafsir" to "التفسير",
+        "hadith" to "الحديث وشروحه",
+        "fiqh" to "الفقه والسياسة الشرعية",
+        "tazkiya" to "الرقائق وتزكية النفس",
+        "family" to "الأسرة والتربية",
+        "thought" to "فكر وخواطر إيمانية معاصرة",
+        "adab" to "الأدب واللغة والحكمة",
     )
+
+    /** Categories shown inside their own sections (Stories, History, Hajj guide, Ruqyah guide); the library shows the rest. */
+    val sectionCats = setOf("prophets", "seerah", "sahaba", "egypt", "uae", "hajj", "adhkar")
 
     val bidaya = BookMeta(
         "bidaya", "history", "البداية والنهاية", "الحافظ ابن كثير (ت ٧٧٤هـ)",
@@ -155,6 +166,15 @@ object Books {
         return all
     }
 
+    private val refreshLock = Mutex()
+    @Volatile private var refreshed = false
+
+    /** One catalog refresh per app run, shared by every book list on screen (they used to race and overwrite the file). */
+    suspend fun refreshOnce(ctx: Context = SafiApp.instance): Boolean = refreshLock.withLock {
+        if (refreshed) return@withLock false
+        refreshCatalog(ctx).also { refreshed = true }
+    }
+
     suspend fun refreshCatalog(ctx: Context = SafiApp.instance): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             http.newCall(Request.Builder().url(BASE + "catalog.json").build()).execute().use { r ->
@@ -163,7 +183,10 @@ object Books {
                 val parsed = parse(JSONArray(txt))
                 if (parsed.isEmpty()) return@runCatching false
                 root(ctx).mkdirs()
-                File(root(ctx), "catalog.json").writeText(txt)
+                // write then rename, so a reader never sees half a file
+                val tmp = File(root(ctx), "catalog.json.tmp")
+                tmp.writeText(txt)
+                tmp.renameTo(File(root(ctx), "catalog.json"))
                 catalogCache = null
                 true
             }

@@ -40,12 +40,82 @@ object Prayer {
         set(v) = sp().edit { putStringSet("enabled", v) }
     var preMinutes: Int get() = sp().getInt("pre", 0); set(v) = sp().edit { putInt("pre", v) }
 
-    /** Uses the phone's last known location when available. */
+    /** ISO country of the prayer location ("AE", "EG"…), picks the calculation method. */
+    var country: String get() = sp().getString("country", "AE") ?: "AE"; set(v) = sp().edit { putString("country", v) }
+    /** Time zone of the prayer location; empty = the phone's zone. */
+    var tzId: String get() = sp().getString("tz", "") ?: ""; set(v) = sp().edit { putString("tz", v) }
+    /** Follow the phone's location automatically (default on). */
+    var autoLocation: Boolean get() = sp().getBoolean("auto", true); set(v) = sp().edit { putBoolean("auto", v) }
+
+    /** Zone of the place the times are for. */
+    val placeZone: java.time.ZoneId get() = runCatching { java.time.ZoneId.of(tzId) }.getOrNull() ?: zone
+
+    /** Calculation method by country: Fajr angle, Isha angle (or minutes after Maghrib), Asr shadow factor. */
+    private data class Method(val fajr: Double, val isha: Double, val ishaMin: Int = 0, val asr: Double = 1.0)
+    private fun method(): Method = when (country.uppercase(java.util.Locale.US)) {
+        "AE" -> Method(18.2, 18.2)
+        "EG", "SD", "LY", "SY", "LB", "IQ" -> Method(19.5, 17.5)
+        "SA", "YE" -> Method(18.5, 0.0, ishaMin = 90)
+        "QA", "BH" -> Method(18.0, 0.0, ishaMin = 90)
+        "KW" -> Method(18.0, 17.5)
+        "OM" -> Method(18.0, 18.0)
+        "JO", "PS" -> Method(18.0, 18.0)
+        "MA" -> Method(19.0, 17.0)
+        "DZ", "TN" -> Method(18.0, 17.0)
+        "TR" -> Method(18.0, 17.0)
+        "PK", "IN", "BD", "AF" -> Method(18.0, 18.0, asr = 2.0)
+        "US", "CA" -> Method(15.0, 15.0)
+        else -> Method(18.0, 17.0) // Muslim World League
+    }
+
+    /**
+     * Uses the phone's current location: updates the city, the country (calculation method) and the place's time zone.
+     * Returns true when the location changed enough to matter (> 2 km) or anything about the place changed.
+     */
     fun refreshLocation(ctx: Context): Boolean {
         val l = LocationService.currentLocation(ctx) ?: return false
+        val moved = FloatArray(1).also { android.location.Location.distanceBetween(lat, lng, l.latitude, l.longitude, it) }[0] > 2000f
         lat = l.latitude; lng = l.longitude
         city = com.mohamed.safi.location.LocationLogger.geocode(ctx, l.latitude, l.longitude).split("،").lastOrNull()?.trim()?.ifBlank { null } ?: city
-        return true
+        val cc = runCatching {
+            @Suppress("DEPRECATION")
+            android.location.Geocoder(ctx, java.util.Locale.US).getFromLocation(l.latitude, l.longitude, 1)?.firstOrNull()?.countryCode
+        }.getOrNull()
+        val oldTz = tzId
+        if (!cc.isNullOrBlank()) {
+            country = cc
+            tzId = zoneFor(cc, l.longitude) ?: ""
+        }
+        return moved || oldTz != tzId
+    }
+
+    /** Name of the calculation method in use, for display. */
+    val methodName: String get() = when (country.uppercase(java.util.Locale.US)) {
+        "AE" -> "طريقة الإمارات"
+        "EG", "SD", "LY", "SY", "LB", "IQ" -> "الهيئة المصرية العامة للمساحة"
+        "SA", "YE" -> "أم القرى"
+        "QA", "BH" -> "طريقة قطر"
+        "KW" -> "طريقة الكويت"
+        "PK", "IN", "BD", "AF" -> "جامعة العلوم الإسلامية بكراتشي (العصر حنفي)"
+        "US", "CA" -> "أمريكا الشمالية (ISNA)"
+        else -> "رابطة العالم الإسلامي"
+    }
+
+    /** The country's time zone; for countries with several, the one whose offset best matches the longitude. */
+    private fun zoneFor(cc: String, longitude: Double): String? = runCatching {
+        val ids = android.icu.util.TimeZone.getAvailableIDs(android.icu.util.TimeZone.SystemTimeZoneType.CANONICAL_LOCATION, cc, null).toList()
+        if (ids.isEmpty()) return@runCatching null
+        if (ids.size == 1) return@runCatching ids[0]
+        val target = longitude / 15.0
+        ids.minByOrNull { id -> kotlin.math.abs(java.time.ZoneId.of(id).rules.getOffset(java.time.Instant.now()).totalSeconds / 3600.0 - target) }
+    }.getOrNull()
+
+    /** Re-reads the location (if automatic) and re-schedules every prayer-based alert. Safe to call often. */
+    fun autoUpdate(ctx: Context) {
+        if (autoLocation) runCatching { refreshLocation(ctx) }
+        runCatching { schedule(ctx) }
+        runCatching { FaithAlerts.scheduleAll(ctx) }
+        runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(ctx) }
     }
 
     // ---------- astronomy ----------
@@ -80,7 +150,9 @@ object Prayer {
     }
 
     fun compute(date: LocalDate, latitude: Double = lat, longitude: Double = lng): PrayerDay {
-        val tz = ZonedDateTime.of(date.atTime(12, 0), zone).offset.totalSeconds / 3600.0
+        val pz = placeZone
+        val tz = ZonedDateTime.of(date.atTime(12, 0), pz).offset.totalSeconds / 3600.0
+        val m = method()
         val jDate = julian(date.year, date.monthValue, date.dayOfMonth) - longitude / (15.0 * 24.0)
 
         fun midDay(t: Double): Double = fixHour(12 - sunPosition(jDate + t).second)
@@ -101,12 +173,12 @@ object Prayer {
         repeat(2) {
             val p = t.map { it / 24.0 }
             t = doubleArrayOf(
-                angleTime(18.2, p[0], true),
+                angleTime(m.fajr, p[0], true),
                 angleTime(0.833, p[1], true),
                 midDay(p[2]),
-                asr(1.0, p[3]),
+                asr(m.asr, p[3]),
                 angleTime(0.833, p[4], false),
-                angleTime(18.2, p[5], false),
+                if (m.ishaMin > 0) angleTime(0.833, p[4], false) + m.ishaMin / 60.0 else angleTime(m.isha, p[5], false),
             )
         }
         val adjustMin = intArrayOf(0, -3, 3, 3, 3, 0)
@@ -114,7 +186,8 @@ object Prayer {
             val local = h + tz - longitude / 15.0
             val totalMin = (local * 60.0).roundToLong() + adjustMin[i]
             val dayMin = ((totalMin % 1440) + 1440) % 1440
-            names[i] to date.atTime(LocalTime.of((dayMin / 60).toInt(), (dayMin % 60).toInt()))
+            // computed in the place's zone, shown on the phone's clock (the same thing unless they differ)
+            names[i] to date.atTime(LocalTime.of((dayMin / 60).toInt(), (dayMin % 60).toInt())).atZone(pz).withZoneSameInstant(zone).toLocalDateTime()
         }
         return PrayerDay(date, times)
     }

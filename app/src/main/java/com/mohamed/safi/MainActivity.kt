@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavHostController
@@ -161,15 +162,6 @@ private fun LockScreen(onUnlock: () -> Unit) {
     }
 }
 
-private data class Tab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-
-private val tabs = listOf(
-    Tab("home", "الرئيسية", Icons.Default.Home),
-    Tab("finance", "الحسابات", Icons.Default.AccountBalanceWallet),
-    Tab("assistant", "${com.mohamed.safi.AppName.v}", Icons.Default.Mic),
-    Tab("schedule", "المواعيد", Icons.Default.Event),
-    Tab("more", "المزيد", Icons.Default.GridView),
-)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -191,7 +183,8 @@ fun AppRoot() {
         }
         if (SafiApp.prefs.locationOn) runCatching { com.mohamed.safi.location.LocationService.start(ctx) }
         runCatching { com.mohamed.safi.data.Carpool.schedule(ctx) }
-        runCatching { com.mohamed.safi.faith.Prayer.schedule(ctx) }
+        // prayer times follow wherever the phone is (location, country method, time zone)
+        withContext(Dispatchers.IO) { runCatching { com.mohamed.safi.faith.Prayer.autoUpdate(ctx) } }
         runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(ctx) }
     }
     val pendingShare by UiBus.pendingShare.collectAsState()
@@ -227,18 +220,24 @@ fun AppRoot() {
         bottomBar = {
             Column {
             MiniPlayer(current) { r -> runCatching { go(nav, r) } }
-            if (current in tabs.map { it.route }) {
+            @Suppress("UNUSED_VARIABLE") val slots = NavPrefs.slots.value // recompose when the user changes the bar
+            val items = NavPrefs.items()
+            var customize by remember { mutableStateOf(false) }
+            if (current in items.map { it.route }) {
                 NavigationBar {
-                    tabs.forEach { t ->
+                    items.forEach { t ->
                         NavigationBarItem(
                             selected = current == t.route,
                             onClick = { go(nav, t.route) },
                             icon = { Icon(t.icon, t.label) },
-                            label = { Text(t.label) },
+                            label = { Text(t.label, fontSize = 10.sp, maxLines = 1) },
+                            alwaysShowLabel = true,
                         )
                     }
                 }
             }
+            LaunchedEffect(Unit) { UiBus.customizeNav.collect { if (it) { customize = true; UiBus.customizeNav.value = false } } }
+            if (customize) NavCustomizeDialog { customize = false }
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -309,7 +308,7 @@ fun AppRoot() {
 }
 
 private fun go(nav: NavHostController, route: String) {
-    if (route in tabs.map { it.route }) {
+    if (route in NavPrefs.routes()) {
         nav.navigate(route) {
             popUpTo("home") { saveState = true }
             launchSingleTop = true

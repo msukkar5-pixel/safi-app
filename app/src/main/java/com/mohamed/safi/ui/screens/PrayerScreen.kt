@@ -70,8 +70,8 @@ fun PrayerScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) {
         // refreshLocation uses a blocking Geocoder
-        val moved = runCatching { withContext(Dispatchers.IO) { Prayer.refreshLocation(ctx) } }.getOrDefault(false)
-        if (moved) { day = Prayer.today(); city = Prayer.city; loc = Prayer.lat to Prayer.lng; Prayer.schedule(ctx) }
+        val moved = Prayer.autoLocation && runCatching { withContext(Dispatchers.IO) { Prayer.refreshLocation(ctx) } }.getOrDefault(false)
+        if (moved) { day = Prayer.today(); city = Prayer.city; loc = Prayer.lat to Prayer.lng; Prayer.schedule(ctx); runCatching { com.mohamed.safi.faith.FaithAlerts.scheduleAll(ctx) } }
         while (true) { delay(1000); now = LocalDateTime.now(zone); if (now.toLocalDate() != day.date) day = Prayer.today() }
     }
     val next = day.next(now) ?: Prayer.nextPrayer()
@@ -88,7 +88,7 @@ fun PrayerScreen(onBack: () -> Unit) {
                         "%d:%02d:%02d".format(left.toHours(), (left.toMinutes() % 60), (left.seconds % 60)),
                         color = onP, fontSize = 34.sp, fontWeight = FontWeight.Bold,
                     )
-                    Text("حسب $city • طريقة الإمارات", color = onP.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
+                    Text("حسب $city • ${Prayer.methodName}" + if (Prayer.autoLocation) " • تلقائي حسب مكانك" else "", color = onP.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
                 }
             }
             item {

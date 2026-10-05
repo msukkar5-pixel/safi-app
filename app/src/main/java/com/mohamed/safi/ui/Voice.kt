@@ -64,6 +64,25 @@ object VoicePrefs {
     fun aiCanTranscribe() = SafiApp.prefs.keyOf(sttProvider).isNotBlank()
 }
 
+/**
+ * The phone's default recognition service is often one that refuses other apps (Samsung/Bixby and others), so prefer
+ * Google's service when it is installed.
+ */
+private fun googleRecognizer(ctx: Context): android.content.ComponentName? = runCatching {
+    val list = ctx.packageManager.queryIntentServices(Intent(android.speech.RecognitionService.SERVICE_INTERFACE), 0)
+    val g = list.firstOrNull { it.serviceInfo.packageName == "com.google.android.googlequicksearchbox" }
+        ?: list.firstOrNull { it.serviceInfo.packageName == "com.google.android.tts" }
+        ?: list.firstOrNull { it.serviceInfo.packageName.startsWith("com.google.") }
+    g?.serviceInfo?.let { android.content.ComponentName(it.packageName, it.name) }
+}.getOrNull()
+
+/** The system "speak now" screen (Google), used when the in-app listener can't start. */
+fun systemSpeechIntent(lang: String): Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+    .putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, lang)
+    .putExtra(RecognizerIntent.EXTRA_PROMPT, "اتكلم…")
+
 /** Phone speech engine that keeps listening through pauses until the user taps "done". */
 private class ContinuousRecognizer(
     private val ctx: Context,
@@ -72,8 +91,11 @@ private class ContinuousRecognizer(
     private val onChunk: (String) -> Unit,
     private val onFinished: () -> Unit,
     private val onFatal: (String) -> Unit,
+    private val onReady: () -> Unit = {},
+    private val onLevel: (Float) -> Unit = {},
 ) {
-    private val sr = SpeechRecognizer.createSpeechRecognizer(ctx)
+    private val sr = googleRecognizer(ctx)?.let { c -> runCatching { SpeechRecognizer.createSpeechRecognizer(ctx, c) }.getOrNull() }
+        ?: SpeechRecognizer.createSpeechRecognizer(ctx)
     private var active = false
     private var stopping = false
     private val handler = Handler(Looper.getMainLooper())
@@ -92,9 +114,9 @@ private class ContinuousRecognizer(
         .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, ctx.packageName)
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) {}
-        override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onReadyForSpeech(params: Bundle?) { onReady() }
+        override fun onBeginningOfSpeech() { onReady() }
+        override fun onRmsChanged(rmsdB: Float) { onLevel(rmsdB) }
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
         override fun onEvent(eventType: Int, params: Bundle?) {}
@@ -206,6 +228,18 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
     var seconds by remember { mutableIntStateOf(0) }
     var delivered by remember { mutableStateOf(false) }
     val deliver: (String) -> Unit = { t -> if (!delivered) { delivered = true; onDone(t) } }
+    var ready by remember { mutableStateOf(false) }
+    var level by remember { mutableFloatStateOf(0f) }
+    var offerSystem by remember { mutableStateOf(false) }
+    val systemScreen = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+        val said = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty()
+        if (said.isNotBlank()) deliver((committed + " " + said).trim()) else status = "ماسمعتش حاجة، جرّب تاني"
+    }
+    fun openSystem() {
+        recognizer?.cancel()
+        runCatching { systemScreen.launch(systemSpeechIntent(VoicePrefs.lang)) }
+            .onFailure { status = "مفيش خدمة تعرف على الصوت على التليفون. نزّل تطبيق Google أو اختار \"تحويل بالذكاء الاصطناعي\" من الإعدادات" }
+    }
 
     val full = (committed + " " + partial).trim()
 
@@ -232,7 +266,7 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
             while (recorder != null && !finishing) { delay(1000); seconds++ }
         } else {
             if (!SpeechRecognizer.isRecognitionAvailable(ctx)) {
-                status = "التعرف على الصوت مش متاح. نزّل تطبيق Google أو اختار \"تحويل بالذكاء الاصطناعي\" من الإعدادات"
+                openSystem()
                 return@LaunchedEffect
             }
             val rec = ContinuousRecognizer(
@@ -240,10 +274,19 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
                 onPartial = { partial = it },
                 onChunk = { committed = (committed + " " + it).trim(); partial = "" },
                 onFinished = { if (finishing) deliver((committed + " " + partial).trim()) },
-                onFatal = { status = it },
+                onFatal = { status = it; offerSystem = true },
+                onReady = { ready = true },
+                onLevel = { level = it },
             )
             recognizer = rec
             rec.start()
+            // the engine never started: go straight to the system screen instead of sitting silent
+            delay(4000)
+            if (!ready && (committed + partial).isBlank() && !finishing) {
+                offerSystem = true
+                status = "الميكروفون ماشتغلش هنا، بفتح شاشة جوجل…"
+                openSystem()
+            }
         }
     }
     DisposableEffect(Unit) {
@@ -310,6 +353,13 @@ private fun VoiceSheet(onDone: (String) -> Unit, onCancel: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 Text(status + if (useAi && !busy) "  ${seconds / 60}:${"%02d".format(seconds % 60)}" else "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 Text(VoicePrefs.languages[VoicePrefs.lang] ?: VoicePrefs.lang, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                if (!useAi && ready) {
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(progress = { ((level + 2f) / 12f).coerceIn(0.02f, 1f) }, modifier = Modifier.width(120.dp))
+                }
+                if (!useAi && offerSystem) {
+                    TextButton(onClick = { openSystem() }) { Text("اتكلم من شاشة جوجل") }
+                }
                 if (!useAi) {
                     Spacer(Modifier.height(10.dp))
                     Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
