@@ -18,12 +18,6 @@
   "url": "https://l3.itworkscdn.net/smcquranlive/quranradiolive/icecast.audio"
  },
  {
-  "id": "sa_quran_hls",
-  "name": "إذاعة القرآن الكريم — السعودية (جودة عالية)",
-  "group": "رسمية",
-  "url": "https://live.kwikmotion.com/sbrksaquranradiolive/srpksaquranradio/playlist.m3u8"
- },
- {
   "id": "sa_nidaa",
   "name": "إذاعة نداء الإسلام — مكة المكرمة",
   "group": "رسمية",
