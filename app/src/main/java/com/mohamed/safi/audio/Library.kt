@@ -251,6 +251,20 @@ object Player {
         c.play()
     }
 
+    /** A short playlist of (mediaId, url, title) — sleep duas, ruqyah surahs, calm recitation. */
+    fun loadList(c: MediaController, items: List<Triple<String, String, String>>, artist: String, album: String) {
+        if (items.isEmpty()) return
+        c.setMediaItems(items.map { (id, url, title) ->
+            MediaItem.Builder().setUri(url).setMediaId(id)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album).build())
+                .build()
+        }, 0, 0L)
+        c.setPlaybackSpeed(1f)
+        c.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+        c.prepare()
+        c.play()
+    }
+
     fun load(c: MediaController, book: AudioBook, tracks: List<Track>, startIndex: Int, startMs: Long) {
         val items = tracks.mapIndexed { i, t ->
             MediaItem.Builder().setUri(t.url).setMediaId("${book.id}#$i")

@@ -228,7 +228,7 @@ fun GuideScreen(id: String, onBack: () -> Unit, open: (String) -> Unit) {
                     item { SectionTitle("سور الرقية — اقرأها أو اسمعها") }
                     item {
                         var names by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
-                        LaunchedEffect(Unit) { names = runCatching { Quran.surahs(ctx).associate { it.number to it.name } }.getOrDefault(emptyMap()) }
+                        LaunchedEffect(Unit) { names = runCatching { Quran.surahs(ctx).associate { it.number to it.name.removePrefix("سُورَةُ ").removePrefix("سورة ") } }.getOrDefault(emptyMap()) }
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             media.surahs.forEach { n ->
                                 AssistChip(onClick = { openAyah(n, 1, open) }, label = { Text(names[n]?.let { "سورة $it" } ?: "سورة $n") }, leadingIcon = { Icon(Icons.Default.MenuBook, null) })
@@ -494,10 +494,10 @@ private fun GuideTable(head: List<String>, rows: List<List<String>>) {
 // ===================================================================== Hisn al-Muslim
 
 @Composable
-fun HisnScreen(onBack: () -> Unit, open: (String) -> Unit) {
+fun HisnScreen(onBack: () -> Unit, open: (String) -> Unit, start: Int? = null) {
     val ctx = LocalContext.current
     val hisn = remember { runCatching { Deen.hisn(ctx) }.getOrNull() }
-    var chapter by rememberSaveable { mutableStateOf<Int?>(null) }
+    var chapter by rememberSaveable { mutableStateOf(start) }
     var group by rememberSaveable { mutableStateOf<Int?>(null) } // -1 = favourites
     var q by rememberSaveable { mutableStateOf("") }
     var fav by remember { mutableStateOf(Deen.hisnFav) }
@@ -507,7 +507,7 @@ fun HisnScreen(onBack: () -> Unit, open: (String) -> Unit) {
     }
     val ch = hisn.chapters.firstOrNull { it.i == chapter }
     if (ch != null) {
-        HisnChapterView(hisn, ch, fav, onFav = { k -> fav = if (k in fav) fav - k else fav + k; Deen.hisnFav = fav }, onChapter = { chapter = it }, onBack = { chapter = null })
+        HisnChapterView(hisn, ch, fav, onFav = { k -> fav = if (k in fav) fav - k else fav + k; Deen.hisnFav = fav }, onChapter = { chapter = it }, onBack = { if (start != null) onBack() else chapter = null })
         return
     }
     val list = remember(q, group, fav) {

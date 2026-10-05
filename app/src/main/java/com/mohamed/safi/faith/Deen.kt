@@ -142,6 +142,11 @@ object Deen {
         get() = sp().getInt("hisn_last", 0)
         set(v) = sp().edit { putInt("hisn_last", v) }
 
+    /** mp3quran reciter id chosen in the sleep section (0 = first calm reciter found). */
+    var sleepReciter: Int
+        get() = sp().getInt("sleep_reciter", 0)
+        set(v) = sp().edit { putInt("sleep_reciter", v) }
+
     /** Last section opened in each guide, to offer "continue". */
     fun lastSection(guide: String): String = sp().getString("last_$guide", "") ?: ""
     fun setLastSection(guide: String, section: String) = sp().edit { putString("last_$guide", section) }
