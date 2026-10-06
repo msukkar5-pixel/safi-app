@@ -39,6 +39,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var rateUpdated by remember { mutableLongStateOf(prefs.rateUpdated) }
     var cats by remember { mutableStateOf(prefs.transferCats.joinToString("، ")) }
     var lockOn by remember { mutableStateOf(prefs.lockOn) }
+    var briefOn by remember { mutableStateOf(prefs.briefOn) }
     var briefHour by remember { mutableIntStateOf(prefs.briefHour) }
     var interval by remember { mutableIntStateOf(prefs.locationIntervalMin) }
 
@@ -177,6 +178,14 @@ fun SettingsScreen(onBack: () -> Unit) {
             SectionTitle("عام")
             AppCard {
                 OutlinedTextField(name, { name = it }, label = { Text("اسمك") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("الموجز الصباحي")
+                        Text("المواعيد والالتزامات والدروس والواجبات المشتركة فقط", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    }
+                    Switch(briefOn, { briefOn = it; prefs.briefOn = it; DailyWorker.schedule(ctx, replace = true) })
+                }
                 Spacer(Modifier.height(8.dp))
                 ChoiceField("ملخص الصبح الساعة", briefHour.toString(), (5..11).map { it.toString() }, display = { "$it الصبح" }) {
                     briefHour = it.toInt(); prefs.briefHour = briefHour; DailyWorker.schedule(ctx, replace = true)

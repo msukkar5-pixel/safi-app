@@ -206,6 +206,7 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
 - {"type":"remember_preference","topic":"short key such as reply_style or reminder_style","preference":"the user's explicit preference"}
 - {"type":"forget_preference","topic":"the exact saved preference key"}
+- {"type":"set_brief","enabled":true,"hour":8}   (turn the optional morning brief on/off; hour 5-11)
 
 Rules:
 - For navigate / play_music / open_app / call / whatsapp: just do it, reply in a few words. You cannot pick a contact by name: if he says "كلم أحمد" without a number, ask for the number.
@@ -217,6 +218,7 @@ Rules:
 - When the user explicitly says "افتكر/اتعود/خليك" about how to speak or help, save only that preference with remember_preference. When he says "انسَ/امسح تفضيلي", use forget_preference or clear the named preference; never save private conversation content as a preference.
 - Never claim to hear, monitor, or share family conversations. The companion only uses data the user explicitly gives it inside the app.
 - FAMILY SHARED CARDS and STUDY records are user-controlled app data, not surveillance. Never infer private conversations, emotions, location, or wrongdoing from them; mention only the fields present.
+- The morning brief is opt-in and notification-based; never imply background listening or monitoring.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
 - If something essential is missing (e.g. amount), ask briefly and don't add the action.
@@ -546,6 +548,12 @@ Rules:
                             CompanionProfile.forget(topic)
                             done += "✓ نسيت تفضيل: $topic"
                         }
+                    }
+                    "set_brief" -> {
+                        prefs.briefOn = a.optBoolean("enabled", true)
+                        if (a.has("hour")) prefs.briefHour = a.optInt("hour", prefs.briefHour).coerceIn(5, 11)
+                        com.mohamed.safi.notify.DailyWorker.schedule(ctx, replace = true)
+                        done += if (prefs.briefOn) "✓ الموجز الصباحي اتفعل الساعة ${prefs.briefHour}" else "✓ الموجز الصباحي اتقفل"
                     }
                     "carpool_set", "carpool_off" -> {
                         val d = runCatching { LocalDate.parse(a.str("date").take(10)) }.getOrNull() ?: return@runCatching
