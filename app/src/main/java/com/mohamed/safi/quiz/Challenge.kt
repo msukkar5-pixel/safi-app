@@ -131,7 +131,7 @@ object Challenge {
         val a = JSONArray()
         val familyIds = (Family.members().map { it.id } + Family.myId).toSet()
         localUpdates().filter { challengeId.isNullOrBlank() || it.challengeId == challengeId }
-            .filter { !familyOnly || it.participantId in familyIds }.forEach { u ->
+            .filter { !Family.joined || if (familyOnly) it.participantId in familyIds else it.participantId !in familyIds }.forEach { u ->
             a.put(JSONObject().put("e", u.eventId).put("c", u.challengeId).put("p", u.participantId).put("n", u.participant)
                 .put("k", u.kind).put("x", u.correct).put("s", u.score).put("t", u.at).put("prev", u.previousHash).put("h", u.hash))
         }
