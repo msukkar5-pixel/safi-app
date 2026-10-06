@@ -70,7 +70,9 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
         when (g) {
             "memory" -> MemoryGame(kid) { game = null }
             "wudu" -> WuduGame(kid) { game = null }
-            else -> KidsQuiz(kid) { game = null }
+            "quiz" -> KidsQuiz(kid) { game = null }
+            "stories" -> KidsStoriesScreen(kid) { game = null }
+            else -> KidsGame(g, kid) { game = null }
         }
         return
     }
@@ -112,17 +114,29 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
                 item { RewardsCard(kid) }
                 item { Text("ألعاب وقصص", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = KidGreen) }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        KidTile("🧠", "لعبة الذاكرة", Modifier.weight(1f)) { game = "memory" }
-                        KidTile("💧", "رتّب الوضوء", Modifier.weight(1f)) { game = "wudu" }
+                    Surface(onClick = { game = "stories" }, shape = RoundedCornerShape(22.dp), color = Color(0xFFFFE9B8), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("📚", fontSize = 40.sp)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("قصص مدينة الخير", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF3B3125))
+                                Text("قصص بعِبرة، وقصص بتختار فيها النهاية", style = MaterialTheme.typography.bodySmall, color = Color(0xFF3B3125))
+                            }
+                        }
                     }
                 }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        KidTile("❓", "أسئلة سهلة", Modifier.weight(1f)) { game = "quiz" }
-                        KidTile("📖", "قصص الأنبياء", Modifier.weight(1f)) { open("stories") }
+                listOf(
+                    listOf("🏮" to "اصطاد الفوانيس" to "catch", "🧭" to "المتاهة" to "maze", "🎨" to "لوّن بالأرقام" to "color"),
+                    listOf("🔤" to "الحروف" to "letters", "🕌" to "الصلوات الخمس" to "prayers", "🔢" to "عدّ معايا" to "count"),
+                    listOf("🧠" to "لعبة الذاكرة" to "memory", "💧" to "رتّب الوضوء" to "wudu", "❓" to "أسئلة سهلة" to "quiz"),
+                ).forEach { row ->
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { (t, id) -> KidTile(t.first, t.second, Modifier.weight(1f)) { game = id } }
+                        }
                     }
                 }
+                item { KidTile("📖", "قصص الأنبياء", Modifier.fillMaxWidth()) { open("stories") } }
                 item { Spacer(Modifier.height(24.dp)) }
             }
         }
@@ -310,7 +324,7 @@ private fun KidTile(icon: String, label: String, modifier: Modifier, onClick: ()
     Surface(onClick = onClick, shape = RoundedCornerShape(20.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(2.dp, KidSky.copy(alpha = 0.5f)), modifier = modifier.height(96.dp)) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(icon, fontSize = 32.sp)
-            Text(label, fontWeight = FontWeight.Bold, color = Color(0xFF3B3125))
+            Text(label, fontWeight = FontWeight.Bold, color = Color(0xFF3B3125), textAlign = TextAlign.Center, fontSize = 14.sp, lineHeight = 16.sp)
         }
     }
 }

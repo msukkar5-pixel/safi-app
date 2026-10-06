@@ -117,6 +117,14 @@ object Kids {
     fun activeDays(kid: String, ym: YearMonth = YearMonth.now(zone)): Int = (1..ym.lengthOfMonth()).count { doneOn(kid, ym.atDay(it)).isNotEmpty() }
 
     // ---------------------------------------------------------------- games and Ramadan fasting (parent-enabled)
+    /** Stories give stars once a day each, so re-reading is welcome but can't farm stars. */
+    fun storyRead(id: String) = sp().contains("story_$id")
+    fun markStory(id: String): Boolean {
+        val today = LocalDate.now(zone).toString()
+        if (sp().getString("story_$id", "") == today) return false
+        sp().edit { putString("story_$id", today) }; bump(); return true
+    }
+
     fun addStars(kid: String, n: Int) { sp().edit { putInt("stars_$kid", stars(kid) + n) }; bump() }
 
     /** 0 = none, 1 = suhoor, 2 = until noon, 3 = full day. Only shown when the parent enabled fasting for this child. */

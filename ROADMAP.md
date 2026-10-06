@@ -74,3 +74,9 @@ Done (all built on CI, quick emulator plan passed with no crashes):
 
 Not done on purpose: the schools/teachers/admin platform from the Manus document (needs a server and multi-tenant accounts).
 Next: merge into dev → main to release (with Mohamed's go-ahead).
+
+### Same branch — follow-up (family roles, friends challenge, kids, more Manus ideas)
+- Family: roles زوج/زوجة/أب/أم/ابن/ابنة/أخ/أخت/جد/جدة; the invite QR carries the inviter's intro, the joiner shows a reply QR (or same Wi-Fi does it) so each appears on the other's phone at once; per-member local label ("صفته عندي"); family khatma (30 juz claimed/marked, merged via cards, rounds).
+- Friends challenge from anywhere (`quiz/Challenge.kt`): code `SAFI-CH1:` with seed + question ids, sent by any messenger; shared into Safi or pasted/clipboard; reply code records W/D/L per friend. No server (phones behind mobile NAT can't serve each other).
+- Kids: 6 new games (`KidsGames.kt`: lanterns catch, maze, colour by number, Arabic letters, prayers order + rak'ahs, counting); stories (`assets/kids/stories.json`, ar/en/ur): 8 value stories with a question + 3 choose-your-path. Original educational fiction, no hadith or attributions.
+- Ramadan screen: daily good-deed challenge, khatma plan 30/15/10 days (sets Wird.pagesPerDay), private notebook with prompts, charity log, share card (verse of the day + Maghrib, `ui/ShareCard.kt`), suhoor/iftar alerts (FaithAlerts "suhoor"/"iftar", Ramadan days only; also in Alerts screen).

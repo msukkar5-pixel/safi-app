@@ -27,6 +27,7 @@ import javax.crypto.spec.SecretKeySpec
 data class MemberCard(
     val id: String, val name: String, val role: String, val at: Long,
     val prayers: Int? = null, val wird: String? = null, val kids: String? = null, val city: String? = null, val status: String? = null,
+    val khRound: Int = 0, val khMine: Set<Int> = emptySet(), val khDone: Set<Int> = emptySet(),
 )
 
 /**
@@ -72,17 +73,32 @@ object Family {
         myName = name; myRole = role
     }
 
-    /** Text inside the invite QR code. */
-    fun inviteText(): String = QR_PREFIX + familyId + ":" + sp().getString("key_family", "")
+    fun isInvite(t: String) = t.trim().startsWith(QR_PREFIX)
+    fun isCard(t: String) = t.trim().startsWith(PREFIX)
+
+    /** Name, role and id only: enough for the other phone to add me right away. */
+    private fun intro() = JSONObject().put("id", myId).put("name", myName).put("role", myRole).put("at", System.currentTimeMillis())
+        .put("khr", khRound).put("khm", khMine.joinToString(",")).put("khd", khDone.joinToString(","))
+
+    /** Text inside the invite QR code: the family key plus who invited, so the new member sees them at once. */
+    fun inviteText(): String = QR_PREFIX + familyId + ":" + sp().getString("key_family", "") + ":" +
+        Base64.encodeToString(intro().toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP or Base64.URL_SAFE)
+
+    /** A small encrypted card for the "reply" QR the new member shows back to the inviter. */
+    fun introCard(): String = PREFIX + familyId + ":" + encrypt(intro().toString())
 
     fun join(qr: String, name: String, role: String): Boolean {
-        if (!qr.startsWith(QR_PREFIX)) return false
-        val parts = qr.removePrefix(QR_PREFIX).split(":", limit = 2)
-        if (parts.size != 2 || parts[1].isBlank()) return false
+        if (!isInvite(qr)) return false
+        val parts = qr.trim().removePrefix(QR_PREFIX).split(":", limit = 3)
+        if (parts.size < 2 || parts[1].isBlank()) return false
         val k = runCatching { Base64.decode(parts[1], Base64.NO_WRAP) }.getOrNull() ?: return false
         if (k.size != 32) return false
         sp().edit { putString("key_family", parts[1]); putString("fid", parts[0]) }
         myName = name; myRole = role
+        // the inviter's introduction travels inside the QR
+        parts.getOrNull(2)?.let { b ->
+            runCatching { JSONObject(String(Base64.decode(b, Base64.NO_WRAP or Base64.URL_SAFE), Charsets.UTF_8)) }.getOrNull()?.let { store(it) }
+        }
         return true
     }
 
@@ -119,6 +135,7 @@ object Family {
         if (shareKids) o.put("kids", com.mohamed.safi.kids.Kids.kids().joinToString("، ") { "${it.avatar} ${it.name} ⭐${com.mohamed.safi.kids.Kids.stars(it.id)}" })
         if (shareCity) o.put("city", com.mohamed.safi.faith.Prayer.city)
         if (status.isNotBlank()) o.put("status", status)
+        o.put("khr", khRound).put("khm", khMine.joinToString(",")).put("khd", khDone.joinToString(","))
         return PREFIX + familyId + ":" + encrypt(o.toString())
     }
 
@@ -129,12 +146,47 @@ object Family {
         if (fid != familyId) return null
         val json = decrypt(t.substringAfter(":")) ?: return null
         val o = runCatching { JSONObject(json) }.getOrNull() ?: return null
+        return if (store(o)) o.optString("name") else null
+    }
+
+    /** Keeps the newest card per member; a newer family khatma round from anyone starts it here too. */
+    private fun store(o: JSONObject): Boolean {
         val id = o.optString("id")
-        if (id.isBlank() || id == myId) return null
+        if (id.isBlank() || id == myId) return false
         val prev = sp().getLong("at_$id", 0)
-        if (o.optLong("at") >= prev) sp().edit { putString("card_$id", json); putLong("at_$id", o.optLong("at")) }
+        if (o.optLong("at") >= prev) sp().edit { putString("card_$id", o.toString()); putLong("at_$id", o.optLong("at")) }
+        val r = o.optInt("khr", 0)
+        if (r > khRound) sp().edit { putInt("kh_round", r); putStringSet("kh_mine", emptySet()); putStringSet("kh_done", emptySet()) }
         bump()
-        return o.optString("name")
+        return true
+    }
+
+    /** Whether this member was already known (to tell "added" from "updated"). */
+    fun known(id: String) = sp().contains("card_$id")
+
+    /** How I label a member on my phone (e.g. the one who joined as "ابن" is "ابني"); defaults to the role they chose. */
+    fun label(id: String): String? = sp().getString("label_$id", null)
+    fun setLabel(id: String, v: String) { sp().edit { putString("label_$id", v) }; bump() }
+
+    // ------------------------------------------------------------------ family khatma: 30 juz split between members
+    val khRound: Int get() = sp().getInt("kh_round", 0)
+    val khMine: Set<Int> get() = sp().getStringSet("kh_mine", emptySet())!!.mapNotNull { it.toIntOrNull() }.toSet()
+    val khDone: Set<Int> get() = sp().getStringSet("kh_done", emptySet())!!.mapNotNull { it.toIntOrNull() }.toSet()
+    private fun putSet(k: String, v: Set<Int>) = sp().edit { putStringSet(k, v.map { it.toString() }.toSet()) }
+
+    fun startKhatma() { sp().edit { putInt("kh_round", khRound + 1) }; putSet("kh_mine", emptySet()); putSet("kh_done", emptySet()); bump() }
+    fun claim(j: Int) { putSet("kh_mine", khMine + j); bump() }
+    fun unclaim(j: Int) { putSet("kh_mine", khMine - j); putSet("kh_done", khDone - j); bump() }
+    fun setDone(j: Int, v: Boolean) { putSet("kh_done", if (v) khDone + j else khDone - j); bump() }
+
+    /** For each juz: who took it (names) and whether it's read, merging my state with members of the same round. */
+    data class Juz(val n: Int, val by: List<String>, val done: Boolean, val mine: Boolean)
+    fun khatma(): List<Juz> {
+        val others = members().filter { it.khRound == khRound }
+        return (1..30).map { j ->
+            val by = others.filter { j in it.khMine }.map { label(it.id) ?: it.name }
+            Juz(j, by, j in khDone || others.any { j in it.khDone }, j in khMine)
+        }
     }
 
     fun members(): List<MemberCard> = sp().all.keys.filter { it.startsWith("card_") }.mapNotNull { k ->
@@ -143,10 +195,13 @@ object Family {
             o.optString("id"), o.optString("name"), o.optString("role"), o.optLong("at"),
             if (o.has("prayers")) o.optInt("prayers") else null, o.optString("wird").ifBlank { null }, o.optString("kids").ifBlank { null },
             o.optString("city").ifBlank { null }, o.optString("status").ifBlank { null },
+            o.optInt("khr", 0), ints(o.optString("khm")), ints(o.optString("khd")),
         )
     }.sortedByDescending { it.at }
 
-    fun removeMember(id: String) { sp().edit { remove("card_$id"); remove("at_$id") }; bump() }
+    private fun ints(s: String) = s.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+
+    fun removeMember(id: String) { sp().edit { remove("card_$id"); remove("at_$id"); remove("label_$id") }; bump() }
 
     // ------------------------------------------------------------------ home Wi-Fi sync
     private var scope: CoroutineScope? = null
@@ -155,6 +210,8 @@ object Family {
     private var reg: NsdManager.RegistrationListener? = null
     private var disc: NsdManager.DiscoveryListener? = null
     val lastSync = mutableIntStateOf(0)
+    /** Name of a member who just appeared over Wi-Fi, for a "joined" message. */
+    val joinedName = androidx.compose.runtime.mutableStateOf<String?>(null)
 
     /** Exchanges cards with family phones on the same Wi-Fi while running. */
     fun startLan(ctx: Context) {
@@ -210,7 +267,9 @@ object Family {
             val out = s.getOutputStream().bufferedWriter()
             out.write(myCard()); out.newLine(); out.flush()
             val line = s.getInputStream().bufferedReader().readLine() ?: return
-            if (importCard(line) != null) lastSync.intValue++
+            val isNew = runCatching { line.substringAfter(PREFIX).substringAfter(":") }.getOrNull()?.let { decrypt(it) }
+                ?.let { runCatching { JSONObject(it).optString("id") }.getOrNull() }?.let { !known(it) } ?: false
+            importCard(line)?.let { n -> lastSync.intValue++; if (isNew) joinedName.value = n }
         }
         runCatching { s.close() }
     }

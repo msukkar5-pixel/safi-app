@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mohamed.safi.quiz.Challenge
 import com.mohamed.safi.quiz.Question
 import com.mohamed.safi.quiz.Quiz
 import com.mohamed.safi.ui.*
@@ -46,6 +47,7 @@ import kotlinx.coroutines.delay
 private data class Game(
     val mode: String, val title: String, val questions: List<Question>, val suddenDeath: Boolean = false, val stage: Int = 0,
     val lives: Int = 0, val timeAttack: Boolean = false, val players: List<String> = emptyList(), val ladder: Boolean = false,
+    val ch: Challenge.Code? = null,
 )
 private data class Answer(val q: Question, val picked: Int?, val points: Int, val player: Int = 0)
 
@@ -76,6 +78,25 @@ fun QuizScreen(onBack: () -> Unit) {
         "cats" -> { QuizCategories(onBack = { screen = "home" }) { cats, lvl, title -> start(Game("cat", title, Quiz.pick(10, cats, lvl))) }; return }
         "stages" -> { QuizStages(onBack = { screen = "home" }) { n -> start(Game("stage", "المرحلة $n", Quiz.stageQuestions(n), stage = n)) }; return }
         "stats" -> { QuizStats { screen = "home" }; return }
+        "remote" -> { ChallengeHub(onBack = { screen = "home"; rev++ }) { c -> start(Game("challenge", challengeTitle(c), Challenge.questions(c), ch = c)) }; return }
+    }
+
+    // a friend's challenge that was shared into the app
+    val incoming = Challenge.incoming.value
+    if (incoming != null) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        AlertDialog(
+            onDismissRequest = { Challenge.incoming.value = null },
+            title = { Text("⚔️ ${incoming.from.ifBlank { tr("صاحبك") }} بيتحداك!") },
+            text = { Text("جاب ${incoming.correct} من ${incoming.qs.size}. هتلعب نفس الأسئلة بالظبط، وبعدها ابعتله نتيجتك.") },
+            confirmButton = {
+                Button(onClick = {
+                    Challenge.incoming.value = null
+                    if (Challenge.played(incoming)) toast(ctx, "لعبت التحدي ده قبل كده") else start(Game("challenge", challengeTitle(incoming), Challenge.questions(incoming), ch = incoming))
+                }) { Text("يلا ألعب") }
+            },
+            dismissButton = { TextButton(onClick = { Challenge.incoming.value = null }) { Text("بعدين") } },
+        )
     }
 
     val bank = remember { Quiz.load() }
@@ -167,6 +188,19 @@ fun QuizScreen(onBack: () -> Unit) {
                         ModeCard("تحدّي صاحبك", "اتنين على نفس الموبايل بالدور", Icons.Default.Groups, Color(0xFF3949AB), Modifier.weight(1f)) { friends = true }
                     }
                 }
+                item {
+                    GoldCard(onClick = { screen = "remote" }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⚔️", fontSize = 32.sp)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("تحدّي أصحابك من أي مكان", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Text("العب ١٠ أسئلة وابعت التحدي بواتساب. صاحبك يلعب نفس الأسئلة ويبعتلك نتيجته.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            }
+                            Icon(Icons.Default.ChevronLeft, null)
+                        }
+                    }
+                }
                 item { Badges() }
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,7 +223,7 @@ private fun rebuild(g: Game): Game = when (g.mode) {
     "stage" -> g.copy(questions = Quiz.stageQuestions(g.stage))
     "sudden" -> g.copy(questions = Quiz.pick(60, levels = List(60) { i -> if (i < 10) 1 else if (i < 25) 2 else 3 }))
     "religion" -> g.copy(questions = Quiz.pick(10, Quiz.religionCats.keys))
-    "daily" -> g.copy(mode = "quick", title = "تحدي سريع", questions = Quiz.pick(10))
+    "daily", "challenge" -> g.copy(mode = "quick", title = "تحدي سريع", questions = Quiz.pick(10), ch = null)
     else -> g.copy(questions = Quiz.pick(10, g.questions.map { it.cat }.toSet().takeIf { g.mode == "cat" }))
 }
 
@@ -446,7 +480,7 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
             if (g.mode == "lives" && correct >= 20) add("survivor")
             if (g.mode == "time" && correct >= 15) add("speed15")
             if (g.mode == "ladder" && correct >= 15) add("ladder")
-            if (g.mode == "friends") add("friend")
+            if (g.mode == "friends" || g.mode == "challenge") add("friend")
             if (Quiz.catStats("quran").first >= 50) add("quran50")
             if (Quiz.level() >= 5) add("level5")
             if (Quiz.level() >= 10) add("level10")
@@ -454,6 +488,8 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
         }
         newBadges = Quiz.unlock(earned)
     }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val sendCode = remember { g.ch?.let { Challenge.afterPlay(it, correct, score) } }
     BackHandler { onHome() }
     if (review) {
         BackHandler { review = false }
@@ -493,6 +529,22 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
             val winners = g.players.filterIndexed { i, _ -> scores[i] == top }
             Text(if (winners.size > 1) "🤝 تعادل!" else "🏆 الفايز: ${winners.first()}", color = Gold, fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(top = 6.dp))
             g.players.forEachIndexed { i, n -> Text("$n: ${scores[i]}", fontWeight = FontWeight.SemiBold) }
+        }
+        g.ch?.let { c ->
+            if (c.fromId != Challenge.myId) {
+                val r = compareValuesBy(correct to score, c.correct to c.score, { it.first }, { it.second })
+                Text(if (r > 0) "🏆 كسبت ${c.from}!" else if (r < 0) "${c.from} كسب المرة دي 💪" else "🤝 تعادل!", color = Gold, fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(top = 6.dp))
+                Text("انت $correct • ${c.from} ${c.correct}", fontWeight = FontWeight.SemiBold)
+            }
+            Button(onClick = {
+                val msg = if (c.fromId == Challenge.myId) tr("⚔️ بتحداك في مسابقة صافي! جبت $correct من ${answers.size}. افتح الرسالة دي بصافي (مشاركة ← صافي) والعب نفس الأسئلة:")
+                    else tr("نتيجتي في تحديك: $correct من ${answers.size}. شاركها مع صافي عشان تتسجل:")
+                ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_TEXT, msg + "\n" + sendCode), tr("ابعت")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }, modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Positive)) {
+                Icon(Icons.Default.Send, null); Spacer(Modifier.width(6.dp))
+                Text(if (c.fromId == Challenge.myId) "ابعت التحدي لأصحابك" else "ابعت نتيجتك لـ ${c.from}", fontSize = 17.sp)
+            }
         }
         if (g.ladder) Text(
             when { correct >= 15 -> "وصلت لقمة السلّم! 🏆"; correct >= 10 -> "عديت محطة الأمان التانية"; correct >= 5 -> "عديت محطة الأمان الأولى"; else -> "حاول توصل لمحطة الأمان (السؤال ٥)" },
@@ -610,6 +662,91 @@ private fun QuizStats(onBack: () -> Unit) {
     }
 }
 
+
+// ============================================================================ remote friends challenge
+
+private fun challengeTitle(c: Challenge.Code) = if (c.fromId == Challenge.myId) tr("تحدّي الأصحاب") else tr("تحدّي ${c.from}")
+
+@Composable
+private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    @Suppress("UNUSED_VARIABLE") val v = Challenge.version.intValue
+    var name by remember { mutableStateOf(Challenge.myName) }
+    var cats by remember { mutableStateOf("all") }
+    var code by remember { mutableStateOf("") }
+    fun open(text: String) {
+        val c = Challenge.decode(text) ?: run { toast(ctx, "ده مش كود تحدي صافي"); return }
+        if (c.reply) {
+            when (Challenge.importReply(c)) {
+                null -> toast(ctx, "النتيجة دي متسجلة قبل كده أو مش لتحدي بعته")
+                1 -> toast(ctx, "🏆 كسبت ${c.from}!")
+                0 -> toast(ctx, "🤝 تعادل مع ${c.from}")
+                else -> toast(ctx, "${c.from} كسب المرة دي")
+            }
+            code = ""
+        } else if (c.fromId == Challenge.myId) toast(ctx, "ده التحدي بتاعك، ابعته لأصحابك")
+        else if (Challenge.played(c)) toast(ctx, "لعبت التحدي ده قبل كده")
+        else onPlay(c)
+    }
+    // a code copied from WhatsApp is picked up when the screen opens
+    LaunchedEffect(Unit) {
+        val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clip = runCatching { cm?.primaryClip?.getItemAt(0)?.text?.toString() }.getOrNull().orEmpty()
+        if (Challenge.contains(clip)) code = clip
+    }
+    BackHandler { onBack() }
+    ScreenScaffold("تحدّي الأصحاب", onBack = onBack) { pad ->
+        LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                AppCard {
+                    Text("إزاي بيشتغل؟", fontWeight = FontWeight.Bold)
+                    Text("١. تلعب ١٠ أسئلة.\n٢. تبعت كود التحدي لصاحبك أو لجروب بواتساب.\n٣. صاحبك يعمل «مشاركة» للرسالة مع صافي ويلعب نفس الأسئلة.\n٤. يبعتلك نتيجته بنفس الطريقة، وتتسجل عندك في الترتيب.", style = MaterialTheme.typography.bodySmall)
+                    Text("من غير سيرفر ومن غير حساب: كل حاجة بتتحفظ على موبايلك بس.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                }
+            }
+            item {
+                GoldCard {
+                    OutlinedTextField(name, { name = it.take(20) }, label = { Text("اسمك اللي أصحابك هيشوفوه") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("all" to "منوّع", "religion" to "ديني", "general" to "عام").forEach { (k, t) -> FilterChip(cats == k, { cats = k }, label = { Text(t) }) }
+                    }
+                    Button(onClick = {
+                        if (name.isBlank()) { toast(ctx, "اكتب اسمك الأول"); return@Button }
+                        Challenge.myName = name
+                        onPlay(Challenge.create(cats))
+                    }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("ابدأ تحدي جديد") }
+                }
+            }
+            item {
+                AppCard {
+                    Text("وصلك تحدي أو نتيجة؟", fontWeight = FontWeight.Bold)
+                    OutlinedTextField(code, { code = it }, label = { Text("الصق الرسالة هنا") }, maxLines = 3, modifier = Modifier.fillMaxWidth())
+                    Button(onClick = {
+                        if (name.isNotBlank()) Challenge.myName = name
+                        open(code)
+                    }, enabled = Challenge.contains(code), modifier = Modifier.fillMaxWidth()) { Text("افتح") }
+                }
+            }
+            val list = Challenge.friends()
+            item { SectionTitle("الترتيب بيني وبين أصحابي") }
+            if (list.isEmpty()) item { EmptyState(Icons.Default.EmojiEvents, "لسه مفيش نتايج. ابعت أول تحدي!") }
+            itemsIndexed(list, key = { _, f -> f.id }) { i, f ->
+                AppCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(when (i) { 0 -> "🥇"; 1 -> "🥈"; 2 -> "🥉"; else -> "${i + 1}" }, fontSize = 22.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            androidx.compose.material3.Text(f.name.ifBlank { "?" }, fontWeight = FontWeight.Bold)
+                            Text("آخر مرة: ${f.last}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Text("✅ ${f.wins}  🤝 ${f.draws}  ❌ ${f.losses}", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
 
 // ============================================================================ extras
 

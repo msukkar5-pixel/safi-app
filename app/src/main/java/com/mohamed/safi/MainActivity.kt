@@ -198,6 +198,17 @@ fun AppRoot() {
             runCatching { go(nav, "family") }
             return@LaunchedEffect
         }
+        // a friends challenge, or a friend's result for one I sent
+        if (com.mohamed.safi.quiz.Challenge.contains(text)) {
+            val c = com.mohamed.safi.quiz.Challenge.decode(text)
+            if (c == null) toast(ctx, "كود التحدي ناقص")
+            else if (c.reply) toast(ctx, when (com.mohamed.safi.quiz.Challenge.importReply(c)) {
+                null -> "النتيجة دي متسجلة قبل كده أو مش لتحدي بعته"; 1 -> "🏆 كسبت ${c.from}!"; 0 -> "🤝 تعادل مع ${c.from}"; else -> "${c.from} كسب المرة دي"
+            })
+            else if (c.fromId != com.mohamed.safi.quiz.Challenge.myId) com.mohamed.safi.quiz.Challenge.incoming.value = c
+            runCatching { go(nav, "quiz") }
+            return@LaunchedEffect
+        }
         val res = withContext(Dispatchers.IO) { com.mohamed.safi.sms.SmsProcessor.processText(ctx, text) }
         if (res.added.isNotEmpty()) {
             val e = res.added.first()
