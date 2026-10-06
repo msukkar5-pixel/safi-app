@@ -342,6 +342,7 @@ fun AppRoot() {
             composable("sleep") { SleepScreen(back, open) }
             composable("radio") { RadioScreen(back) }
             composable("tv") { TvScreen(back) }
+            composable("kidstv") { TvScreen(back, kids = true) }
             composable("kids") { KidsScreen(back, open) }
             composable("ramadan") { RamadanScreen(back, open) }
             composable("family") { FamilyScreen(back) }

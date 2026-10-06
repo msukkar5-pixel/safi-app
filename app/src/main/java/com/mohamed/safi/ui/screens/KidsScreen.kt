@@ -112,7 +112,12 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
                 item { TreeCard(kid) }
                 item { PassportCard(kid) }
                 item { RewardsCard(kid) }
-                item { KidTile("📝", "دروسي وواجباتي", Modifier.fillMaxWidth()) { open("study") } }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        KidTile("📝", "دروسي وواجباتي", Modifier.weight(1f)) { open("study") }
+                        KidTile("📺", "قنوات الأطفال", Modifier.weight(1f)) { open("kidstv") }
+                    }
+                }
                 item { DailyKidsCard { game = it } }
                 item { Text("ألعاب وقصص", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = KidGreen) }
                 item {

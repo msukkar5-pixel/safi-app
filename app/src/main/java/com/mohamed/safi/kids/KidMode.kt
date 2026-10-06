@@ -22,7 +22,7 @@ object KidMode {
 
     data class Section(val route: String, val title: String, val icon: String, val byDefault: Boolean)
     val sections = listOf(
-        Section("kids", "مدينة الخير", "🌳", true), Section("study", "دروسي وواجباتي", "📝", true), Section("quran", "القرآن الكريم", "📖", true),
+        Section("kids", "مدينة الخير", "🌳", true), Section("study", "دروسي وواجباتي", "📝", true), Section("kidstv", "قنوات الأطفال", "📺", true), Section("quran", "القرآن الكريم", "📖", true),
         Section("quranaudio", "القرآن المسموع", "🎧", true), Section("azkar", "الأذكار", "🤲", true),
         Section("prayer", "مواعيد الصلاة", "🕌", true), Section("stories", "قصص الأنبياء والسيرة", "📚", true),
         Section("quiz", "المسابقة", "🏆", true), Section("asmahusna", "أسماء الله الحسنى", "✨", true),

@@ -125,6 +125,9 @@ object Kids {
         sp().edit { putString("story_$id", today) }; bump(); return true
     }
 
+    /** Kids' TV channels the parent chose to hide. */
+    var hiddenChannels: Set<String> get() = sp().getStringSet("tv_hidden", emptySet()) ?: emptySet(); set(v) { sp().edit { putStringSet("tv_hidden", v) }; bump() }
+
     fun addStars(kid: String, n: Int) { sp().edit { putInt("stars_$kid", stars(kid) + n) }; bump() }
 
     /** 0 = none, 1 = suhoor, 2 = until noon, 3 = full day. Only shown when the parent enabled fasting for this child. */
