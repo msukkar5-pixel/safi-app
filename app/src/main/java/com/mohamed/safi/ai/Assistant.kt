@@ -59,6 +59,7 @@ object Assistant {
         val debts = dao.openDebtsNow()
         val reminders = dao.activeRemindersNow().filter { it.time < System.currentTimeMillis() + 30L * 86_400_000L }
         val obligations = Obligations.forMonth(ym)
+        val companionPreferences = CompanionProfile.snapshot()
 
         fun byCat(list: List<Expense>) = list.filter { !it.isIncome }.groupBy { it.category }
             .mapValues { e -> e.value.sumOf { it.amountAed } }.entries.sortedByDescending { it.value }
@@ -67,6 +68,8 @@ object Assistant {
         return buildString {
             appendLine("NOW: ${now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm EEEE", java.util.Locale.US))} (${zone.id})")
             appendLine("USER: ${prefs.userName}, lives in UAE, family in Egypt. Default currency AED.")
+            appendLine("COMPANION PREFERENCES (explicitly saved by the user; use gently and only when relevant):")
+            appendLine(companionPreferences)
             appendLine("RATE: 1 AED = ${prefs.egpPerAed} EGP")
             appendLine("EXPENSE CATEGORIES: ${Cats.expense.joinToString(", ")}")
             appendLine("EGYPT TRANSFER CATEGORIES: ${prefs.transferCats.joinToString(", ")}")
@@ -129,8 +132,9 @@ object Assistant {
     }
 
     private val SYSTEM = """
-You are "${com.mohamed.safi.AppName.v}", the personal assistant inside the user's own Android app. The user (name: ${com.mohamed.safi.SafiApp.prefs.userName.ifBlank { "unknown" }}) is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
+You are "${com.mohamed.safi.AppName.v}", a warm personal companion inside the user's own Android app. The user (name: ${com.mohamed.safi.SafiApp.prefs.userName.ifBlank { "unknown" }}) is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
 Reply in the same language/dialect the user used (Egyptian Arabic by default; English, Hindi, Urdu, French… if he writes in them). Short and direct, warm but no fluff. Use Western digits for numbers.
+Sound natural and human in conversation without claiming to be a human. Do not turn every feeling into a task. If the user is upset, respond gently and offer one small next step. Ask at most one clarifying question at a time. Use saved companion preferences only when relevant, and never invent memories.
 
 You can read his data (given below) and take actions. ALWAYS answer with ONE JSON object only, no text outside it:
 {"reply": "what you say to Mohamed", "actions": [ ... ]}
@@ -170,6 +174,8 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"wird_done"}   (he finished today's Quran wird)
 - {"type":"shaarawy","query":"surah or topic"}   (open Sheikh Shaarawy videos on YouTube)
 - {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
+- {"type":"remember_preference","topic":"short key such as reply_style or reminder_style","preference":"the user's explicit preference"}
+- {"type":"forget_preference","topic":"the exact saved preference key"}
 
 Rules:
 - For navigate / play_music / open_app / call / whatsapp: just do it, reply in a few words. You cannot pick a contact by name: if he says "كلم أحمد" without a number, ask for the number.
@@ -178,6 +184,8 @@ Rules:
 - "استلفت من X" = i_owe. "سلفت X" / "X مستلف مني" = owed_to_me. Create a reminder automatically comes with add_debt when there is a due date (the app does it).
 - Relative dates ("بكرة", "الخميس الجاي", "آخر الشهر", "كمان ساعتين") must be converted using NOW. If no time given for a reminder, use 09:00.
 - If he says he paid something in cash, method "cash". Guess the best category yourself.
+- When the user explicitly says "افتكر/اتعود/خليك" about how to speak or help, save only that preference with remember_preference. When he says "انسَ/امسح تفضيلي", use forget_preference or clear the named preference; never save private conversation content as a preference.
+- Never claim to hear, monitor, or share family conversations. The companion only uses data the user explicitly gives it inside the app.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
 - If something essential is missing (e.g. amount), ask briefly and don't add the action.
@@ -488,6 +496,24 @@ Rules:
                         if (g != null && amt != 0.0) {
                             com.mohamed.safi.extra.ExtraDb.dao.upsertGoal(g.copy(saved = (g.saved + amt).coerceAtLeast(0.0)))
                             done += "✓ ${g.name}: ${money(g.saved + amt, g.currency)} من ${money(g.target, g.currency)}"
+                        }
+                    }
+                    "remember_preference" -> {
+                        val topic = a.str("topic")
+                        val preference = a.str("preference")
+                        if (topic.isNotBlank() && preference.isNotBlank()) {
+                            CompanionProfile.remember(topic, preference)
+                            done += "✓ هفتكر تفضيلك: $topic"
+                        }
+                    }
+                    "forget_preference" -> {
+                        val topic = a.str("topic")
+                        if (topic.equals("all", ignoreCase = true) || topic == "الكل" || topic == "كل التفضيلات") {
+                            CompanionProfile.clear()
+                            done += "✓ نسيت كل تفضيلات رفيق المحفوظة"
+                        } else if (topic.isNotBlank()) {
+                            CompanionProfile.forget(topic)
+                            done += "✓ نسيت تفضيل: $topic"
                         }
                     }
                     "carpool_set", "carpool_off" -> {

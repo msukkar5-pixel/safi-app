@@ -105,6 +105,9 @@ fun SettingsScreen(onBack: () -> Unit) {
             SectionTitle("اسم التطبيق")
             AppNameCard()
 
+            SectionTitle("رفيق وذاكرته")
+            CompanionMemoryCard()
+
             SectionTitle("العملة وتحويلات مصر")
             AppCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -345,11 +348,11 @@ private fun AppNameCard() {
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
-                prefs.appName = name.trim().ifBlank { "صافي" }
+                prefs.appName = name.trim().ifBlank { "أثر" }
                 toast(ctx, "اتغير الاسم. اقفل التطبيق وافتحه علشان يظهر في كل مكان.")
             }) { Text("حفظ") }
             OutlinedButton(onClick = {
-                prefs.appName = name.trim().ifBlank { "صافي" }
+                prefs.appName = name.trim().ifBlank { "أثر" }
                 com.mohamed.safi.AppName.pinShortcut(ctx)
             }) { Text("أيقونة بالاسم ده") }
         }
@@ -416,6 +419,28 @@ private fun SttKeyBox() {
         }
         Text(
             if (prov == "gemini") "مفتاح Gemini بيتعمل من حساب جوجل في دقيقة، وفيه استخدام مجاني بحدود يومية." else if (prov == "groq") "Groq فيه استخدام مجاني بحدود يومية." else "OpenAI بالدفع حسب الاستخدام.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+        )
+    }
+}
+
+@Composable
+private fun CompanionMemoryCard() {
+    val ctx = LocalContext.current
+    var snapshot by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.snapshot()) }
+    AppCard {
+        Text("رفيق يتعلم تفضيلاتك أنت فقط، وليس محادثاتك أو أصواتك.", fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        Text("المحفوظ حاليًا:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Text(snapshot, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = {
+            com.mohamed.safi.ai.CompanionProfile.clear()
+            snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+            toast(ctx, "اتمسحت تفضيلات رفيق فقط")
+        }) { Text("امسح ذاكرة رفيق") }
+        Text(
+            "تقدر تقول لرفيق: افتكر إني بحب الرد المختصر، أو انسَ تفضيل الرد المختصر. بيانات المصاريف والمحادثات والملفات لا تُمسح من هذا الزر.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
     }

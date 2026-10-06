@@ -8,6 +8,7 @@ import androidx.core.content.edit
 import com.mohamed.safi.SafiApp
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.MessageDigest
 import kotlin.random.Random
 
 /**
@@ -26,6 +27,7 @@ object Challenge {
     )
 
     private fun sp() = SafiApp.instance.getSharedPreferences("safi_challenge", Context.MODE_PRIVATE)
+    private const val EVENTS = "events_v1"
     val version = mutableIntStateOf(0)
     /** A challenge that arrived (shared into the app), waiting for the quiz screen to show it. */
     val incoming = mutableStateOf<Code?>(null)
@@ -54,6 +56,47 @@ object Challenge {
 
     fun contains(text: String) = re.containsMatchIn(text)
 
+    /** Append-only local journal; later capsules can merge events instead of replacing history. */
+    data class Update(val eventId: String, val challengeId: String, val participantId: String, val participant: String,
+                      val kind: String, val correct: Int, val score: Int, val at: Long, val previousHash: String, val hash: String)
+
+    private fun digest(text: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+
+    @Synchronized
+    private fun appendUpdate(c: Code, correct: Int, score: Int, kind: String) {
+        val existing = runCatching { JSONArray(sp().getString(EVENTS, "[]")) }.getOrElse { JSONArray() }
+        val previous = if (existing.length() == 0) "GENESIS" else existing.optJSONObject(existing.length() - 1)?.optString("h", "GENESIS") ?: "GENESIS"
+        val at = System.currentTimeMillis()
+        val eventId = java.util.UUID.randomUUID().toString()
+        val body = "$eventId|${c.id}|$myId|$kind|$correct|$score|$at|$previous"
+        existing.put(JSONObject().put("e", eventId).put("c", c.id).put("p", myId).put("n", myName)
+            .put("k", kind).put("x", correct).put("s", score).put("t", at).put("prev", previous).put("h", digest(body)))
+        sp().edit { putString(EVENTS, existing.toString()) }
+    }
+
+    /** Returns only local challenge events; no audio, chat, or family data is included. */
+    fun localUpdates(): List<Update> {
+        val a = runCatching { JSONArray(sp().getString(EVENTS, "[]")) }.getOrElse { JSONArray() }
+        return (0 until a.length()).mapNotNull { i ->
+            val o = a.optJSONObject(i) ?: return@mapNotNull null
+            Update(o.optString("e"), o.optString("c"), o.optString("p"), o.optString("n"), o.optString("k"),
+                o.optInt("x"), o.optInt("s"), o.optLong("t"), o.optString("prev"), o.optString("h"))
+        }
+    }
+
+    /** Validates the local hash chain before a future capsule export or merge. */
+    fun journalIsValid(): Boolean {
+        val updates = localUpdates()
+        var previous = "GENESIS"
+        return updates.all { u ->
+            val body = "${u.eventId}|${u.challengeId}|${u.participantId}|${u.kind}|${u.correct}|${u.score}|${u.at}|$previous"
+            val valid = u.previousHash == previous && u.hash == digest(body)
+            previous = u.hash
+            valid
+        }
+    }
+
     // ------------------------------------------------------------------ playing
     fun catsFor(key: String): Set<String>? = when (key) { "religion" -> Quiz.religionCats.keys; "general" -> Quiz.generalCats.keys; else -> null }
 
@@ -79,9 +122,11 @@ object Challenge {
         val mine = c.fromId == myId
         return if (mine) {
             sp().edit { putString("sent_${c.id}", JSONObject().put("c", correct).put("p", score).toString()) }
+            appendUpdate(c, correct, score, "challenge_result")
             encode(c.copy(from = myName, correct = correct, score = score))
         } else {
             sp().edit { putBoolean("played_${c.id}", true) }
+            appendUpdate(c, correct, score, "friend_result")
             record(c.fromId, c.from, correct, score, c.correct, c.score)
             encode(c.copy(fromId = myId, from = myName, correct = correct, score = score, reply = true))
         }

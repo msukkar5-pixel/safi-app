@@ -17,8 +17,8 @@ class Prefs(context: Context) {
 
     var userName: String get() = s("userName", ""); set(v) = putS("userName", v)
 
-    /** Name the user gave the app / assistant. */
-    var appName: String get() = s("appName", "صافي").ifBlank { "صافي" }; set(v) = putS("appName", v.trim())
+    /** Name the user gave the app / assistant. Existing custom names remain unchanged. */
+    var appName: String get() = s("appName", "أثر").ifBlank { "أثر" }; set(v) = putS("appName", v.trim())
 
     // AI provider (any): anthropic | openai | gemini | deepseek | groq | openrouter | custom
     var aiProvider: String get() = s("aiProvider", "anthropic"); set(v) = putS("aiProvider", v)
