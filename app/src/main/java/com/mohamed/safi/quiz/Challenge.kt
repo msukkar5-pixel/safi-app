@@ -6,10 +6,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.edit
 import com.mohamed.safi.SafiApp
+import com.mohamed.safi.data.zone
 import com.mohamed.safi.family.Family
 import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
+import java.time.LocalDate
 import kotlin.random.Random
 
 /**
@@ -95,6 +97,18 @@ object Challenge {
         existing.put(JSONObject().put("e", eventId).put("c", c.id).put("p", myId).put("n", myName)
             .put("k", kind).put("x", correct).put("s", score).put("t", at).put("prev", previous).put("h", digest(body)))
         sp().edit { putString(EVENTS, existing.toString()) }
+        version.intValue++
+    }
+
+    /** One local completion per kind/day, shared only when the user enabled family activity sharing. */
+    fun recordFamilyActivity(kind: String, points: Int) {
+        if (!Family.joined || !Family.shareActivities) return
+        val day = LocalDate.now(zone).toString()
+        val marker = "family_activity_${kind}_$day"
+        if (sp().getBoolean(marker, false)) return
+        val code = Code("family_${kind}_$day", myId, myName, 0L, emptyList(), "family", 0, 0)
+        appendUpdate(code, correct = 1, score = points.coerceIn(1, 100), kind = "activity_$kind")
+        sp().edit { putBoolean(marker, true) }
     }
 
     /** Returns only local challenge events; no audio, chat, or family data is included. */
@@ -127,11 +141,12 @@ object Challenge {
     }
 
     /** Export only challenge events, not chat, family, money, or personal memory. */
-    fun exportCapsule(challengeId: String? = null, familyOnly: Boolean = false): String {
+    fun exportCapsule(challengeId: String? = null, familyOnly: Boolean = false, limit: Int = Int.MAX_VALUE): String {
         val a = JSONArray()
         val familyIds = (Family.members().map { it.id } + Family.myId).toSet()
         localUpdates().filter { challengeId.isNullOrBlank() || it.challengeId == challengeId }
-            .filter { !Family.joined || if (familyOnly) it.participantId in familyIds else it.participantId !in familyIds }.forEach { u ->
+            .filter { !Family.joined || if (familyOnly) it.participantId in familyIds else it.participantId !in familyIds }
+            .sortedByDescending { it.at }.take(limit.coerceAtLeast(0)).forEach { u ->
             a.put(JSONObject().put("e", u.eventId).put("c", u.challengeId).put("p", u.participantId).put("n", u.participant)
                 .put("k", u.kind).put("x", u.correct).put("s", u.score).put("t", u.at).put("prev", u.previousHash).put("h", u.hash))
         }

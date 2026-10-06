@@ -3,7 +3,6 @@ package com.mohamed.safi.ai
 import com.mohamed.safi.SafiApp
 import com.mohamed.safi.faith.SituationSupport
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -56,12 +55,22 @@ class CompanionProfileTest {
     }
 
     @Test
-    fun panicSignalsAreSeparatedFromAnticipatoryAnxiety() = runBlocking {
-        val panic = SituationSupport.forMessage("حاسس هموت ومش قادر أتنفس وقلبي سريع")
+    fun emotionalSignalsAreSeparatedAccurately() {
+        val panic = SituationSupport.match("حاسس هموت ومش قادر أتنفس وقلبي سريع")
         assertEquals("الهلع والذعر", panic?.situation)
+        assertTrue(panic?.urgentPhysicalSignal == true)
 
-        val anticipatory = SituationSupport.forMessage("قلقان من نتيجة الامتحان ومش عارف أبطل تفكير")
+        val anticipatory = SituationSupport.match("قلقان من نتيجة الامتحان ومش عارف أبطل تفكير")
         assertEquals("قلق التوقع وكثرة التفكير", anticipatory?.situation)
+
+        assertEquals("الوحدة والانعزال", SituationSupport.match("حاسس بالوحدة ومحدش فاهمني")?.situation)
+        assertEquals("انخفاض المزاج وفقدان الشغف", SituationSupport.match("مكتئب وفاقد الشغف ومفيش طاقة")?.situation)
+        assertEquals("الإرهاق والاحتراق", SituationSupport.match("مرهق ومستنزف ومضغوط طول الوقت")?.situation)
+        assertEquals("الخذلان والانكسار العاطفي", SituationSupport.match("سابني وحاسس بخذلان وقلبي مكسور")?.situation)
+        assertEquals("الإحساس بالفشل وقلة القيمة", SituationSupport.match("أنا فاشل وحاسس إن ماليش لازمة")?.situation)
+        val crisis = SituationSupport.match("أنا مش عايز أعيش وعايز أموت")
+        assertEquals("أزمة أمان شخصية", crisis?.situation)
+        assertTrue(crisis?.selfHarmSignal == true)
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.mohamed.safi.ai
 
 import android.Manifest
 import android.app.Notification
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -23,7 +24,7 @@ import kotlin.math.sqrt
 /**
  * Explicit opt-in, visible voice-signal helper. It keeps only short PCM frames in memory,
  * computes loudness, then discards them. It never records, transcribes, uploads, or stores audio.
- * Loudness is only a rough signal; it is not a diagnosis of emotion.
+ * Loudness is only a rough signal; it does not understand spoken content or diagnose emotion.
  */
 class EmotionVoiceService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -41,13 +42,29 @@ class EmotionVoiceService : Service() {
         scope.launch { monitor() }
     }
 
-    private fun notification(): Notification = NotificationCompat.Builder(this, Notifier.CH_EMOTION_VOICE)
-        .setSmallIcon(R.drawable.ic_notify)
-        .setContentTitle("مساعد النبرة الصوتية شغال")
-        .setContentText("تحليل مستوى الصوت فقط — بدون حفظ أو رفع التسجيلات")
-        .setOngoing(true)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE)
-        .build()
+    private fun notification(): Notification {
+        val stop = PendingIntent.getService(
+            this, NOTIF_ID + 2,
+            Intent(this, EmotionVoiceService::class.java).setAction(ACTION_STOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Builder(this, Notifier.CH_EMOTION_VOICE)
+            .setSmallIcon(R.drawable.ic_notify)
+            .setContentTitle("مساعد النبرة الصوتية شغال")
+            .setContentText("تحليل مستوى الصوت فقط — بدون حفظ أو رفع التسجيلات")
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .addAction(android.R.drawable.ic_media_pause, "إيقاف", stop)
+            .build()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            SafiApp.prefs.emotionVoiceOn = false
+            stopSelf()
+        }
+        return START_NOT_STICKY
+    }
 
     private suspend fun monitor() = withContext(Dispatchers.IO) {
         val rate = 16_000
@@ -65,7 +82,7 @@ class EmotionVoiceService : Service() {
         val buffer = ShortArray(size)
         try {
             r.startRecording()
-            while (isActive && SafiApp.prefs.emotionVoiceOn) {
+            while (isActive && SafiApp.prefs.emotionVoiceOn && CompanionProfile.voiceMonitoringAllowed()) {
                 val n = r.read(buffer, 0, buffer.size)
                 if (n > 0) {
                     val rms = sqrt(buffer.take(n).sumOf { it.toDouble() * it.toDouble() } / n) / 32768.0
@@ -82,6 +99,7 @@ class EmotionVoiceService : Service() {
             runCatching { r.stop() }
             r.release()
             recorder = null
+            stopSelf()
         }
     }
 
@@ -108,6 +126,7 @@ class EmotionVoiceService : Service() {
 
     companion object {
         private const val NOTIF_ID = 48_200
+        private const val ACTION_STOP = "com.mohamed.safi.ai.STOP_EMOTION_VOICE"
         fun start(ctx: Context) {
             if (!SafiApp.prefs.emotionVoiceOn) return
             if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return

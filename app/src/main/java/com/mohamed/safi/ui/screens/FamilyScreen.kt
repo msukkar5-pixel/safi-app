@@ -65,18 +65,21 @@ fun FamilyScreen(onBack: () -> Unit) {
         onDispose { if (!com.mohamed.safi.SafiApp.prefs.familySyncOn) Family.stopLan() }
     }
 
-    fun handle(text: String) {
+    fun handle(text: String, approveNewMember: Boolean = false) {
         when {
             Family.isInvite(text) -> if (Family.joined) toast(ctx, "انت منضم لعيلة بالفعل") else { scanned = text; setup = "join" }
-            Family.isCard(text) -> Family.importCard(text)?.let { toast(ctx, "اتضاف للعيلة: $it"); showQr = false } ?: toast(ctx, "الكود ده مش من عيلتك")
+            Family.isCard(text) -> (if (approveNewMember) Family.approvePairingReply(text) else Family.importCard(text))?.let {
+                toast(ctx, if (approveNewMember) "اتعمد موبايل $it للعيلة" else "اتحدثت بيانات $it")
+                showQr = false
+            } ?: toast(ctx, if (approveNewMember) "الكود غير صالح لاعتماد فرد جديد" else "التحديث مش من جهاز عائلي معتمد")
             else -> toast(ctx, "الكود ده مش كود عيلة ${com.mohamed.safi.AppName.v}")
         }
     }
 
-    fun scan() {
+    fun scan(approveNewMember: Boolean = false) {
         runCatching {
             com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx).startScan()
-                .addOnSuccessListener { b -> b.rawValue?.let { handle(it) } }
+                .addOnSuccessListener { b -> b.rawValue?.let { handle(it, approveNewMember) } }
                 .addOnFailureListener { toast(ctx, "مقدرتش أفتح الماسح") }
         }.onFailure { toast(ctx, "الماسح مش متاح على الموبايل ده") }
     }
@@ -119,7 +122,7 @@ fun FamilyScreen(onBack: () -> Unit) {
                             }
                         }) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(4.dp)); Text("ابعت تحديثي") }
                     }
-                    Text("على نفس الواي فاي: التحديث بيتبادل لوحده حتى لو قفلت الشاشة طالما المزامنة المستمرة مفعلة. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Text("بعد اعتماد الموبايل مرة واحدة، التحديث بيتبادل لوحده على نفس الواي فاي حتى لو قفلت الشاشة طالما المزامنة المستمرة مفعلة. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("المزامنة المستمرة", fontWeight = FontWeight.SemiBold)
@@ -180,6 +183,7 @@ fun FamilyScreen(onBack: () -> Unit) {
                     ShareSwitch("وردي من القرآن", Family.shareWird) { Family.shareWird = it }
                     ShareSwitch("نجوم الأطفال", Family.shareKids) { Family.shareKids = it }
                     ShareSwitch("مدينتي (من غير موقع دقيق)", Family.shareCity) { Family.shareCity = it }
+                    ShareSwitch("إنجازات الورد والحفظ والدراسة والأطفال في التحدي العائلي", Family.shareActivities) { Family.shareActivities = it }
                     var st by remember { mutableStateOf(Family.status) }
                     OutlinedTextField(st, { st = it.take(80); Family.status = st }, label = { Text("رسالة حالة (مثلاً: وصلت البيت)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
@@ -200,10 +204,10 @@ fun FamilyScreen(onBack: () -> Unit) {
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(bmp.asImageBitmap(), null, Modifier.size(260.dp).background(Color.White))
-                    Text("الكود ده هو مفتاح العيلة. ماتبعتهوش ولا تصوّره لحد برّا العيلة.", style = MaterialTheme.typography.bodySmall, color = Danger)
+                    Text("الكود ده دعوة عائلية مؤقتة لمدة ١٠ دقايق ولمرة واحدة. ماتبعتهوش ولا تصوّره لحد برّا العيلة.", style = MaterialTheme.typography.bodySmall, color = Danger)
                     Spacer(Modifier.height(6.dp))
-                    Text("لو انتو على نفس الواي فاي هيتضاف عندك لوحده. لو لأ: بعد ما ينضم هيظهرله كود، امسحه من هنا 👇", style = MaterialTheme.typography.bodySmall)
-                    OutlinedButton(onClick = { scan() }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(4.dp)); Text("امسح كود الفرد الجديد") }
+                    Text("بعد ما ينضم هيظهرله كود اعتماد. امسحه من هنا مرة واحدة علشان موبايله يبقى جهاز عائلي معتمد، وبعدها المزامنة تكمل تلقائيًا.", style = MaterialTheme.typography.bodySmall)
+                    OutlinedButton(onClick = { scan(approveNewMember = true) }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(4.dp)); Text("اعتمد موبايل الفرد الجديد") }
                 }
             },
             confirmButton = { TextButton(onClick = { showQr = false }) { Text("تمام") } },
@@ -217,7 +221,7 @@ fun FamilyScreen(onBack: () -> Unit) {
             title = { Text("انضميت للعيلة 🎉") },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("خلّي اللي ضافك يمسح الكود ده من «امسح كود الفرد الجديد» عشان تتضاف عنده. (على نفس الواي فاي بيحصل لوحده.)", style = MaterialTheme.typography.bodySmall)
+                    Text("خلّي اللي ضافك يمسح الكود ده من «اعتمد موبايل الفرد الجديد» مرة واحدة. بعد الاعتماد، التحديثات بينكم تكمل تلقائيًا على نفس الواي فاي.", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(6.dp))
                     Image(bmp.asImageBitmap(), null, Modifier.size(240.dp).background(Color.White))
                 }
@@ -237,13 +241,13 @@ fun FamilyScreen(onBack: () -> Unit) {
                     Text("صفته عندي", fontWeight = FontWeight.Bold)
                     @OptIn(ExperimentalLayoutApi::class)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { roles.forEach { r -> FilterChip(role == r, { role = r }, label = { Text(r) }) } }
-                    TextButton(onClick = { confirmRemove = true }) { Text("شيله من عندي", color = Danger) }
+                    TextButton(onClick = { confirmRemove = true }) { Text("أوقف تحديثات موبايله عندي", color = Danger) }
                 }
             },
             confirmButton = { Button(onClick = { Family.setLabel(m.id, role); editing = null }) { Text("حفظ") } },
             dismissButton = { TextButton(onClick = { editing = null }) { Text("إلغاء") } },
         )
-        if (confirmRemove) ConfirmDialog("تشيله؟", "هيتمسح من الموبايل ده بس، ولو بعت تحديث تاني هيرجع.", "شيل", { confirmRemove = false }) { Family.removeMember(m.id); confirmRemove = false; editing = null }
+        if (confirmRemove) ConfirmDialog("توقف تحديثاته؟", "مش هتقبل أي تحديث جديد من موبايله على الجهاز ده. لو الموبايل المفقود كان معاه مفتاح العيلة القديم، أنشئ عيلة جديدة بمفتاح جديد لحماية كل البيانات.", "أوقف", { confirmRemove = false }) { Family.removeMember(m.id); confirmRemove = false; editing = null }
     }
 
     setup?.let { mode ->

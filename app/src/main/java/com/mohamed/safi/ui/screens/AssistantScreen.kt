@@ -42,6 +42,10 @@ private val suggestions = listOf(
     "مين اللي هيسوق بكرة؟",
     "فطرت 3 بيضات وتوست",
     "وزني النهارده 92.5",
+    "أنا متوتر ومحتاج أتكلم",
+    "حاسس بالوحدة النهارده",
+    "افتكر إني بحب الرد المختصر",
+    "خلّي التنبيهات قليلة ومش بعد 10 بالليل",
 )
 
 @Composable
@@ -132,6 +136,20 @@ fun AssistantScreen() {
                                 Text("⚠️ اربط أي ذكاء اصطناعي من الإعدادات (Claude، ChatGPT، Gemini…)", color = Warn)
                             }
                             Spacer(Modifier.height(16.dp))
+                            val memories = com.mohamed.safi.ai.CompanionProfile.memories()
+                            val policy = com.mohamed.safi.ai.CompanionProfile.alertPolicy()
+                            AppCard(onClick = { UiBus.pendingRoute.value = "settings" }, modifier = Modifier.fillMaxWidth()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Psychology, null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text("رفيق بيتعود عليك بإذنك", fontWeight = FontWeight.SemiBold)
+                                        Text("${memories.size} ذكريات صريحة • الدعم ${if (policy.supportOn) "مفعل" else "موقوف"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    }
+                                    Icon(Icons.Default.ChevronLeft, null, tint = MaterialTheme.colorScheme.outline)
+                                }
+                            }
+                            Spacer(Modifier.height(12.dp))
                             suggestions.forEach { s ->
                                 SuggestionChip(onClick = { send(s) }, label = { Text(s) }, modifier = Modifier.padding(vertical = 2.dp))
                             }
@@ -281,4 +299,3 @@ object ClaudeApp {
         }
     }
 }
-

@@ -62,6 +62,21 @@ object Quiz {
     val dailyDoneToday get() = sp().getString("daily_day", "") == LocalDate.now(zone).toString()
     val dailyScore get() = sp().getInt("daily_score", 0)
     fun markDaily(score: Int) = sp().edit { putString("daily_day", LocalDate.now(zone).toString()); putInt("daily_score", score) }
+    private fun leagueWeek(): String {
+        val d = LocalDate.now(zone)
+        val w = d.get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear())
+        return "${d.year}-$w"
+    }
+    private fun leagueKey() = "league_${leagueWeek()}"
+    /** Local weekly league: all scores stay on the device and reset automatically with a new ISO week. */
+    val leaguePoints: Int get() = sp().getInt(leagueKey(), 0)
+    val leagueRounds: Int get() = sp().getInt("${leagueKey()}_rounds", 0)
+    val leagueGoals = listOf(400, 900, 1_500)
+    fun leagueTier(points: Int = leaguePoints): Int = leagueGoals.count { points >= it }
+    fun addLeague(score: Int) = sp().edit {
+        putInt(leagueKey(), leaguePoints + score.coerceAtLeast(0))
+        putInt("${leagueKey()}_rounds", leagueRounds + 1)
+    }
     val streak: Int get() {
         val last = sp().getString("play_day", "") ?: ""
         val today = LocalDate.now(zone)
@@ -136,6 +151,8 @@ object Quiz {
         Badge("level5", "⭐", "المستوى ٥", "توصل للمستوى الخامس"),
         Badge("level10", "🌟", "المستوى ١٠", "توصل للمستوى العاشر"),
         Badge("streak7", "📅", "أسبوع كامل", "تلعب ٧ أيام ورا بعض"),
+        Badge("league1", "🥉", "بداية الدوري", "توصل للمرحلة الأولى من دوري الأسبوع"),
+        Badge("league3", "👑", "بطل الأسبوع", "تخلص المراحل الثلاثة من دوري الأسبوع"),
     )
     fun hasBadge(id: String) = sp().getBoolean("badge_$id", false)
     /** Unlocks the badges these conditions earned; returns only the new ones. */

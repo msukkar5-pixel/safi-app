@@ -46,6 +46,10 @@ object Family {
     const val PREFIX = "SAFI-FAM1:"
     private const val QR_PREFIX = "SAFI-JOIN1:"
     private const val SERVICE = "_safifamily._tcp."
+    private const val APPROVED = "approved_member_ids"
+    private const val ACTIVE_INVITE = "active_invite"
+    private const val ACTIVE_INVITE_UNTIL = "active_invite_until"
+    private const val PENDING_INVITE = "pending_invite"
 
     private fun sp() = SafiApp.instance.getSharedPreferences("safi_family", Context.MODE_PRIVATE)
     val version = mutableIntStateOf(0)
@@ -62,14 +66,34 @@ object Family {
     var shareWird: Boolean get() = sp().getBoolean("s_wird", false); set(v) { sp().edit { putBoolean("s_wird", v) }; bump() }
     var shareKids: Boolean get() = sp().getBoolean("s_kids", false); set(v) { sp().edit { putBoolean("s_kids", v) }; bump() }
     var shareCity: Boolean get() = sp().getBoolean("s_city", false); set(v) { sp().edit { putBoolean("s_city", v) }; bump() }
+    /** Shares only completion events and points in the family challenge, never content, chat, or audio. */
+    var shareActivities: Boolean get() = sp().getBoolean("s_activities", false); set(v) { sp().edit { putBoolean("s_activities", v) }; bump() }
     var status: String get() = sp().getString("status", "").orEmpty(); set(v) { sp().edit { putString("status", v) }; bump() }
+
+    /** Devices accepted during explicit family pairing. Existing devices sync without another QR. */
+    val approvedMemberIds: Set<String> get() {
+        val raw = sp().getStringSet(APPROVED, null)
+        // First run after this security upgrade: retain cards that were already present on this phone.
+        val legacy = sp().all.keys.filter { it.startsWith("card_") }.map { it.removePrefix("card_") }.toSet()
+        return (raw?.toSet() ?: legacy) + myId
+    }
+    fun isApproved(id: String) = id.isNotBlank() && id in approvedMemberIds
+    private fun approve(id: String) {
+        if (id.isBlank() || id == myId) return
+        sp().edit { putStringSet(APPROVED, approvedMemberIds + id) }
+    }
 
     private fun key(): ByteArray? = sp().getString("key_family", null)?.let { Base64.decode(it, Base64.NO_WRAP) }
 
     fun create(name: String, role: String) {
         val k = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val fid = ByteArray(6).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(java.util.Locale.US, it) }
-        sp().edit { putString("key_family", Base64.encodeToString(k, Base64.NO_WRAP)); putString("fid", fid) }
+        val me = myId
+        sp().edit {
+            putString("key_family", Base64.encodeToString(k, Base64.NO_WRAP))
+            putString("fid", fid)
+            putStringSet(APPROVED, setOf(me))
+        }
         myName = name; myRole = role
     }
 
@@ -80,12 +104,22 @@ object Family {
     private fun intro() = JSONObject().put("id", myId).put("name", myName).put("role", myRole).put("at", System.currentTimeMillis())
         .put("khr", khRound).put("khm", khMine.joinToString(",")).put("khd", khDone.joinToString(","))
 
-    /** Text inside the invite QR code: the family key plus who invited, so the new member sees them at once. */
-    fun inviteText(): String = QR_PREFIX + familyId + ":" + sp().getString("key_family", "") + ":" +
-        Base64.encodeToString(intro().toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP or Base64.URL_SAFE)
+    /** A 10-minute, one-time invite: the pairing reply must carry the same nonce before this phone accepts it. */
+    fun inviteText(): String {
+        val nonce = ByteArray(12).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+        val until = System.currentTimeMillis() + 10 * 60_000L
+        sp().edit { putString(ACTIVE_INVITE, nonce); putLong(ACTIVE_INVITE_UNTIL, until) }
+        val inviter = intro().put("inv", nonce).put("exp", until)
+        return QR_PREFIX + familyId + ":" + sp().getString("key_family", "") + ":" +
+            Base64.encodeToString(inviter.toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP or Base64.URL_SAFE)
+    }
 
     /** A small encrypted card for the "reply" QR the new member shows back to the inviter. */
-    fun introCard(): String = PREFIX + familyId + ":" + encrypt(intro().toString())
+    fun introCard(): String {
+        val reply = intro()
+        sp().getString(PENDING_INVITE, "").orEmpty().takeIf { it.isNotBlank() }?.let { reply.put("inv", it) }
+        return PREFIX + familyId + ":" + encrypt(reply.toString())
+    }
 
     fun join(qr: String, name: String, role: String): Boolean {
         if (!isInvite(qr)) return false
@@ -93,12 +127,27 @@ object Family {
         if (parts.size < 2 || parts[1].isBlank()) return false
         val k = runCatching { Base64.decode(parts[1], Base64.NO_WRAP) }.getOrNull() ?: return false
         if (k.size != 32) return false
-        sp().edit { putString("key_family", parts[1]); putString("fid", parts[0]) }
+        val inviter = parts.getOrNull(2)?.let { b ->
+            runCatching { JSONObject(String(Base64.decode(b, Base64.NO_WRAP or Base64.URL_SAFE), Charsets.UTF_8)) }.getOrNull()
+        }
+        val inviteNonce = inviter?.optString("inv").orEmpty()
+        val inviteExpires = inviter?.optLong("exp", 0L) ?: 0L
+        if (inviteNonce.isBlank() || inviteExpires < System.currentTimeMillis()) return false
+        val invitedBy = inviter?.optString("id").orEmpty()
+        val me = myId
+        val approved = buildSet {
+            add(me)
+            if (invitedBy.isNotBlank()) add(invitedBy)
+        }
+        sp().edit {
+            putString("key_family", parts[1])
+            putString("fid", parts[0])
+            putStringSet(APPROVED, approved)
+            putString(PENDING_INVITE, inviteNonce)
+        }
         myName = name; myRole = role
         // the inviter's introduction travels inside the QR
-        parts.getOrNull(2)?.let { b ->
-            runCatching { JSONObject(String(Base64.decode(b, Base64.NO_WRAP or Base64.URL_SAFE), Charsets.UTF_8)) }.getOrNull()?.let { store(it) }
-        }
+        inviter?.let { store(it, allowNewMember = true) }
         return true
     }
 
@@ -159,10 +208,29 @@ object Family {
         return if (store(o)) o.optString("name") else null
     }
 
+    /** Explicit approval used only after the creator scans the new member's reply QR. */
+    fun approvePairingReply(text: String): String? {
+        val t = text.trim().substringAfter(PREFIX, "").takeIf { it.isNotBlank() } ?: return null
+        if (t.substringBefore(":") != familyId) return null
+        val json = decrypt(t.substringAfter(":")) ?: return null
+        val o = runCatching { JSONObject(json) }.getOrNull() ?: return null
+        val id = o.optString("id")
+        if (id.isBlank() || id == myId) return null
+        val activeInvite = sp().getString(ACTIVE_INVITE, "").orEmpty()
+        val activeUntil = sp().getLong(ACTIVE_INVITE_UNTIL, 0L)
+        if (activeInvite.isBlank() || activeUntil < System.currentTimeMillis() || o.optString("inv") != activeInvite) return null
+        return if (store(o, allowNewMember = true)) {
+            sp().edit { remove(ACTIVE_INVITE); remove(ACTIVE_INVITE_UNTIL) }
+            o.optString("name")
+        } else null
+    }
+
     /** Keeps the newest card per member; a newer family khatma round from anyone starts it here too. */
-    private fun store(o: JSONObject): Boolean {
+    private fun store(o: JSONObject, allowNewMember: Boolean = false): Boolean {
         val id = o.optString("id")
         if (id.isBlank() || id == myId) return false
+        if (!allowNewMember && !isApproved(id)) return false
+        if (allowNewMember) approve(id)
         o.optJSONObject("study")?.let { runCatching { com.mohamed.safi.study.Study.merge(it) } }
         o.remove("study")
         o.optJSONObject("lists")?.let { runCatching { FamilyLists.merge(it) } }
@@ -217,7 +285,14 @@ object Family {
 
     private fun ints(s: String) = s.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
 
-    fun removeMember(id: String) { sp().edit { remove("card_$id"); remove("at_$id"); remove("label_$id") }; bump() }
+    /** Stops this phone from accepting future cards from that member id. It does not revoke an old group key remotely. */
+    fun removeMember(id: String) {
+        sp().edit {
+            remove("card_$id"); remove("at_$id"); remove("label_$id")
+            putStringSet(APPROVED, approvedMemberIds - id - myId)
+        }
+        bump()
+    }
 
     // ------------------------------------------------------------------ home Wi-Fi sync
     private var scope: CoroutineScope? = null
@@ -261,6 +336,8 @@ object Family {
             override fun onServiceFound(i: NsdServiceInfo) {
                 // only our family's phones, and not ourselves
                 if (!i.serviceName.startsWith("safi-$familyId-") || i.serviceName.endsWith("-$myId")) return
+                val remoteId = i.serviceName.removePrefix("safi-$familyId-")
+                if (!isApproved(remoteId)) return
                 @Suppress("DEPRECATION")
                 runCatching {
                     m.resolveService(i, object : NsdManager.ResolveListener {
@@ -281,13 +358,26 @@ object Family {
         runCatching {
             s.soTimeout = 5000
             val out = s.getOutputStream().bufferedWriter()
+            val input = s.getInputStream().bufferedReader()
+            // A device must first prove it is an explicitly approved family id before either side shares a card.
+            out.write(hello()); out.newLine(); out.flush()
+            val remoteId = helloId(input.readLine() ?: return) ?: return
+            if (!isApproved(remoteId)) return
+            val isNew = !known(remoteId)
             out.write(myCard()); out.newLine(); out.flush()
-            val line = s.getInputStream().bufferedReader().readLine() ?: return
-            val isNew = runCatching { line.substringAfter(PREFIX).substringAfter(":") }.getOrNull()?.let { decrypt(it) }
-                ?.let { runCatching { JSONObject(it).optString("id") }.getOrNull() }?.let { !known(it) } ?: false
+            val line = input.readLine() ?: return
             importCard(line)?.let { n -> lastSync.intValue++; if (isNew) joinedName.value = n }
         }
         runCatching { s.close() }
+    }
+
+    private fun hello(): String = PREFIX + familyId + ":" + encrypt(JSONObject().put("hello", true).put("id", myId).toString())
+
+    private fun helloId(line: String): String? {
+        val t = line.trim().substringAfter(PREFIX, "").takeIf { it.isNotBlank() } ?: return null
+        if (t.substringBefore(":") != familyId) return null
+        val o = decrypt(t.substringAfter(":"))?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return null
+        return o.optString("id").takeIf { o.optBoolean("hello", false) && it.isNotBlank() }
     }
 
     fun stopLan() {

@@ -225,6 +225,7 @@ Rules:
 - The morning brief is opt-in and notification-based; never imply background listening or monitoring.
 - Respect the saved alert policy: do not suggest speaking or showing automatic spiritual support during quiet hours, and do not promise more frequent alerts than the saved cooldown.
 - If VERIFIED SPIRITUAL SUPPORT is present and the user explicitly describes distress, anger, fear, grief, guilt, gratitude, or sleep, offer the most relevant quoted item gently. Keep the source exactly as provided; if no item is present, say you do not have a verified match instead of inventing one.
+- If VERIFIED SPIRITUAL SUPPORT includes CRISIS SAFETY, prioritize immediate safety: be warm and direct, ask the user to move away from means of harm, not remain alone, and contact a trusted person now. Include {"type":"open_screen","screen":"sos"}. Do not shame, debate, moralize, or leave the user with religious content alone.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
 - If something essential is missing (e.g. amount), ask briefly and don't add the action.
@@ -284,6 +285,12 @@ Rules:
                 ?: (if (json != null) "تمام" else raw.trim())
             val reply = support?.let { com.mohamed.safi.faith.SituationSupport.automaticAddition(modelReply, it) } ?: modelReply
             val actions = json?.optJSONArray("actions") ?: JSONArray()
+            if (support?.selfHarmSignal == true) {
+                val hasSos = (0 until actions.length()).any { i ->
+                    actions.optJSONObject(i)?.let { it.optString("type") == "open_screen" && it.optString("screen") == "sos" } == true
+                }
+                if (!hasSos) actions.put(JSONObject().put("type", "open_screen").put("screen", "sos"))
+            }
             val done = execute(ctx, actions)
             dao.insertChat(ChatMsg(role = "assistant", text = reply, actions = done.joinToString("\n")))
             Result(reply, done)
@@ -551,7 +558,7 @@ Rules:
                     "forget_preference" -> {
                         val topic = a.str("topic")
                         if (topic.equals("all", ignoreCase = true) || topic == "الكل" || topic == "كل التفضيلات") {
-                            CompanionProfile.clear()
+                            CompanionProfile.clearMemories()
                             done += "✓ نسيت كل تفضيلات رفيق المحفوظة"
                         } else if (topic.isNotBlank()) {
                             CompanionProfile.forget(topic)
@@ -565,7 +572,7 @@ Rules:
                     "forget_memory" -> {
                         val target = a.str("id_or_category")
                         val removed = if (target.equals("all", true) || target == "الكل") {
-                            CompanionProfile.clear(); 1
+                            CompanionProfile.clearMemories(); 1
                         } else CompanionProfile.forgetMemory(target)
                         if (removed > 0) done += "✓ اتمسحت الذاكرة المطلوبة" else done += "✗ ملقتش الذاكرة دي"
                     }
@@ -585,7 +592,7 @@ Rules:
                             quietFrom = quietFrom, quietUntil = quietUntil, cooldownMinutes = cooldown,
                         )
                         val p = CompanionProfile.alertPolicy()
-                        if (!p.voiceOn) {
+                        if (!p.supportOn || !p.voiceOn) {
                             SafiApp.prefs.emotionVoiceOn = false
                             com.mohamed.safi.ai.EmotionVoiceService.stop(ctx)
                         }

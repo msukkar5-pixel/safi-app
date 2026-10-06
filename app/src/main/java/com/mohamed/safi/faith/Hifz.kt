@@ -40,6 +40,7 @@ object Hifz {
         val next = LocalDate.now(zone).plusDays(1).toString()
         sp().edit { for (a in from..to) putString("m_" + key(s, a), JSONObject().put("lv", 0).put("next", next).toString()) }
         version.intValue++
+        runCatching { com.mohamed.safi.quiz.Challenge.recordFamilyActivity("hifz", (to - from + 1).coerceIn(1, 10)) }
     }
     fun forget(s: Int, a: Int) { sp().edit { remove("m_" + key(s, a)) }; version.intValue++ }
 

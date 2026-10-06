@@ -84,22 +84,22 @@ object KidData {
         return o.optString(if (l == "ar" || l == "ur") l else "en").ifBlank { o.optString("ar") }
     }
 
-    data class Entry(val id: String, val icon: String, val title: String)
+    data class Entry(val id: String, val icon: String, val title: String, val minAge: Int = 3, val maxAge: Int = 14)
     /** Every kids game, in the order of the Ramadan calendar (game n on Ramadan day n). */
-    fun allGames(ctx: android.content.Context): List<Entry> {
+    fun allGames(ctx: android.content.Context, age: Int = 7): List<Entry> {
         val g = games(ctx)
         val builtIn = listOf(
-            Entry("memory", "🧠", tr("لعبة الذاكرة")), Entry("catch", "🏮", tr("اصطاد الفوانيس")), Entry("wudu", "💧", tr("رتّب الوضوء")),
-            Entry("maze", "🧭", tr("المتاهة")), Entry("letters", "🔤", tr("الحروف")), Entry("color", "🎨", tr("لوّن بالأرقام")),
-            Entry("prayers", "🕌", tr("الصلوات الخمس")), Entry("count", "🔢", tr("عدّ معايا")), Entry("quiz", "❓", tr("أسئلة سهلة")),
-            Entry("simon", "🚦", tr("تتابع الألوان")), Entry("slide", "🧩", tr("اللغز المنزلق")), Entry("xo", "⭕", tr("إكس أو")), Entry("balloons", "🎈", tr("فرقع البالونات")),
+            Entry("memory", "🧠", tr("لعبة الذاكرة"), 3, 9), Entry("catch", "🏮", tr("اصطاد الفوانيس"), 3, 8), Entry("wudu", "💧", tr("رتّب الوضوء"), 4, 10),
+            Entry("maze", "🧭", tr("المتاهة"), 5, 12), Entry("letters", "🔤", tr("الحروف"), 3, 7), Entry("color", "🎨", tr("لوّن بالأرقام"), 3, 8),
+            Entry("prayers", "🕌", tr("الصلوات الخمس"), 5, 12), Entry("count", "🔢", tr("عدّ معايا"), 3, 7), Entry("quiz", "❓", tr("أسئلة سهلة"), 5, 10),
+            Entry("simon", "🚦", tr("تتابع الألوان"), 5, 12), Entry("slide", "🧩", tr("اللغز المنزلق"), 7, 14), Entry("xo", "⭕", tr("إكس أو"), 6, 14), Entry("balloons", "🎈", tr("فرقع البالونات"), 3, 8),
         )
-        val fromJson = (g.pick + g.order + g.memory).map { Entry(it.optString("id"), it.optString("icon"), t(it.optJSONObject("title"))) }
+        val fromJson = (g.pick + g.order + g.memory).map { Entry(it.optString("id"), it.optString("icon"), t(it.optJSONObject("title")), it.optInt("minAge", 3), it.optInt("maxAge", 14)) }
         // interleave so the calendar mixes kinds of games
         val out = ArrayList<Entry>()
         val a = ArrayDeque(builtIn); val b = ArrayDeque(fromJson)
         while (a.isNotEmpty() || b.isNotEmpty()) { a.removeFirstOrNull()?.let { out += it }; b.removeFirstOrNull()?.let { out += it }; b.removeFirstOrNull()?.let { out += it } }
-        return out
+        return out.filter { age in it.minAge..it.maxAge }
     }
 }
 

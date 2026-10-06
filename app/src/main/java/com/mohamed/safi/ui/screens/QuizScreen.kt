@@ -1,10 +1,12 @@
 package com.mohamed.safi.ui.screens
 
+import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -40,6 +43,13 @@ import com.mohamed.safi.quiz.Quiz
 import com.mohamed.safi.family.Family
 import com.mohamed.safi.ui.*
 import kotlinx.coroutines.delay
+
+private fun challengeQrBitmap(text: String, size: Int = 640): Bitmap {
+    val matrix = com.google.zxing.qrcode.QRCodeWriter().encode(text, com.google.zxing.BarcodeFormat.QR_CODE, size, size)
+    return Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565).also { bitmap ->
+        for (x in 0 until size) for (y in 0 until size) bitmap.setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+    }
+}
 
 /**
  * [lives] > 0: lose one per mistake (3 lives). [timeAttack]: one 60-second clock for the whole game.
@@ -150,6 +160,23 @@ fun QuizScreen(onBack: () -> Unit) {
                     }
                 }
                 item {
+                    val points = Quiz.leaguePoints
+                    val tier = Quiz.leagueTier(points)
+                    val next = Quiz.leagueGoals.getOrNull(tier)
+                    AppCard(onClick = { start(Game("league", "جولة دوري الأسبوع", Quiz.pick(15, levels = listOf(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3)))) }, color = Color(0xFF233B68).copy(alpha = .13f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (tier >= 3) "👑" else "🏟️", fontSize = 34.sp)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("دوري الأسبوع", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Text(if (next == null) "أكملت الدوري! العب جولات إضافية لتحسن رقمك." else "$points / $next نقطة للمرحلة التالية • ${Quiz.leagueRounds} جولات", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                LinearProgressIndicator(progress = { if (next == null) 1f else (points.toFloat() / next).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(top = 7.dp).height(6.dp).clip(CircleShape), color = Gold, drawStopIndicator = {})
+                            }
+                            Icon(Icons.Default.PlayArrow, "ابدأ جولة", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+                item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         ModeCard("تحدي سريع", "١٠ أسئلة منوّعة", Icons.Default.Bolt, Color(0xFFE09F3E), Modifier.weight(1f)) { start(Game("quick", "تحدي سريع", Quiz.pick(10))) }
                         ModeCard("المراحل", "اطلع مرحلة مرحلة", Icons.Default.Stairs, Brand, Modifier.weight(1f)) { screen = "stages" }
@@ -176,9 +203,14 @@ fun QuizScreen(onBack: () -> Unit) {
                         ModeCard("٣ أرواح", "كل غلطة بروح، لحد إمتى هتصمد؟", Icons.Default.Favorite, Color(0xFFD81B60), Modifier.weight(1f)) {
                             start(Game("lives", "٣ أرواح", Quiz.pick(80, levels = List(80) { i -> if (i < 8) 1 else if (i < 25) 2 else 3 }), lives = 3))
                         }
-                        ModeCard("سباق الدقيقة", "أكبر عدد صح في ٦٠ ثانية", Icons.Default.Timer, Color(0xFF00897B), Modifier.weight(1f)) {
-                            start(Game("time", "سباق الدقيقة", Quiz.pick(60), timeAttack = true))
+                        ModeCard("ماراثون المعرفة", "٣٠ سؤالًا متوازنًا من كل الأقسام", Icons.Default.EmojiEvents, Color(0xFF00897B), Modifier.weight(1f)) {
+                            start(Game("marathon", "ماراثون المعرفة", Quiz.pick(30, levels = List(30) { i -> if (i < 8) 1 else if (i < 20) 2 else 3 })))
                         }
+                    }
+                }
+                item {
+                    ModeCard("سباق الدقيقة", "أكبر عدد صح في ٦٠ ثانية", Icons.Default.Timer, Color(0xFF00897B), Modifier.fillMaxWidth()) {
+                        start(Game("time", "سباق الدقيقة", Quiz.pick(60), timeAttack = true))
                     }
                 }
                 item {
@@ -202,6 +234,7 @@ fun QuizScreen(onBack: () -> Unit) {
                         }
                     }
                 }
+                if (Family.joined) item { FamilyChallengeBoard() }
                 item { Badges() }
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -219,6 +252,8 @@ fun QuizScreen(onBack: () -> Unit) {
 private fun rebuild(g: Game): Game = when (g.mode) {
     "lives" -> g.copy(questions = Quiz.pick(80, levels = List(80) { i -> if (i < 8) 1 else if (i < 25) 2 else 3 }))
     "time" -> g.copy(questions = Quiz.pick(60))
+    "marathon" -> g.copy(questions = Quiz.pick(30, levels = List(30) { i -> if (i < 8) 1 else if (i < 20) 2 else 3 }))
+    "league" -> g.copy(questions = Quiz.pick(15, levels = listOf(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3)))
     "ladder" -> g.copy(questions = Quiz.pick(15, levels = ladderLevels))
     "friends" -> g.copy(questions = Quiz.pick(g.players.size * 8))
     "stage" -> g.copy(questions = Quiz.stageQuestions(g.stage))
@@ -470,6 +505,9 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
         xpGain = score / 2 + correct * 5
         Quiz.addXp(xpGain)
         if (g.mode == "daily") Quiz.markDaily(score)
+        if (g.mode == "league") Quiz.addLeague(score)
+        // Shares one daily aggregate only, and only when the person enabled family activity sharing.
+        Challenge.recordFamilyActivity("quiz", correct)
         if (g.mode == "stage") { Quiz.setStageStars(g.stage, stars); if (correct >= 7 && g.stage >= Quiz.stage) Quiz.stage = g.stage + 1 }
         var run = 0; var best = 0
         answers.forEach { a -> run = if (a.picked == a.q.correct) run + 1 else 0; best = maxOf(best, run) }
@@ -486,6 +524,8 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
             if (Quiz.level() >= 5) add("level5")
             if (Quiz.level() >= 10) add("level10")
             if (Quiz.streak >= 7) add("streak7")
+            if (Quiz.leagueTier() >= 1) add("league1")
+            if (Quiz.leagueTier() >= 3) add("league3")
         }
         newBadges = Quiz.unlock(earned)
     }
@@ -524,6 +564,7 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
         Text("$score", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         Text("نقطة", color = MaterialTheme.colorScheme.outline)
         if (newBest) Text("🏆 رقم قياسي جديد!", color = Gold, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(top = 6.dp))
+        if (g.mode == "league") Text("🏟️ رصيد الدوري: ${Quiz.leaguePoints} نقطة • المرحلة ${Quiz.leagueTier() + 1}", color = Brand, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
         if (g.players.isNotEmpty()) {
             val scores = g.players.indices.map { p -> answers.filter { it.player == p }.sumOf { it.points } }
             val top = scores.maxOrNull() ?: 0
@@ -675,6 +716,7 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
     var name by remember { mutableStateOf(Challenge.myName) }
     var cats by remember { mutableStateOf("all") }
     var code by remember { mutableStateOf("") }
+    var showFriendQr by remember { mutableStateOf(false) }
     fun open(text: String) {
         if (Challenge.containsCapsule(text) || Challenge.containsFamilyCapsule(text)) {
             val added = Challenge.importCapsule(text)
@@ -694,6 +736,13 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
         } else if (c.fromId == Challenge.myId) toast(ctx, "ده التحدي بتاعك، ابعته لأصحابك")
         else if (Challenge.played(c)) toast(ctx, "لعبت التحدي ده قبل كده")
         else onPlay(c)
+    }
+    fun scanFriendUpdate() {
+        runCatching {
+            com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx).startScan()
+                .addOnSuccessListener { b -> b.rawValue?.let { open(it) } }
+                .addOnFailureListener { toast(ctx, "مقدرتش أفتح الماسح") }
+        }.onFailure { toast(ctx, "الماسح مش متاح على الموبايل ده") }
     }
     // a code copied from WhatsApp is picked up when the screen opens
     LaunchedEffect(Unit) {
@@ -738,6 +787,12 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
                             .putExtra(android.content.Intent.EXTRA_TEXT, Challenge.exportCapsule())
                         ctx.startActivity(android.content.Intent.createChooser(share, "ابعت كبسولة التحديات"))
                     }, modifier = Modifier.fillMaxWidth()) { Text("شارك تحديثات التحديات") }
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { showFriendQr = true }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.QrCode, null); Spacer(Modifier.width(4.dp)); Text("اعرض QR") }
+                        OutlinedButton(onClick = { scanFriendUpdate() }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.QrCodeScanner, null); Spacer(Modifier.width(4.dp)); Text("امسح QR") }
+                    }
+                    Text("للّقاء المباشر: الـQR ينقل آخر ٣ تحديثات أصدقاء فقط، من غير بيانات العيلة أو الذاكرة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
             }
             val list = Challenge.friends()
@@ -759,6 +814,23 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
             if (Family.joined) item { FamilyChallengeBoard() }
         }
     }
+    if (showFriendQr) {
+        val capsule = remember(Challenge.version.intValue) { Challenge.exportCapsule(limit = 3) }
+        val bitmap = remember(capsule) { runCatching { challengeQrBitmap(capsule) }.getOrNull() }
+        AlertDialog(
+            onDismissRequest = { showFriendQr = false },
+            title = { Text("تحديثات الأصحاب القريبة") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (bitmap == null) Text("التحديثات كتيرة جدًا للـQR. استخدم زر المشاركة بدلًا منه.", color = MaterialTheme.colorScheme.error)
+                    else Image(bitmap.asImageBitmap(), null, Modifier.size(260.dp).background(Color.White))
+                    Spacer(Modifier.height(8.dp))
+                    Text("خلي صاحبك يمسح الكود من «امسح QR». كل واحد يمسح كود التاني علشان الترتيب يتحدث عند الاثنين.", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { TextButton(onClick = { showFriendQr = false }) { Text("تمام") } },
+        )
+    }
 }
 
 @Composable
@@ -766,36 +838,57 @@ private fun FamilyChallengeBoard() {
     @Suppress("UNUSED_VARIABLE") val familyVersion = Family.version.intValue
     @Suppress("UNUSED_VARIABLE") val challengeVersion = Challenge.version.intValue
     val familyIds = (Family.members().map { it.id } + Family.myId).toSet()
+    val weekStart = java.time.LocalDate.now(com.mohamed.safi.data.zone)
+        .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        .atStartOfDay(com.mohamed.safi.data.zone).toInstant().toEpochMilli()
     val events = Challenge.localUpdates().filter { it.participantId in familyIds }.sortedByDescending { it.at }
-    val byPlayer = events.groupBy { it.participantId to it.participant.ifBlank { "فرد من العيلة" } }
+    val weekly = events.filter { it.at >= weekStart }
+    val byPlayer = weekly.groupBy { it.participantId to it.participant.ifBlank { "فرد من العيلة" } }
         .map { (key, rows) ->
             val latest = rows.maxByOrNull { it.at }
             val points = rows.sumOf { it.score }
-            key.second to (rows.size to (points to (latest?.correct ?: 0)))
-        }.sortedByDescending { it.second.second.first }
+            key.second to FamilyChallengeProgress(rows.size, points, latest?.kind.orEmpty())
+        }.sortedByDescending { it.second.points }
+    val cupGoal = (familyIds.size.coerceAtLeast(1) * 120)
+    val cupPoints = weekly.sumOf { it.score }.coerceAtMost(cupGoal)
     AppCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Groups, null, tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Default.EmojiEvents, null, tint = Gold)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text("تقدم العيلة", fontWeight = FontWeight.Bold)
-                Text("نتائج التحديات المشفرة بين أفراد العيلة فقط", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text("بطولة العيلة الأسبوعية", fontWeight = FontWeight.Bold)
+                Text("مسابقة، ورد، حفظ، دراسة، وإنجازات أطفال — للأعضاء المصرح لهم فقط", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
         Spacer(Modifier.height(8.dp))
+        Text("هدف الفريق هذا الأسبوع: $cupPoints / $cupGoal نقطة", fontWeight = FontWeight.SemiBold)
+        LinearProgressIndicator(progress = { (cupPoints.toFloat() / cupGoal).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(top = 5.dp).height(7.dp).clip(CircleShape), color = Gold, drawStopIndicator = {})
+        Text(if (cupPoints >= cupGoal) "🏆 اكتمل هدف الأسبوع! استمروا لتطوير أرقامكم." else "كل فرد يضيف إنجازًا واحدًا حقيقيًا في اليوم، والهدف يتجدد يوم الاثنين.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(top = 6.dp))
+        Spacer(Modifier.height(8.dp))
         if (byPlayer.isEmpty()) {
-            Text("لسه مفيش نتيجة عائلية متزامنة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            Text("لسه مفيش إنجاز عائلي متزامن هذا الأسبوع. ابدأوا جولة مسابقة أو أكملوا مهمة مفعّلة للمشاركة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         } else {
             byPlayer.take(6).forEachIndexed { index, (name, stats) ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${index + 1}", modifier = Modifier.width(24.dp), fontWeight = FontWeight.Bold)
+                    Text(when (index) { 0 -> "🥇"; 1 -> "🥈"; 2 -> "🥉"; else -> "${index + 1}" }, modifier = Modifier.width(30.dp), fontWeight = FontWeight.Bold)
                     Text(name, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                    Text("${stats.first} جولة • ${stats.second.first} نقطة", style = MaterialTheme.typography.bodySmall)
+                    Text("${familyActivityLabel(stats.lastKind)} • ${stats.count} إنجازات • ${stats.points} نقطة", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
-        Text("تحديثات العيلة تنتقل تلقائيًا عبر الواي فاي أو بطاقة العيلة، ولا تظهر في ترتيب الأصدقاء.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Text("التحديثات مشفرة وتنتقل عبر الواي فاي أو بطاقة العيلة، ولا تظهر في ترتيب الأصدقاء ولا تنقل محادثات أو محتوى خاص.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
     }
+}
+
+private data class FamilyChallengeProgress(val count: Int, val points: Int, val lastKind: String)
+
+private fun familyActivityLabel(kind: String) = when (kind) {
+    "activity_wird" -> "ورد قرآن"
+    "activity_hifz" -> "حفظ قرآن"
+    "activity_kids" -> "نشاط أطفال"
+    "activity_study" -> "جلسة دراسة"
+    "activity_quiz" -> "جولة مسابقة"
+    else -> "مسابقة"
 }
 
 // ============================================================================ extras

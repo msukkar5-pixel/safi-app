@@ -126,7 +126,16 @@ object CompanionProfile {
     }
 
     @Synchronized
+    fun clearMemories() = prefs().edit { remove(KEY).remove(MEMORIES) }
+
+    /** Full reset used only by an explicit profile reset or isolated test setup. */
+    @Synchronized
     fun clear() = prefs().edit { remove(KEY).remove(MEMORIES).remove(ALERT_POLICY) }
+
+    fun voiceMonitoringAllowed(): Boolean {
+        val p = alertPolicy()
+        return p.supportOn && p.voiceOn
+    }
 
     fun memories(): List<Memory> {
         val a = memoriesJson()

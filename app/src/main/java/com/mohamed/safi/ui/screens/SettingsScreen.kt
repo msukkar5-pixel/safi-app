@@ -111,6 +111,9 @@ fun SettingsScreen(onBack: () -> Unit) {
             SectionTitle("رفيق وذاكرته")
             CompanionMemoryCard()
 
+            SectionTitle("الدعم التلقائي")
+            CompanionAlertPolicyCard()
+
             SectionTitle("العملة وتحويلات مصر")
             AppCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -381,6 +384,7 @@ private fun VoiceSettingsCard() {
     var voiceOn by remember { mutableStateOf(SafiApp.prefs.emotionVoiceOn) }
     val requestMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
+            com.mohamed.safi.ai.CompanionProfile.setAlertPolicy(supportOn = true, voiceOn = true)
             SafiApp.prefs.emotionVoiceOn = true
             voiceOn = true
             com.mohamed.safi.ai.EmotionVoiceService.start(ctx)
@@ -460,6 +464,8 @@ private fun CompanionMemoryCard() {
     val ctx = LocalContext.current
     var snapshot by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.snapshot()) }
     var memories by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.memories()) }
+    var category by remember { mutableStateOf("tone") }
+    var memoryValue by remember { mutableStateOf("") }
     AppCard {
         Text("رفيق يتعلم تفضيلاتك أنت فقط، وليس محادثاتك أو أصواتك.", fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
@@ -476,8 +482,32 @@ private fun CompanionMemoryCard() {
             }
         }
         Spacer(Modifier.height(8.dp))
+        Text("أضف حاجة تحب رفيق يفتكرها", fontWeight = FontWeight.SemiBold)
+        ChoiceField("النوع", category, listOf("tone", "routine", "goal", "like", "avoid", "support", "general"), display = {
+            when (it) {
+                "tone" -> "أسلوب الكلام"
+                "routine" -> "روتين"
+                "goal" -> "هدف"
+                "like" -> "حاجة بحبها"
+                "avoid" -> "حاجة أتجنبها"
+                "support" -> "طريقة دعم مفضلة"
+                else -> "معلومة عامة"
+            }
+        }) { category = it }
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(memoryValue, { memoryValue = it.take(300) }, label = { Text("مثلاً: بحب الرد المختصر") }, modifier = Modifier.fillMaxWidth())
+        TextButton(onClick = {
+            val memory = com.mohamed.safi.ai.CompanionProfile.rememberMemory(category, memoryValue)
+            if (memory == null) toast(ctx, "اكتب حاجة الأول")
+            else {
+                memoryValue = ""
+                memories = com.mohamed.safi.ai.CompanionProfile.memories()
+                snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+                toast(ctx, "اتحفظت في ملف رفيق")
+            }
+        }, enabled = memoryValue.isNotBlank()) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("أضف للذاكرة") }
         OutlinedButton(onClick = {
-            com.mohamed.safi.ai.CompanionProfile.clear()
+            com.mohamed.safi.ai.CompanionProfile.clearMemories()
             snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
             memories = com.mohamed.safi.ai.CompanionProfile.memories()
             toast(ctx, "اتمسحت تفضيلات رفيق فقط")
@@ -486,5 +516,53 @@ private fun CompanionMemoryCard() {
             "تقدر تقول لرفيق: افتكر إني بحب الرد المختصر، أو انسَ تفضيل الرد المختصر. بيانات المصاريف والمحادثات والملفات لا تُمسح من هذا الزر.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
+    }
+}
+
+@Composable
+private fun CompanionAlertPolicyCard() {
+    val ctx = LocalContext.current
+    var policy by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.alertPolicy()) }
+    fun save(
+        support: Boolean? = null,
+        voice: Boolean? = null,
+        from: Int? = null,
+        until: Int? = null,
+        cooldown: Int? = null,
+    ) {
+        com.mohamed.safi.ai.CompanionProfile.setAlertPolicy(support, voice, from, until, cooldown)
+        policy = com.mohamed.safi.ai.CompanionProfile.alertPolicy()
+        if (!policy.supportOn || !policy.voiceOn) {
+            SafiApp.prefs.emotionVoiceOn = false
+            com.mohamed.safi.ai.EmotionVoiceService.stop(ctx)
+        }
+    }
+    val hours = listOf(-1) + (0..23).toList()
+    fun hourLabel(value: String) = value.toIntOrNull()?.let { if (it < 0) "بدون ساعات هدوء" else "${it}:00" } ?: value
+    AppCard {
+        Text("دعم رفيق التلقائي", fontWeight = FontWeight.SemiBold)
+        Text("يتحكم في الدعم الهادئ الناتج من تفاعل المستخدم أو من مساعد النبرة الاختياري. لا يحفظ مشاعرك ولا صوتك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("الدعم التلقائي")
+                Text("يسمح للمساعد باقتراح دعم مناسب في الحالات الواضحة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(policy.supportOn, { save(support = it) })
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("النطق التلقائي")
+                Text("لو اتقفل، خدمة الميكروفون تتوقف فورًا", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(policy.voiceOn, { save(voice = it) })
+        }
+        Spacer(Modifier.height(8.dp))
+        ChoiceField("الهدوء يبدأ", policy.quietFrom.toString(), hours.map { it.toString() }, display = ::hourLabel) { save(from = it.toIntOrNull() ?: -1) }
+        Spacer(Modifier.height(6.dp))
+        ChoiceField("الهدوء ينتهي", policy.quietUntil.toString(), hours.map { it.toString() }, display = ::hourLabel) { save(until = it.toIntOrNull() ?: -1) }
+        Spacer(Modifier.height(6.dp))
+        ChoiceField("أقل فاصل بين الدعم", policy.cooldownMinutes.toString(), listOf("5", "10", "20", "30", "60"), display = { "$it دقيقة" }) { save(cooldown = it.toIntOrNull() ?: 10) }
     }
 }
