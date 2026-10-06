@@ -133,6 +133,8 @@ fun SocialScreen(onBack: () -> Unit) {
                     var id by remember { mutableStateOf(Social.fbPage) }; var t by remember { mutableStateOf(Social.fbToken) }
                     OutlinedTextField(id, { id = it; Social.fbPage = it }, label = { Text("Page ID") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                     SecretField("Page access token", t) { t = it; Social.fbToken = it }
+                    var app by remember { mutableStateOf(Social.metaAppId) }
+                    OutlinedTextField(app, { app = it; Social.metaAppId = it }, label = { Text("Meta App ID (اختياري: يفتح ستوري فيسبوك وإنستجرام على طول)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             }
             item {
