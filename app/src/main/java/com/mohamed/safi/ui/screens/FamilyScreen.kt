@@ -145,6 +145,19 @@ fun FamilyScreen(onBack: () -> Unit) {
                     m.city?.let { androidx.compose.material3.Text("📍 $it") }
                 }
             }
+            item {
+                AppCard(onClick = { UiBus.pendingRoute.value = "familylists" }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Checklist, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("لستة العيلة", fontWeight = FontWeight.Bold)
+                            Text("المشتريات وأعياد الميلاد والمواعيد، متشاركة بينكم", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Icon(Icons.Default.ChevronLeft, null)
+                    }
+                }
+            }
             item { SectionTitle("الختمة العائلية") }
             item { FamilyKhatma() }
             item { SectionTitle("أنا بشارك إيه؟") }

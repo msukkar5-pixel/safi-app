@@ -292,6 +292,7 @@ fun AppRoot() {
             composable("kidhome") { KidHomeScreen(open) }
             composable("study") { StudyScreen(back, open) }
             composable("hifz") { HifzScreen(back) }
+            composable("familylists") { FamilyListsScreen(back, open) }
             composable("kidsetup") { KidSetupScreen(back) { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }

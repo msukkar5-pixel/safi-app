@@ -138,6 +138,7 @@ object Family {
         o.put("khr", khRound).put("khm", khMine.joinToString(",")).put("khd", khDone.joinToString(","))
         // lessons, homework and study time travel with the card so parent and child stay in sync
         runCatching { com.mohamed.safi.study.Study.export() }.getOrNull()?.let { o.put("study", it) }
+        runCatching { FamilyLists.export() }.getOrNull()?.let { o.put("lists", it) }
         return PREFIX + familyId + ":" + encrypt(o.toString())
     }
 
@@ -157,6 +158,8 @@ object Family {
         if (id.isBlank() || id == myId) return false
         o.optJSONObject("study")?.let { runCatching { com.mohamed.safi.study.Study.merge(it) } }
         o.remove("study")
+        o.optJSONObject("lists")?.let { runCatching { FamilyLists.merge(it) } }
+        o.remove("lists")
         val prev = sp().getLong("at_$id", 0)
         if (o.optLong("at") >= prev) sp().edit { putString("card_$id", o.toString()); putLong("at_$id", o.optLong("at")) }
         val r = o.optInt("khr", 0)

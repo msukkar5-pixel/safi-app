@@ -51,6 +51,7 @@ private val sections = listOf(
         Entry("vehicle", "السيارة", "دور السواقة، الصيانة، الخطط", Icons.Default.DirectionsCar, Color(0xFFD98A1C)),
         Entry("documents", "المستندات", "الهوية، الإقامة، الجواز…", Icons.Default.Badge, Color(0xFF5C6BC0)),
         Entry("study", "دروس وواجبات الأولاد", "الجدول والواجب والمذاكرة والامتحانات", Icons.Default.School, Color(0xFF3F6EB5)),
+        Entry("familylists", "لستة العيلة", "المشتريات وأعياد الميلاد والمواعيد", Icons.Default.Checklist, Color(0xFF00897B)),
         Entry("family", "ربط العيلة", "مشاركة آمنة بين موبايلات العيلة", Icons.Default.FamilyRestroom, Color(0xFF6D4C41)),
         Entry("diary", "مذكراتي", "بالصوت وتحليل يومك", Icons.Default.EditNote, Color(0xFFAD1457)),
         Entry("places", "أماكني", "كل مكان رحته بالوقت", Icons.Default.Place, Color(0xFF8E5BB8)),
