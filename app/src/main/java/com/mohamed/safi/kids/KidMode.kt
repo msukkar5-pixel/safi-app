@@ -23,7 +23,7 @@ object KidMode {
     data class Section(val route: String, val title: String, val icon: String, val byDefault: Boolean)
     val sections = listOf(
         Section("kids", "مدينة الخير", "🌳", true), Section("study", "دروسي وواجباتي", "📝", true), Section("kidstv", "قنوات الأطفال", "📺", true), Section("quran", "القرآن الكريم", "📖", true),
-        Section("quranaudio", "القرآن المسموع", "🎧", true), Section("azkar", "الأذكار", "🤲", true),
+        Section("quranaudio", "القرآن المسموع", "🎧", true), Section("hifz", "حفظ القرآن", "🧠", true), Section("azkar", "الأذكار", "🤲", true),
         Section("prayer", "مواعيد الصلاة", "🕌", true), Section("stories", "قصص الأنبياء والسيرة", "📚", true),
         Section("quiz", "المسابقة", "🏆", true), Section("asmahusna", "أسماء الله الحسنى", "✨", true),
         Section("sleep", "قبل النوم", "🌙", true), Section("ramadan", "رمضان", "🏮", true),
@@ -124,7 +124,7 @@ object KidMode {
     var bedTo: Int get() = sp().getInt("bed_to", 6); set(v) { sp().edit { putInt("bed_to", v) }; version.intValue++ }
     /** Quran, adhkar and prayer times stay open when the time is up. */
     var keepQuran: Boolean get() = sp().getBoolean("keep_quran", true); set(v) { sp().edit { putBoolean("keep_quran", v) }; version.intValue++ }
-    val alwaysOpen = setOf("quran", "quranaudio", "azkar", "prayer", "hisn")
+    val alwaysOpen = setOf("quran", "quranaudio", "azkar", "prayer", "hisn", "hifz")
 
     private fun today() = java.time.LocalDate.now(com.mohamed.safi.data.zone).toString()
     val usedToday: Int get() = if (sp().getString("used_day", "") == today()) sp().getInt("used", 0) else 0

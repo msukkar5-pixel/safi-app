@@ -27,6 +27,7 @@ private val sections = listOf(
         Entry("quranaudio", "القرآن المسموع", "كل القرّاء وكل الروايات", Icons.Default.Headphones, Color(0xFF00695C)),
         Entry("radio", "إذاعات القرآن", "القاهرة والسعودية والشارقة وكل القرّاء", Icons.Default.Radio, Color(0xFF00838F)),
         Entry("tv", "قنوات القرآن والسنة", "بث مباشر مجاني", Icons.Default.LiveTv, Color(0xFF6A1B9A)),
+        Entry("hifz", "حفظ القرآن", "اسمع وكرر، اختبر نفسك، وراجع", Icons.Default.Psychology, Color(0xFF2E7D32)),
         Entry("wird", "الورد اليومي", "صفحات كل يوم وختمة", Icons.Default.AutoStories, Color(0xFF1B5E20)),
         Entry("azkar", "الأذكار والأدعية", "الصباح والمساء والسبحة", Icons.Default.Favorite, Color(0xFF00897B)),
         Entry("hisn", "حصن المسلم", "كل الأبواب بالعداد والصوت", Icons.Default.Shield, Color(0xFF00796B)),

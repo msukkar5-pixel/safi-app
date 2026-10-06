@@ -291,6 +291,7 @@ fun AppRoot() {
             composable("welcome") { WelcomeScreen(onKid = { nav.navigate("kidsetup") }) { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
             composable("kidhome") { KidHomeScreen(open) }
             composable("study") { StudyScreen(back, open) }
+            composable("hifz") { HifzScreen(back) }
             composable("kidsetup") { KidSetupScreen(back) { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }
