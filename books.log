@@ -1,0 +1,421 @@
+== qisas قصص الأنبياء
+  => qisas {'volumes': 2, 'sections': 62, 'chars': 920579} 416 KB
+== sira_hisham السيرة النبوية
+  => sira_hisham {'volumes': 2, 'sections': 2373, 'chars': 1370184} 643 KB
+== fusul_sira الفصول في سيرة الرسول ﷺ
+  => fusul_sira {'volumes': 1, 'sections': 99, 'chars': 201313} 92 KB
+== shamail الشمائل المحمدية
+  => shamail {'volumes': 1, 'sections': 183, 'chars': 116618} 42 KB
+== khulafa تاريخ الخلفاء
+  => khulafa {'volumes': 1, 'sections': 159, 'chars': 694158} 325 KB
+== usd_ghaba أسد الغابة في معرفة الصحابة
+  => usd_ghaba {'volumes': 6, 'sections': 482, 'chars': 4853986} 1949 KB
+== isaba الإصابة في تمييز الصحابة
+  => isaba {'volumes': 8, 'sections': 1394, 'chars': 5293264} 2185 KB
+== tabaqat_saad الطبقات الكبرى
+  => tabaqat_saad {'volumes': 8, 'sections': 697, 'chars': 4602762} 1728 KB
+== safwa صفة الصفوة
+  => safwa {'volumes': 2, 'sections': 351, 'chars': 1642014} 771 KB
+== siyar سير أعلام النبلاء
+  => siyar {'volumes': 23, 'sections': 655, 'chars': 11951523} 5246 KB
+== egypt_ancient موسوعة مصر القديمة (١٨ جزء)
+   list https://www.hindawi.org/contributors/60304038/ 21
+   list https://www.hindawi.org/contributors/60304038/2/ 0
+   list https://www.hindawi.org/contributors/60304038/3/ 0
+   list https://www.hindawi.org/contributors/60304038/4/ 0
+   list https://www.hindawi.org/contributors/60304038/5/ 0
+   list https://www.hindawi.org/contributors/60304038/6/ 0
+   list https://www.hindawi.org/contributors/60304038/7/ 0
+   list https://www.hindawi.org/contributors/60304038/?page=2 0
+   list https://www.hindawi.org/contributors/60304038/?page=3 0
+   list https://www.hindawi.org/contributors/60304038/?page=4 0
+   list https://www.hindawi.org/contributors/60304038/?page=5 0
+   list https://www.hindawi.org/contributors/60304038/?page=6 0
+   list https://www.hindawi.org/contributors/60304038/?page=7 0
+  parts [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+  => egypt_ancient {'volumes': 18, 'sections': 5654, 'chars': 15745403} 7517 KB
+== futuh_misr فتوح مصر والمغرب
+  => futuh_misr {'volumes': 1, 'sections': 69, 'chars': 477574} 198 KB
+== husn_muhadara حسن المحاضرة في تاريخ مصر والقاهرة
+  => husn_muhadara {'volumes': 2, 'sections': 224, 'chars': 1170157} 527 KB
+== khitat المواعظ والاعتبار (الخطط المقريزية)
+  => khitat {'volumes': 4, 'sections': 1745, 'chars': 3715466} 1733 KB
+== suluk السلوك لمعرفة دول الملوك
+  => suluk {'volumes': 7, 'sections': 581, 'chars': 4492233} 1972 KB
+== nujum النجوم الزاهرة في ملوك مصر والقاهرة
+  => nujum {'volumes': 16, 'sections': 1168, 'chars': 5970582} 2584 KB
+== jabarti عجائب الآثار في التراجم والأخبار
+  => jabarti {'volumes': 3, 'sections': 436, 'chars': 2846119} 1355 KB
+== zaidan_misr تاريخ مصر الحديث
+  => zaidan_misr {'volumes': 1, 'sections': 559, 'chars': 1162164} 586 KB
+== rafei مؤلفات عبد الرحمن الرافعي
+   list https://www.hindawi.org/contributors/35064136/ 5
+   list https://www.hindawi.org/contributors/35064136/2/ 0
+   list https://www.hindawi.org/contributors/35064136/3/ 0
+   list https://www.hindawi.org/contributors/35064136/4/ 0
+   list https://www.hindawi.org/contributors/35064136/5/ 0
+   list https://www.hindawi.org/contributors/35064136/6/ 0
+   list https://www.hindawi.org/contributors/35064136/7/ 0
+   list https://www.hindawi.org/contributors/35064136/?page=2 0
+   list https://www.hindawi.org/contributors/35064136/?page=3 0
+   list https://www.hindawi.org/contributors/35064136/?page=4 0
+   list https://www.hindawi.org/contributors/35064136/?page=5 0
+   list https://www.hindawi.org/contributors/35064136/?page=6 0
+   list https://www.hindawi.org/contributors/35064136/?page=7 0
+    تاريخ الحركة القومية في مصر القديمة {'volumes': 1, 'sections': 280, 'chars': 274054}
+    شعراء الوطنية {'volumes': 1, 'sections': 269, 'chars': 340487}
+    الزعيم الثائر أحمد عرابي {'volumes': 1, 'sections': 106, 'chars': 248662}
+    مذكراتي ١٨٨٩–١٩٥١ {'volumes': 1, 'sections': 143, 'chars': 325475}
+    جمال الدين الأفغاني {'volumes': 1, 'sections': 96, 'chars': 252256}
+  => rafei_63739739 {'volumes': 1, 'sections': 280, 'chars': 274054} 143 KB
+  => rafei_94053925 {'volumes': 1, 'sections': 269, 'chars': 340487} 205 KB
+  => rafei_27518393 {'volumes': 1, 'sections': 106, 'chars': 248662} 120 KB
+  => rafei_51827368 {'volumes': 1, 'sections': 143, 'chars': 325475} 163 KB
+  => rafei_90309579 {'volumes': 1, 'sections': 96, 'chars': 252256} 134 KB
+== uae_portal تاريخ الإمارات وقادتها
+  ok https://u.ae/ar/about-the-uae/History
+  ok https://u.ae/ar/about-the-uae/founders-of-the-union
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates/abu-dhabi
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates/dubai
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates/sharjah
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates/ajman
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates/umm-al-quwain
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates/ras-al-khaimah
+  ok https://u.ae/ar/about-the-uae/the-seven-emirates/fujairah
+  ok https://u.ae/ar/about-the-uae/the-uae-government/the-federal-supreme-council
+  ok https://u.ae/ar/about-the-uae/the-uae-government/government-leaders/h-h-sheikh-mohammed-bin-rashid-al-maktoum
+  ok https://u.ae/ar/about-the-uae/the-uae-government/the-federal-government
+  ok https://u.ae/ar/about-the-uae/the-uae-government/the-federal-national-council-
+  ok https://u.ae/ar/about-the-uae/fact-sheet
+  => uae_portal {'volumes': 1, 'sections': 171, 'chars': 107271} 49 KB
+== uae_mofa تاريخ دولة الإمارات
+  ok https://www.mofa.gov.ae/ar-ae/the-uae/history
+  skip https://www.mofa.gov.ae/ar/the-uae/history too little text (60)
+  => uae_mofa {'volumes': 1, 'sections': 1, 'chars': 4368} 2 KB
+== mbr_life علمتني الحياة — عن الكتاب
+  ok https://www.mediaoffice.ae/ar/news/2025/september/14-09/mohammed-bin-rashid-launches-the-1st-part-of-his-new-book-life-has-taught-me
+  => mbr_life {'volumes': 1, 'sections': 1, 'chars': 7549} 4 KB
+== idah_manasik الإيضاح في مناسك الحج والعمرة
+  => idah_manasik {'volumes': 1, 'sections': 70, 'chars': 231125} 104 KB
+== manasik_taymiyya مناسك الحج
+  => manasik_taymiyya {'volumes': 1, 'sections': 46, 'chars': 65060} 30 KB
+== zad_maad زاد المعاد في هدي خير العباد
+  => zad_maad {'volumes': 5, 'sections': 1259, 'chars': 2969983} 1331 KB
+== fatawa_arkan فتاوى أركان الإسلام
+  => fatawa_arkan {'volumes': 1, 'sections': 540, 'chars': 533171} 249 KB
+== tibb_nabawi الطب النبوي
+  => tibb_nabawi {'volumes': 1, 'sections': 186, 'chars': 419299} 201 KB
+== wabil_sayyib الوابل الصيب من الكلم الطيب
+  => wabil_sayyib {'volumes': 1, 'sections': 164, 'chars': 223936} 101 KB
+== kalim_tayyib الكلم الطيب
+  => kalim_tayyib {'volumes': 1, 'sections': 3, 'chars': 62882} 25 KB
+== adhkar_nawawi الأذكار
+  => adhkar_nawawi {'volumes': 1, 'sections': 376, 'chars': 590766} 244 KB
+== lumca لمعة الاعتقاد
+  => lumca {'volumes': 1, 'sections': 14, 'chars': 19158} 10 KB
+== wasitiyya العقيدة الواسطية
+  => wasitiyya {'volumes': 1, 'sections': 112, 'chars': 31808} 17 KB
+== tahawiyya شرح العقيدة الطحاوية
+  => tahawiyya {'volumes': 2, 'sections': 395, 'chars': 680668} 320 KB
+== riyad رياض الصالحين
+  => riyad {'volumes': 1, 'sections': 2282, 'chars': 615062} 268 KB
+== bulugh بلوغ المرام من أدلة الأحكام
+  => bulugh {'volumes': 1, 'sections': 421, 'chars': 283407} 103 KB
+== umdat_ahkam عمدة الأحكام
+  => umdat_ahkam {'volumes': 1, 'sections': 277, 'chars': 137971} 58 KB
+== adab_mufrad الأدب المفرد
+  => adab_mufrad {'volumes': 1, 'sections': 29, 'chars': 392492} 154 KB
+== jamic_ulum جامع العلوم والحكم
+  => jamic_ulum {'volumes': 2, 'sections': 58, 'chars': 1003737} 436 KB
+== saadi تيسير الكريم الرحمن (تفسير السعدي)
+  => saadi {'volumes': 1, 'sections': 170, 'chars': 2924540} 1414 KB
+== ibnkathir_tafsir تفسير القرآن العظيم
+  => ibnkathir_tafsir {'volumes': 8, 'sections': 2131, 'chars': 8090534} 3674 KB
+== umdat_fiqh عمدة الفقه
+  => umdat_fiqh {'volumes': 1, 'sections': 231, 'chars': 144349} 70 KB
+== zad_mustaqni زاد المستقنع
+  => zad_mustaqni {'volumes': 1, 'sections': 181, 'chars': 151886} 80 KB
+== risala_qayrawani الرسالة
+  => risala_qayrawani {'volumes': 1, 'sections': 46, 'chars': 121843} 58 KB
+== bidayat_mujtahid بداية المجتهد ونهاية المقتصد
+  => bidayat_mujtahid {'volumes': 4, 'sections': 501, 'chars': 1636091} 664 KB
+== siyasa السياسة الشرعية
+  => siyasa {'volumes': 1, 'sections': 30, 'chars': 156683} 73 KB
+== kharaj الخراج
+  => kharaj {'volumes': 1, 'sections': 59, 'chars': 387960} 168 KB
+== ahkam_sultaniyya الأحكام السلطانية
+  => ahkam_sultaniyya {'volumes': 1, 'sections': 63, 'chars': 458082} 204 KB
+== madarij مدارج السالكين
+  => madarij {'volumes': 3, 'sections': 764, 'chars': 2067058} 988 KB
+== uddat_sabirin عدة الصابرين وذخيرة الشاكرين
+  => uddat_sabirin {'volumes': 1, 'sections': 33, 'chars': 391608} 184 KB
+== miftah_saada مفتاح دار السعادة
+  => miftah_saada {'volumes': 2, 'sections': 202, 'chars': 1261061} 599 KB
+== ighatha إغاثة اللهفان من مصايد الشيطان
+  => ighatha {'volumes': 1, 'sections': 39, 'chars': 42509} 20 KB
+== sayd_khatir صيد الخاطر
+  => sayd_khatir {'volumes': 1, 'sections': 400, 'chars': 633817} 338 KB
+== minhaj_qasidin مختصر منهاج القاصدين
+  => minhaj_qasidin {'volumes': 1, 'sections': 242, 'chars': 557903} 275 KB
+== lataif لطائف المعارف
+  => lataif {'volumes': 1, 'sections': 42, 'chars': 606031} 275 KB
+== talbis_iblis تلبيس إبليس
+  => talbis_iblis {'volumes': 1, 'sections': 87, 'chars': 656037} 305 KB
+== zuhd_mubarak الزهد والرقائق
+  => zuhd_mubarak {'volumes': 2, 'sections': 514, 'chars': 701154} 255 KB
+== adab_dunya أدب الدنيا والدين
+  => adab_dunya {'volumes': 1, 'sections': 33, 'chars': 478616} 233 KB
+== makarim_akhlaq مكارم الأخلاق
+  => makarim_akhlaq {'volumes': 1, 'sections': 52, 'chars': 150501} 65 KB
+== tuhfat_mawdud تحفة المودود بأحكام المولود
+  => tuhfat_mawdud {'volumes': 1, 'sections': 66, 'chars': 253292} 112 KB
+== tarbiya_talas التربية والتعليم في الإسلام
+  => tarbiya_talas {'volumes': 1, 'sections': 10, 'chars': 296955} 144 KB
+== tarbiya_ahwani التربية في الإسلام
+  => tarbiya_ahwani {'volumes': 1, 'sections': 17, 'chars': 502218} 234 KB
+== wahy_qalam وحي القلم
+  => wahy_qalam {'volumes': 3, 'sections': 200, 'chars': 1509384} 779 KB
+== ijaz_rafii إعجاز القرآن والبلاغة النبوية
+  => ijaz_rafii {'volumes': 1, 'sections': 47, 'chars': 362538} 181 KB
+== tahta_raya تحت راية القرآن
+  => tahta_raya {'volumes': 1, 'sections': 49, 'chars': 489691} 251 KB
+== nazarat النظرات
+  => nazarat {'volumes': 3, 'sections': 146, 'chars': 836740} 446 KB
+== mukhtar_sihah مختار الصحاح
+  => mukhtar_sihah {'volumes': 1, 'sections': 4002, 'chars': 911949} 458 KB
+== qatr_nada شرح قطر الندى
+  => qatr_nada {'volumes': 1, 'sections': 91, 'chars': 193437} 87 KB
+== amthal مجمع الأمثال
+  => amthal {'volumes': 2, 'sections': 1055, 'chars': 1287863} 687 KB
+== diwan_shafii ديوان الإمام الشافعي
+  => diwan_shafii {'volumes': 1, 'sections': 1, 'chars': 26052} 13 KB
+== adhkiya الأذكياء
+  => adhkiya {'volumes': 1, 'sections': 36, 'chars': 324775} 161 KB
+== uyun_akhbar عيون الأخبار
+  => uyun_akhbar {'volumes': 4, 'sections': 324, 'chars': 1176018} 616 KB
+== tantawi_suwar صور وخواطر
+  => tantawi_suwar {'volumes': 1, 'sections': 42, 'chars': 367358} 197 KB
+== tantawi_nafs من حديث النفس
+  => tantawi_nafs {'volumes': 1, 'sections': 47, 'chars': 293908} 159 KB
+== tantawi_islah في سبيل الإصلاح
+  => tantawi_islah {'volumes': 1, 'sections': 38, 'chars': 276358} 148 KB
+== tantawi_thaqafa فصول في الثقافة والأدب
+  => tantawi_thaqafa {'volumes': 1, 'sections': 43, 'chars': 304912} 160 KB
+== tantawi_tarif تعريف عام بدين الإسلام
+  => tantawi_tarif {'volumes': 1, 'sections': 162, 'chars': 232725} 120 KB
+== hadara_islamiyya الحضارة الإسلامية
+  => hadara_islamiyya {'volumes': 1, 'sections': 5, 'chars': 139465} 71 KB
+== ibnkhaldun تاريخ ابن خلدون (مع المقدمة)
+  => ibnkhaldun {'volumes': 7, 'sections': 3005, 'chars': 7478992} 3454 KB
+== kilani_khulafa مصارع الخلفاء
+  => kilani_khulafa {'volumes': 1, 'sections': 3, 'chars': 76027} 41 KB
+== kilani_ayan مصارع الأعيان
+  => kilani_ayan {'volumes': 1, 'sections': 4, 'chars': 116596} 59 KB
+== hayat_muhammad حياة محمد ﷺ
+  => hayat_muhammad {'volumes': 1, 'sections': 31, 'chars': 891978} 442 KB
+== abq_muhammad عبقرية محمد ﷺ
+  => abq_muhammad {'volumes': 1, 'sections': 7, 'chars': 208780} 106 KB
+== abq_siddiq عبقرية الصديق
+  => abq_siddiq {'volumes': 1, 'sections': 7, 'chars': 197681} 98 KB
+== abq_umar عبقرية عمر
+  => abq_umar {'volumes': 1, 'sections': 11, 'chars': 316211} 162 KB
+== abq_khalid عبقرية خالد
+  => abq_khalid {'volumes': 1, 'sections': 9, 'chars': 242161} 124 KB
+== dhunnurayn ذو النورين عثمان بن عفان
+  => dhunnurayn {'volumes': 1, 'sections': 7, 'chars': 203541} 103 KB
+== abq_ali عبقرية الإمام علي
+  => abq_ali {'volumes': 1, 'sections': 7, 'chars': 197132} 99 KB
+== haykal_siddiq الصديق أبو بكر
+  => haykal_siddiq {'volumes': 1, 'sections': 18, 'chars': 527560} 253 KB
+== haykal_faruq الفاروق عمر
+  => haykal_faruq {'volumes': 1, 'sections': 38, 'chars': 1102516} 536 KB
+== kids_arbain الأربعون النووية
+  => kids_arbain {'volumes': 1, 'sections': 45, 'chars': 17630} 8 KB
+== kids_tuhfa تحفة الأطفال والغلمان
+  => kids_tuhfa {'volumes': 1, 'sections': 11, 'chars': 3331} 2 KB
+== kids_jazariyya المقدمة الجزرية
+  => kids_jazariyya {'volumes': 1, 'sections': 2, 'chars': 5969} 3 KB
+== kids_usul ثلاثة الأصول وأدلتها
+  => kids_usul {'volumes': 1, 'sections': 2, 'chars': 11530} 6 KB
+== kids_shurut شروط الصلاة وأركانها وواجباتها
+  => kids_shurut {'volumes': 1, 'sections': 4, 'chars': 8510} 4 KB
+== kids_mashy آداب المشي إلى الصلاة
+  => kids_mashy {'volumes': 1, 'sections': 20, 'chars': 50517} 25 KB
+== kids_shamail مختصر الشمائل المحمدية
+  => kids_shamail {'volumes': 1, 'sections': 3, 'chars': 78280} 30 KB
+== kids_sira مختصر سيرة الرسول ﷺ
+  => kids_sira {'volumes': 1, 'sections': 199, 'chars': 333378} 161 KB
+== kids_fadail فضائل القرآن
+  => kids_fadail {'volumes': 1, 'sections': 19, 'chars': 15227} 8 KB
+== h_azraqi أخبار مكة
+  => h_azraqi {'volumes': 2, 'sections': 522, 'chars': 672158} 286 KB
+== h_madina تاريخ المدينة المنورة
+  => h_madina {'volumes': 4, 'sections': 885, 'chars': 1158200} 481 KB
+== h_shifa شفاء الغرام بأخبار البلد الحرام
+  => h_shifa {'volumes': 2, 'sections': 221, 'chars': 1344147} 548 KB
+== h_wafa وفاء الوفا بأخبار دار المصطفى ﷺ
+  => h_wafa {'volumes': 4, 'sections': 668, 'chars': 1960013} 862 KB
+== h_najd تاريخ نجد الحديث
+  => h_najd {'volumes': 1, 'sections': 18, 'chars': 533761} 259 KB
+== h_qalanisi ذيل تاريخ دمشق
+  => h_qalanisi {'volumes': 1, 'sections': 151, 'chars': 630052} 282 KB
+== h_halab زبدة الحلب من تاريخ حلب
+  => h_halab {'volumes': 1, 'sections': 320, 'chars': 596741} 274 KB
+== h_rawdatayn الروضتين في أخبار الدولتين
+  => h_rawdatayn {'volumes': 4, 'sections': 281, 'chars': 1667765} 851 KB
+== h_budayri حوادث دمشق اليومية
+  => h_budayri {'volumes': 1, 'sections': 43, 'chars': 180420} 84 KB
+== h_khitat_sham خطط الشام
+  => h_khitat_sham {'volumes': 5, 'sections': 606, 'chars': 2316399} 1142 KB
+== h_umawiyya الدولة الأموية في الشام
+  => h_umawiyya {'volumes': 1, 'sections': 12, 'chars': 340333} 176 KB
+== h_uns الأنس الجليل بتاريخ القدس والخليل
+  => h_uns {'volumes': 2, 'sections': 74, 'chars': 1109788} 469 KB
+== h_khalidi رجال الحكم والإدارة في فلسطين
+  => h_khalidi {'volumes': 1, 'sections': 3, 'chars': 76604} 34 KB
+== h_lubnan بيروت ولبنان منذ قرن ونصف
+  => h_lubnan {'volumes': 1, 'sections': 19, 'chars': 545761} 281 KB
+== h_dhakhair ذخائر لبنان
+  => h_dhakhair {'volumes': 1, 'sections': 14, 'chars': 409236} 186 KB
+== h_baghdad تاريخ بغداد
+  => h_baghdad {'volumes': 14, 'sections': 829, 'chars': 9480775} 3590 KB
+== h_mawsil تاريخ الموصل
+  => h_mawsil {'volumes': 1, 'sections': 53, 'chars': 1536532} 729 KB
+== h_wasit تاريخ واسط
+  => h_wasit {'volumes': 1, 'sections': 424, 'chars': 260063} 109 KB
+== h_salam بغداد مدينة السلام
+  => h_salam {'volumes': 1, 'sections': 5, 'chars': 130016} 64 KB
+== h_jacdi طبقات فقهاء اليمن
+  => h_jacdi {'volumes': 1, 'sections': 15, 'chars': 435744} 195 KB
+== h_mustabsir تاريخ المستبصر
+  => h_mustabsir {'volumes': 1, 'sections': 269, 'chars': 299311} 152 KB
+== h_sudan السودان: من التاريخ القديم
+  => h_sudan {'volumes': 1, 'sections': 61, 'chars': 1799127} 864 KB
+== h_sudan_misri السودان المصري
+  => h_sudan_misri {'volumes': 1, 'sections': 8, 'chars': 217452} 103 KB
+== h_misr_sudan مصر والسودان
+  => h_misr_sudan {'volumes': 1, 'sections': 1, 'chars': 18985} 10 KB
+== h_istiqsa الاستقصا لأخبار دول المغرب الأقصى
+  => h_istiqsa {'volumes': 7, 'sections': 744, 'chars': 2462867} 1197 KB
+== h_mucjib المعجب في تلخيص أخبار المغرب
+  => h_mucjib {'volumes': 1, 'sections': 54, 'chars': 381780} 188 KB
+== h_bayan البيان المغرب في أخبار الأندلس والمغرب
+  => h_bayan {'volumes': 1, 'sections': 29, 'chars': 832651} 392 KB
+== h_ifriqiya تاريخ إفريقية والمغرب
+  => h_ifriqiya {'volumes': 1, 'sections': 31, 'chars': 139517} 68 KB
+== h_riyad رياض النفوس
+  => h_riyad {'volumes': 2, 'sections': 105, 'chars': 895686} 438 KB
+== h_tabaqat_ifriqiya طبقات علماء إفريقية
+  => h_tabaqat_ifriqiya {'volumes': 1, 'sections': 10, 'chars': 275581} 138 KB
+== h_aqwam أقوم المسالك في معرفة أحوال الممالك
+  => h_aqwam {'volumes': 1, 'sections': 20, 'chars': 598671} 276 KB
+== h_wasit_shinqit الوسيط في تراجم أدباء شنقيط
+  => h_wasit_shinqit {'volumes': 1, 'sections': 158, 'chars': 596469} 316 KB
+== h_nafh نفح الطيب من غصن الأندلس الرطيب
+  => h_nafh {'volumes': 1, 'sections': 154, 'chars': 4567810} 2321 KB
+== h_ihata الإحاطة في أخبار غرناطة
+  => h_ihata {'volumes': 1, 'sections': 70, 'chars': 2070698} 1053 KB
+== h_jadhwa جذوة المقتبس في ذكر ولاة الأندلس
+  => h_jadhwa {'volumes': 1, 'sections': 15, 'chars': 442024} 198 KB
+== h_faradi تاريخ علماء الأندلس
+  => h_faradi {'volumes': 2, 'sections': 179, 'chars': 616424} 220 KB
+== h_qurtuba قضاة قرطبة
+  => h_qurtuba {'volumes': 1, 'sections': 9, 'chars': 255950} 114 KB
+== h_fadl_andalus فضل الأندلس وذكر رجالها
+  => h_fadl_andalus {'volumes': 1, 'sections': 3, 'chars': 69517} 36 KB
+== h_hadarat حضارة العرب في الأندلس
+  => h_hadarat {'volumes': 1, 'sections': 4, 'chars': 106680} 58 KB
+== h_ghabir غابر الأندلس وحاضرها
+  => h_ghabir {'volumes': 1, 'sections': 6, 'chars': 157721} 80 KB
+== h_macarik معارك العرب في الأندلس
+  => h_macarik {'volumes': 1, 'sections': 5, 'chars': 134979} 70 KB
+== d_mukhtar مختار الصحاح
+  => d_mukhtar {'volumes': 1, 'sections': 4002, 'chars': 911949} 458 KB
+== d_misbah المصباح المنير
+  => d_misbah {'volumes': 1, 'sections': 2987, 'chars': 1071785} 620 KB
+== d_qamus القاموس المحيط
+  => d_qamus {'volumes': 1, 'sections': 731, 'chars': 3399047} 1750 KB
+== d_lisan لسان العرب
+  => d_lisan {'volumes': 15, 'sections': 1032, 'chars': 16727888} 8206 KB
+== d_sihah الصحاح: تاج اللغة وصحاح العربية
+  => d_sihah {'volumes': 6, 'sections': 6471, 'chars': 2947960} 1543 KB
+== d_maqayis معجم مقاييس اللغة
+  => d_maqayis {'volumes': 6, 'sections': 5599, 'chars': 1985301} 997 KB
+== d_asas أساس البلاغة
+  => d_asas {'volumes': 2, 'sections': 3912, 'chars': 1618186} 890 KB
+== d_taj تاج العروس من جواهر القاموس
+  => d_taj {'volumes': 40, 'sections': 13159, 'chars': 21859352} 10874 KB
+== d_fiqh_lugha فقه اللغة وسر العربية
+  => d_fiqh_lugha {'volumes': 1, 'sections': 690, 'chars': 272983} 150 KB
+== wiki_egypt تاريخ مصر: نبذة شاملة
+  ok تاريخ مصر
+  => wiki_egypt {'volumes': 1, 'sections': 18, 'chars': 18350} 10 KB
+== wiki_uae تاريخ الإمارات: نبذة شاملة
+  ok تاريخ الإمارات العربية المتحدة
+  => wiki_uae {'volumes': 1, 'sections': 33, 'chars': 30865} 16 KB
+== wiki_saudi تاريخ السعودية: نبذة شاملة
+  ok تاريخ السعودية
+  => wiki_saudi {'volumes': 1, 'sections': 28, 'chars': 43080} 21 KB
+== wiki_sham تاريخ سوريا: نبذة شاملة
+  ok تاريخ سوريا
+  => wiki_sham {'volumes': 1, 'sections': 38, 'chars': 66914} 34 KB
+== wiki_palestine تاريخ فلسطين: نبذة شاملة
+  ok تاريخ فلسطين
+  => wiki_palestine {'volumes': 1, 'sections': 30, 'chars': 33766} 17 KB
+== wiki_lebanon تاريخ لبنان: نبذة شاملة
+  ok تاريخ لبنان
+  => wiki_lebanon {'volumes': 1, 'sections': 53, 'chars': 34837} 18 KB
+== wiki_jordan تاريخ الأردن: نبذة شاملة
+  ok تاريخ الأردن
+  => wiki_jordan {'volumes': 1, 'sections': 15, 'chars': 41069} 21 KB
+== wiki_iraq تاريخ العراق: نبذة شاملة
+  ok تاريخ العراق
+  => wiki_iraq {'volumes': 1, 'sections': 30, 'chars': 59599} 29 KB
+== wiki_yemen تاريخ اليمن: نبذة شاملة
+  ok تاريخ اليمن
+  => wiki_yemen {'volumes': 1, 'sections': 25, 'chars': 76880} 36 KB
+== wiki_sudan تاريخ السودان: نبذة شاملة
+  ok تاريخ السودان
+  => wiki_sudan {'volumes': 1, 'sections': 58, 'chars': 70765} 36 KB
+== wiki_maghrib تاريخ المغرب: نبذة شاملة
+  ok تاريخ المغرب
+  => wiki_maghrib {'volumes': 1, 'sections': 34, 'chars': 31004} 16 KB
+== wiki_tunisia تاريخ تونس: نبذة شاملة
+  ok تاريخ تونس
+  => wiki_tunisia {'volumes': 1, 'sections': 28, 'chars': 43073} 22 KB
+== wiki_algeria تاريخ الجزائر: نبذة شاملة
+  ok تاريخ الجزائر
+  => wiki_algeria {'volumes': 1, 'sections': 7, 'chars': 2322} 2 KB
+== wiki_libya تاريخ ليبيا: نبذة شاملة
+  ok تاريخ ليبيا
+  => wiki_libya {'volumes': 1, 'sections': 18, 'chars': 42116} 22 KB
+== wiki_mauritania تاريخ موريتانيا: نبذة شاملة
+  ok تاريخ موريتانيا
+  => wiki_mauritania {'volumes': 1, 'sections': 4, 'chars': 2623} 1 KB
+== wiki_kuwait تاريخ الكويت: نبذة شاملة
+  ok تاريخ الكويت
+  => wiki_kuwait {'volumes': 1, 'sections': 28, 'chars': 46665} 23 KB
+== wiki_qatar تاريخ قطر: نبذة شاملة
+  ok تاريخ قطر
+  => wiki_qatar {'volumes': 1, 'sections': 16, 'chars': 22894} 12 KB
+== wiki_bahrain تاريخ البحرين: نبذة شاملة
+  ok تاريخ البحرين
+  => wiki_bahrain {'volumes': 1, 'sections': 19, 'chars': 17314} 9 KB
+== wiki_oman تاريخ عُمان: نبذة شاملة
+  skip تاريخ عمان too little text (0)
+  ok تاريخ سلطنة عمان
+  => wiki_oman {'volumes': 1, 'sections': 20, 'chars': 31775} 16 KB
+== wiki_somalia تاريخ الصومال: نبذة شاملة
+  ok تاريخ الصومال
+  => wiki_somalia {'volumes': 1, 'sections': 7, 'chars': 9021} 5 KB
+== wiki_djibouti تاريخ جيبوتي: نبذة شاملة
+  ok تاريخ جيبوتي
+  => wiki_djibouti {'volumes': 1, 'sections': 5, 'chars': 6123} 3 KB
+== wiki_comoros تاريخ جزر القمر: نبذة شاملة
+  ok تاريخ جزر القمر
+  => wiki_comoros {'volumes': 1, 'sections': 4, 'chars': 9082} 5 KB
+== wiki_andalus تاريخ الأندلس: نبذة شاملة
+  ok تاريخ الأندلس
+  => wiki_andalus {'volumes': 1, 'sections': 9, 'chars': 6136} 3 KB
+catalog 175 failed []
