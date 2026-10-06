@@ -29,6 +29,17 @@ private val SInk = Color(0xFF3B3125)
 private val SGreen = Color(0xFF2E9D5B)
 
 /** Short value stories (with a question at the end) and choose-your-path stories, from assets/kids/stories.json in ar/en/ur. */
+/** (id, icon, title) of every kids story in the calendar order: value and choice stories mixed. */
+fun kidStoryIds(ctx: android.content.Context): List<Triple<String, String, String>> {
+    val all = KidStories.load(ctx)
+    fun list(k: String) = all.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
+        .map { Triple(it.optString("id"), it.optString("icon"), KidStories.t(it.optJSONObject("title"))) }
+    val v = ArrayDeque(list("stories")); val c = ArrayDeque(list("choice"))
+    val out = ArrayList<Triple<String, String, String>>()
+    while (v.isNotEmpty() || c.isNotEmpty()) { repeat(3) { v.removeFirstOrNull()?.let { out += it } }; c.removeFirstOrNull()?.let { out += it } }
+    return out
+}
+
 private object KidStories {
     private var data: JSONObject? = null
     fun load(ctx: android.content.Context): JSONObject =
@@ -42,13 +53,16 @@ private object KidStories {
 }
 
 @Composable
-fun KidsStoriesScreen(kid: Kid, onDone: () -> Unit) {
+fun KidsStoriesScreen(kid: Kid, startId: String? = null, onDone: () -> Unit) {
     val ctx = LocalContext.current
     val all = remember { KidStories.load(ctx) }
-    var open by remember { mutableStateOf<JSONObject?>(null) }
-    var choice by remember { mutableStateOf<JSONObject?>(null) }
-    open?.let { s -> BackHandler { open = null }; ValueStory(kid, s) { open = null }; return }
-    choice?.let { s -> BackHandler { choice = null }; ChoiceStory(kid, s) { choice = null }; return }
+    fun find(k: String) = all.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty().firstOrNull { it.optString("id") == startId }
+    var open by remember { mutableStateOf(startId?.let { find("stories") }) }
+    var choice by remember { mutableStateOf(startId?.let { find("choice") }) }
+    // opened straight from "today's story": closing the story goes back to the kids screen
+    val direct = startId != null
+    open?.let { s -> BackHandler { if (direct) onDone() else open = null }; ValueStory(kid, s) { if (direct) onDone() else open = null }; return }
+    choice?.let { s -> BackHandler { if (direct) onDone() else choice = null }; ChoiceStory(kid, s) { if (direct) onDone() else choice = null }; return }
     BackHandler { onDone() }
     val stories = all.optJSONArray("stories")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
     val choices = all.optJSONArray("choice")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()

@@ -18,6 +18,14 @@ import java.io.File
 /** Draws a simple branded image card (title, Quran text, footer) and opens the share sheet. Nothing leaves the phone until the user picks an app. */
 object ShareCard {
     fun share(ctx: Context, title: String, body: String, source: String, footer: String) {
+        val file = render(ctx, title, body, source, footer) ?: return
+        val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", file)
+        val send = Intent(Intent.ACTION_SEND).setType("image/png").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        ctx.startActivity(Intent.createChooser(send, tr("شارك البطاقة")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    /** Draws the card into cache/[name].png and returns the file. */
+    fun render(ctx: Context, title: String, body: String, source: String, footer: String, name: String = "safi_card"): File? {
         val w = 1080; val h = 1350
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
@@ -46,10 +54,7 @@ object ShareCard {
         val brand = layout("صافي", 34f, gold, true)
         draw(brand, h - 110f)
 
-        val file = File(ctx.cacheDir, "safi_card.png")
-        runCatching { file.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) } }.onFailure { return }
-        val uri = FileProvider.getUriForFile(ctx, ctx.packageName + ".files", file)
-        val send = Intent(Intent.ACTION_SEND).setType("image/png").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        ctx.startActivity(Intent.createChooser(send, tr("شارك البطاقة")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val file = File(ctx.cacheDir, "$name.png")
+        return runCatching { file.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }; file }.getOrNull()
     }
 }

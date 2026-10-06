@@ -47,6 +47,28 @@ fun SettingsScreen(onBack: () -> Unit) {
             Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            GoldCard(onClick = { UiBus.pendingRoute.value = "app_guide" }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("دليل التطبيق", fontWeight = FontWeight.Bold)
+                        Text("شرح كل قسم وإزاي تستخدمه", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    }
+                    Icon(Icons.Default.ChevronLeft, null)
+                }
+            }
+            AppCard(onClick = { UiBus.pendingRoute.value = "social" }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Campaign, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("المنشور اليومي على السوشيال ميديا", fontWeight = FontWeight.Bold)
+                        Text("آية أو حديث أو دعاء كل يوم على حساباتك", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    }
+                    Icon(Icons.Default.ChevronLeft, null)
+                }
+            }
             SectionTitle("لغة التطبيق")
             AppCard {
                 val scope = rememberCoroutineScope()

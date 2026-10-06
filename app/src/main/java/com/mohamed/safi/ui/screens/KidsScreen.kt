@@ -72,7 +72,7 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
             "wudu" -> WuduGame(kid) { game = null }
             "quiz" -> KidsQuiz(kid) { game = null }
             "stories" -> KidsStoriesScreen(kid) { game = null }
-            else -> KidsGame(g, kid) { game = null }
+            else -> if (g.startsWith("story:")) KidsStoriesScreen(kid, g.removePrefix("story:")) { game = null } else KidsGame(g, kid) { game = null }
         }
         return
     }
@@ -112,6 +112,7 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
                 item { TreeCard(kid) }
                 item { PassportCard(kid) }
                 item { RewardsCard(kid) }
+                item { DailyKidsCard { game = it } }
                 item { Text("ألعاب وقصص", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = KidGreen) }
                 item {
                     Surface(onClick = { game = "stories" }, shape = RoundedCornerShape(22.dp), color = Color(0xFFFFE9B8), modifier = Modifier.fillMaxWidth()) {
@@ -125,14 +126,12 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
                         }
                     }
                 }
-                listOf(
-                    listOf("🏮" to "اصطاد الفوانيس" to "catch", "🧭" to "المتاهة" to "maze", "🎨" to "لوّن بالأرقام" to "color"),
-                    listOf("🔤" to "الحروف" to "letters", "🕌" to "الصلوات الخمس" to "prayers", "🔢" to "عدّ معايا" to "count"),
-                    listOf("🧠" to "لعبة الذاكرة" to "memory", "💧" to "رتّب الوضوء" to "wudu", "❓" to "أسئلة سهلة" to "quiz"),
-                ).forEach { row ->
+                item { Text("كل الألعاب", fontWeight = FontWeight.Bold, color = Color(0xFF3B3125)) }
+                KidData.allGames(com.mohamed.safi.SafiApp.instance).chunked(3).forEach { row ->
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            row.forEach { (t, id) -> KidTile(t.first, t.second, Modifier.weight(1f)) { game = id } }
+                            row.forEach { e -> KidTile(e.icon, e.title, Modifier.weight(1f)) { game = e.id } }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
@@ -573,6 +572,40 @@ private fun TaskPicker(kid: Kid, onDone: () -> Unit) {
                             Text("${"⭐".repeat(t.stars)} • ${t.growth.icon} ${t.growth.label}" + if (kid.age < t.minAge) " • لسن ${t.minAge}+" else "", style = MaterialTheme.typography.bodySmall)
                         }
                         Checkbox(on, { if (on) chosen.remove(t.id) else chosen.add(t.id) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** "Today's game and story": in Ramadan, game n and story n on day n (30 of each); the rest of the year it rotates daily. */
+@Composable
+private fun DailyKidsCard(onOpen: (String) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val today = LocalDate.now(zone)
+    val inR = isRamadan(today)
+    val n = if (inR) com.mohamed.safi.faith.Ramadan.day(today) else (today.toEpochDay() % 30).toInt() + 1
+    val games = remember { KidData.allGames(ctx) }
+    val stories = remember { kidStoryIds(ctx) }
+    val g = games.getOrNull((n - 1) % games.size.coerceAtLeast(1)) ?: return
+    val st = stories.getOrNull((n - 1) % stories.size.coerceAtLeast(1))
+    Surface(shape = RoundedCornerShape(22.dp), color = Color(0xFF1A2A4F), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(if (inR) "🌙 تقويم رمضان: اليوم $n" else "✨ مفاجأة النهارده", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Gold)
+            Text(if (inR) "كل يوم في رمضان لعبة جديدة وقصة جديدة" else "لعبة وقصة مختارين ليك النهارده", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(onClick = { onOpen(g.id) }, shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.weight(1f)) {
+                    Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(g.icon, fontSize = 30.sp); Text("لعبة اليوم", style = MaterialTheme.typography.labelSmall, color = Color(0xFF3B3125))
+                        Text(g.title, fontWeight = FontWeight.Bold, color = Color(0xFF3B3125), textAlign = TextAlign.Center, maxLines = 2)
+                    }
+                }
+                if (st != null) Surface(onClick = { onOpen("story:" + st.first) }, shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE9B8), modifier = Modifier.weight(1f)) {
+                    Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(st.second, fontSize = 30.sp); Text("قصة اليوم", style = MaterialTheme.typography.labelSmall, color = Color(0xFF3B3125))
+                        Text(st.third, fontWeight = FontWeight.Bold, color = Color(0xFF3B3125), textAlign = TextAlign.Center, maxLines = 2)
                     }
                 }
             }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,7 +49,57 @@ fun KidsGame(id: String, kid: Kid, onDone: () -> Unit) {
         "letters" -> LettersGame(kid, onDone)
         "prayers" -> PrayerOrderGame(kid, onDone)
         "count" -> CountGame(kid, onDone)
-        else -> onDone()
+        "simon" -> SimonGame(kid, onDone)
+        "slide" -> SlideGame(kid, onDone)
+        "xo" -> XoGame(kid, onDone)
+        "balloons" -> BalloonGame(kid, onDone)
+        else -> {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val data = remember { KidData.games(ctx) }
+            data.pick.firstOrNull { it.optString("id") == id }?.let { PickGame(kid, it, onDone); return }
+            data.order.firstOrNull { it.optString("id") == id }?.let { OrderGame(kid, it, onDone); return }
+            data.memory.firstOrNull { it.optString("id") == id }?.let { m ->
+                val faces = m.optJSONArray("faces")!!.let { a -> (0 until a.length()).map { a.getString(it) } }
+                ThemedMemory(kid, KidData.t(m.optJSONObject("title")), faces, onDone); return
+            }
+            LaunchedEffect(Unit) { onDone() }
+        }
+    }
+}
+
+/** Kids' content in ar/en/ur from assets/kids/*.json. */
+object KidData {
+    class Games(val pick: List<org.json.JSONObject>, val order: List<org.json.JSONObject>, val memory: List<org.json.JSONObject>)
+    private var games: Games? = null
+    private fun arr(o: org.json.JSONObject, k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
+    fun games(ctx: android.content.Context): Games = games ?: runCatching {
+        val o = org.json.JSONObject(ctx.assets.open("kids/games.json").bufferedReader().use { it.readText() })
+        Games(arr(o, "pick"), arr(o, "order"), arr(o, "memory"))
+    }.getOrDefault(Games(emptyList(), emptyList(), emptyList())).also { games = it }
+
+    /** Text in the app language: Arabic, English or Urdu; other languages read the English. */
+    fun t(o: org.json.JSONObject?): String {
+        if (o == null) return ""
+        val l = I18n.lang.value
+        return o.optString(if (l == "ar" || l == "ur") l else "en").ifBlank { o.optString("ar") }
+    }
+
+    data class Entry(val id: String, val icon: String, val title: String)
+    /** Every kids game, in the order of the Ramadan calendar (game n on Ramadan day n). */
+    fun allGames(ctx: android.content.Context): List<Entry> {
+        val g = games(ctx)
+        val builtIn = listOf(
+            Entry("memory", "🧠", tr("لعبة الذاكرة")), Entry("catch", "🏮", tr("اصطاد الفوانيس")), Entry("wudu", "💧", tr("رتّب الوضوء")),
+            Entry("maze", "🧭", tr("المتاهة")), Entry("letters", "🔤", tr("الحروف")), Entry("color", "🎨", tr("لوّن بالأرقام")),
+            Entry("prayers", "🕌", tr("الصلوات الخمس")), Entry("count", "🔢", tr("عدّ معايا")), Entry("quiz", "❓", tr("أسئلة سهلة")),
+            Entry("simon", "🚦", tr("تتابع الألوان")), Entry("slide", "🧩", tr("اللغز المنزلق")), Entry("xo", "⭕", tr("إكس أو")), Entry("balloons", "🎈", tr("فرقع البالونات")),
+        )
+        val fromJson = (g.pick + g.order + g.memory).map { Entry(it.optString("id"), it.optString("icon"), t(it.optJSONObject("title"))) }
+        // interleave so the calendar mixes kinds of games
+        val out = ArrayList<Entry>()
+        val a = ArrayDeque(builtIn); val b = ArrayDeque(fromJson)
+        while (a.isNotEmpty() || b.isNotEmpty()) { a.removeFirstOrNull()?.let { out += it }; b.removeFirstOrNull()?.let { out += it }; b.removeFirstOrNull()?.let { out += it } }
+        return out
     }
 }
 
@@ -414,5 +465,285 @@ private fun CountGame(kid: Kid, onDone: () -> Unit) {
             }
         }
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+// ================================================================= quiz-like packs (assets/kids/games.json "pick")
+
+@Composable
+private fun PickGame(kid: Kid, pack: org.json.JSONObject, onDone: () -> Unit) {
+    var round by remember { mutableIntStateOf(0) }
+    val items = remember(round) { pack.optJSONArray("items")!!.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.shuffled() }
+    var i by remember(round) { mutableIntStateOf(0) }
+    var wrong by remember(round) { mutableStateOf(setOf<Int>()) }
+    var right by remember(round) { mutableIntStateOf(0) }
+    val haptic = LocalHapticFeedback.current
+    val q = items.getOrNull(i)
+    LaunchedEffect(q == null) { if (q == null) Kids.addStars(kid.id, (right / 3).coerceIn(1, 3)) }
+    GameFrame(KidData.t(pack.optJSONObject("title")), onDone) {
+        if (q == null) { WinBox("عرفت $right من ${items.size} من أول مرة 🌟", onAgain = { round++ }, onDone = onDone); return@GameFrame }
+        Text("${i + 1} / ${items.size}", color = GInk)
+        LinearProgressIndicator(progress = { i / items.size.toFloat() }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), color = GGreen)
+        Spacer(Modifier.height(12.dp))
+        val prompt = KidData.t(q.optJSONObject("q")).ifBlank { KidData.t(pack.optJSONObject("prompt")) }
+        val big = prompt.length <= 4
+        androidx.compose.material3.Text(prompt, fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = if (big) 72.sp else 24.sp, color = GInk,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        if (big) KidData.t(pack.optJSONObject("prompt")).takeIf { it.isNotBlank() }?.let { androidx.compose.material3.Text(it, fontSize = 18.sp, color = GInk) }
+        Spacer(Modifier.height(20.dp))
+        val opts = q.optJSONArray("o")!!.let { a -> (0 until a.length()).map { KidData.t(a.getJSONObject(it)) } }
+        val c = q.optInt("c")
+        val short = opts.all { it.length <= 3 }
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            opts.forEachIndexed { k, o ->
+                Surface(
+                    onClick = {
+                        if (k == c) { if (wrong.isEmpty()) right++; haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); i++; wrong = emptySet() }
+                        else wrong = wrong + k
+                    },
+                    shape = RoundedCornerShape(20.dp), color = if (k in wrong) Color(0xFFFFE0E0) else Color.White,
+                    border = androidx.compose.foundation.BorderStroke(2.dp, GSky),
+                    modifier = if (short) Modifier.size(88.dp) else Modifier.fillMaxWidth(),
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(if (short) 0.dp else 14.dp)) {
+                        androidx.compose.material3.Text(o, fontSize = if (short) 40.sp else 20.sp, fontWeight = FontWeight.SemiBold, color = GInk)
+                    }
+                }
+            }
+        }
+        if (wrong.isNotEmpty()) Text("فكّر تاني، إنت قريب! 🤔", color = Warn, modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+// ================================================================= put in order (assets/kids/games.json "order")
+
+@Composable
+private fun OrderGame(kid: Kid, pack: org.json.JSONObject, onDone: () -> Unit) {
+    val steps = remember { pack.optJSONArray("steps")!!.let { a -> (0 until a.length()).map { KidData.t(a.getJSONObject(it)) } } }
+    var round by remember { mutableIntStateOf(0) }
+    val shuffled = remember(round) { steps.indices.shuffled() }
+    var next by remember(round) { mutableIntStateOf(0) }
+    var hint by remember(round) { mutableStateOf(false) }
+    val done = next == steps.size
+    LaunchedEffect(done) { if (done) Kids.addStars(kid.id, 2) }
+    GameFrame(KidData.t(pack.optJSONObject("title")), onDone) {
+        androidx.compose.material3.Text(KidData.t(pack.optJSONObject("hint")), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = GInk)
+        if (hint) Text("فكّر تاني، إيه اللي بعدها؟ 🤔", color = Warn)
+        Spacer(Modifier.height(8.dp))
+        Column(Modifier.weight(1f).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+            shuffled.forEach { i ->
+                val ok = i < next
+                Surface(
+                    onClick = { if (ok || done) return@Surface; if (i == next) { next++; hint = false } else hint = true },
+                    shape = RoundedCornerShape(16.dp), color = if (ok) GGreen.copy(alpha = 0.18f) else Color.White,
+                    border = androidx.compose.foundation.BorderStroke(2.dp, if (ok) GGreen else GSky.copy(alpha = 0.4f)), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (ok) "${i + 1}" else "•", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(Modifier.width(10.dp))
+                        androidx.compose.material3.Text(steps[i], fontSize = 18.sp, color = GInk)
+                    }
+                }
+            }
+        }
+        if (done) WinBox("ممتاز! رتّبتها صح ⭐⭐", onAgain = { round++ }, onDone = onDone)
+    }
+}
+
+// ================================================================= themed memory
+
+@Composable
+private fun ThemedMemory(kid: Kid, title: String, faces: List<String>, onDone: () -> Unit) {
+    var round by remember { mutableIntStateOf(0) }
+    val cards = remember(round) { faces.take(if (faces.size > 6) 8 else 6).flatMap { listOf(it, it) }.shuffled() }
+    val open = remember(round) { mutableStateListOf<Int>() }
+    val matched = remember(round) { mutableStateListOf<Int>() }
+    var moves by remember(round) { mutableIntStateOf(0) }
+    LaunchedEffect(open.size, round) {
+        if (open.size == 2) {
+            moves++; delay(650)
+            if (cards[open[0]] == cards[open[1]]) matched.addAll(open)
+            open.clear()
+            if (matched.size == cards.size) Kids.addStars(kid.id, 3)
+        }
+    }
+    val won = matched.size == cards.size
+    val cols = if (cards.size > 12) 4 else 3
+    GameFrame(title, onDone) {
+        Text(if (won) "برافو! خلصتها في $moves محاولة ⭐⭐⭐" else "اقلب كارتين متشابهين • $moves محاولة", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = GInk)
+        Spacer(Modifier.height(10.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            cards.indices.chunked(cols).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { i ->
+                        val shown = i in open || i in matched
+                        Surface(
+                            onClick = { if (!shown && open.size < 2) open.add(i) },
+                            shape = RoundedCornerShape(14.dp), color = if (i in matched) GGreen.copy(alpha = 0.2f) else if (shown) Color.White else GSky,
+                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                        ) { Box(contentAlignment = Alignment.Center) { androidx.compose.material3.Text(if (shown) cards[i] else "?", fontSize = 30.sp, color = if (shown) Color.Unspecified else Color.White) } }
+                    }
+                }
+            }
+        }
+        if (won) WinBox("برافو! 🌟", onAgain = { round++ }, onDone = onDone)
+    }
+}
+
+// ================================================================= Simon: repeat the colour sequence
+
+@Composable
+private fun SimonGame(kid: Kid, onDone: () -> Unit) {
+    val colors = listOf(Color(0xFFE53935), Color(0xFF43A047), Color(0xFF1E88E5), Color(0xFFFDD835))
+    var round by remember { mutableIntStateOf(0) }
+    val seq = remember(round) { mutableStateListOf(Random.nextInt(4)) }
+    var showing by remember(round) { mutableStateOf(true) }
+    var lit by remember(round) { mutableIntStateOf(-1) }
+    var pos by remember(round) { mutableIntStateOf(0) }
+    var over by remember(round) { mutableStateOf(false) }
+    LaunchedEffect(seq.size, round) {
+        showing = true; delay(600)
+        for (c in seq.toList()) { lit = c; delay(520); lit = -1; delay(220) }
+        showing = false; pos = 0
+    }
+    LaunchedEffect(over) { if (over) Kids.addStars(kid.id, (seq.size / 2).coerceIn(1, 5)) }
+    GameFrame("تتابع الألوان", onDone) {
+        Text(if (over) "وصلت لـ ${seq.size - 1} 🌟" else if (showing) "ركّز… 👀" else "دورك! (${pos + 1}/${seq.size})", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = GInk)
+        Spacer(Modifier.height(16.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf(0 to 1, 2 to 3).forEach { (a, b) ->
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    listOf(a, b).forEach { c ->
+                        Box(
+                            Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(24.dp))
+                                .background(if (lit == c) colors[c] else colors[c].copy(alpha = 0.35f))
+                                .clickable(enabled = !showing && !over) {
+                                    if (c == seq[pos]) { pos++; if (pos == seq.size) seq.add(Random.nextInt(4)) } else over = true
+                                },
+                        )
+                    }
+                }
+            }
+        }
+        if (over) { Spacer(Modifier.height(8.dp)); WinBox("برافو! افتكرت ${seq.size - 1} 🚦", onAgain = { round++ }, onDone = onDone) }
+    }
+}
+
+// ================================================================= sliding puzzle 3x3
+
+@Composable
+private fun SlideGame(kid: Kid, onDone: () -> Unit) {
+    var round by remember { mutableIntStateOf(0) }
+    val tiles = remember(round) {
+        // shuffle by legal moves so it is always solvable
+        val t = (1..8).toMutableList<Int>().apply { add(0) }
+        var blank = 8
+        repeat(60) {
+            val r = blank / 3; val c = blank % 3
+            val n = listOfNotNull(if (r > 0) blank - 3 else null, if (r < 2) blank + 3 else null, if (c > 0) blank - 1 else null, if (c < 2) blank + 1 else null).random()
+            t[blank] = t[n]; t[n] = 0; blank = n
+        }
+        mutableStateListOf<Int>().apply { addAll(t) }
+    }
+    var moves by remember(round) { mutableIntStateOf(0) }
+    val solved = tiles.toList() == (1..8).toList() + 0
+    LaunchedEffect(solved) { if (solved && moves > 0) Kids.addStars(kid.id, 3) }
+    GameFrame("اللغز المنزلق", onDone) {
+        Text(if (solved) "حلّيتها في $moves حركة 🧩" else "رتّب الأرقام من ١ لـ ٨ • $moves حركة", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = GInk)
+        Spacer(Modifier.height(16.dp))
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Column(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp)).background(GSky.copy(alpha = 0.25f)).padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                (0 until 3).forEach { r ->
+                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (0 until 3).forEach { c ->
+                            val i = r * 3 + c; val v = tiles[i]
+                            Box(
+                                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(if (v == 0) Color.Transparent else Color.White)
+                                    .clickable(enabled = v != 0 && !solved) {
+                                        val b = tiles.indexOf(0)
+                                        if ((b / 3 == r && kotlin.math.abs(b % 3 - c) == 1) || (b % 3 == c && kotlin.math.abs(b / 3 - r) == 1)) { tiles[b] = v; tiles[i] = 0; moves++ }
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) { if (v != 0) Text("$v", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = GInk) }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        if (solved) WinBox("برافو! 🧩", onAgain = { round++ }, onDone = onDone)
+    }
+}
+
+// ================================================================= tic-tac-toe against the phone
+
+@Composable
+private fun XoGame(kid: Kid, onDone: () -> Unit) {
+    var round by remember { mutableIntStateOf(0) }
+    val b = remember(round) { mutableStateListOf<Int>().apply { repeat(9) { add(0) } } } // 1 = child (X), 2 = phone (O)
+    val lines = listOf(listOf(0, 1, 2), listOf(3, 4, 5), listOf(6, 7, 8), listOf(0, 3, 6), listOf(1, 4, 7), listOf(2, 5, 8), listOf(0, 4, 8), listOf(2, 4, 6))
+    fun winner(): Int = lines.firstOrNull { l -> b[l[0]] != 0 && l.all { b[it] == b[l[0]] } }?.let { b[it[0]] } ?: if (b.none { it == 0 }) 3 else 0
+    fun phoneMove() {
+        val free = b.indices.filter { b[it] == 0 }
+        if (free.isEmpty()) return
+        // win if possible, else block, else centre, else random (beatable on purpose)
+        fun finishing(p: Int) = free.firstOrNull { i -> lines.any { l -> i in l && l.count { b[it] == p } == 2 && l.count { b[it] == 0 } == 1 } }
+        val m = finishing(2) ?: (if (Random.nextFloat() < 0.75f) finishing(1) else null) ?: (4.takeIf { it in free }) ?: free.random()
+        b[m] = 2
+    }
+    val w = winner()
+    LaunchedEffect(w) { if (w == 1) Kids.addStars(kid.id, 2) else if (w == 3) Kids.addStars(kid.id, 1) }
+    GameFrame("إكس أو", onDone) {
+        Text(when (w) { 1 -> "كسبت! 🎉"; 2 -> "الموبايل كسب المرة دي 😅"; 3 -> "تعادل 🤝"; else -> "إنت ❌ والموبايل ⭕" }, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = GInk)
+        Spacer(Modifier.height(16.dp))
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Column(Modifier.fillMaxWidth().aspectRatio(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                (0 until 3).forEach { r ->
+                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        (0 until 3).forEach { c ->
+                            val i = r * 3 + c
+                            Box(
+                                Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(16.dp)).background(Color.White)
+                                    .clickable(enabled = b[i] == 0 && w == 0) { b[i] = 1; if (winner() == 0) phoneMove() },
+                                contentAlignment = Alignment.Center,
+                            ) { androidx.compose.material3.Text(when (b[i]) { 1 -> "❌"; 2 -> "⭕"; else -> "" }, fontSize = 48.sp) }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        if (w != 0) WinBox(if (w == 1) "برافو! ⭐⭐" else "جرّب تاني!", onAgain = { round++ }, onDone = onDone)
+    }
+}
+
+// ================================================================= pop the balloons in order
+
+@Composable
+private fun BalloonGame(kid: Kid, onDone: () -> Unit) {
+    var round by remember { mutableIntStateOf(0) }
+    val count = 8 + (round * 2).coerceAtMost(8)
+    val spots = remember(round) { List(count) { Random.nextFloat() * 0.8f to Random.nextFloat() * 0.85f } }
+    val popped = remember(round) { mutableStateListOf<Int>() }
+    var miss by remember(round) { mutableStateOf(false) }
+    val done = popped.size == count
+    LaunchedEffect(done) { if (done) Kids.addStars(kid.id, 2) }
+    GameFrame("فرقع البالونات", onDone) {
+        Text(if (done) "برافو! 🎈" else "فرقعهم بالترتيب: ${popped.size + 1}", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = if (miss) Warn else GInk)
+        Spacer(Modifier.height(8.dp))
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(20.dp)).background(Color(0xFFE3F2FD))) {
+            val w = maxWidth; val h = maxHeight
+            spots.forEachIndexed { i, (x, y) ->
+                if (i !in popped) Box(
+                    Modifier.offset(w * x, h * y).size(62.dp).clickable { if (i == popped.size) { popped.add(i); miss = false } else miss = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    androidx.compose.material3.Text("🎈", fontSize = 52.sp)
+                    Text("${i + 1}", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 10.dp))
+                }
+            }
+        }
+        if (done) { Spacer(Modifier.height(8.dp)); WinBox("فرقعت $count بالونة 🎈", onAgain = { round++ }, onDone = onDone) }
     }
 }

@@ -284,6 +284,8 @@ fun AppRoot() {
             composable("places") { PlacesScreen(back) }
             composable("reports") { ReportsScreen(back) }
             composable("settings") { SettingsScreen(back) }
+            composable("app_guide") { AppGuideScreen(back, open) }
+            composable("social") { SocialScreen(back) }
             composable("carpool") { CarpoolScreen(back) }
             composable("fitness") { FitnessScreen(back) }
             composable("quran") { QuranScreen(back) }
