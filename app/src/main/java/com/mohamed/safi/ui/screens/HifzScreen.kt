@@ -45,8 +45,11 @@ fun HifzScreen(onBack: () -> Unit) {
     var reviewing by remember { mutableStateOf(false) }
     val surah = surahs.firstOrNull { it.number == sNo }
     val count = surah?.ayahs?.size ?: 1
-    if (from > count) from = 1
-    if (to > count || to < from) to = (from + 4).coerceAtMost(count)
+    // clamp only once the surah list is loaded (before that the count is unknown)
+    if (surah != null) {
+        if (from > count) from = 1
+        if (to > count || to < from) to = (from + 4).coerceAtMost(count)
+    }
 
     // ---- player: each verse repeated N times
     val player = remember { ExoPlayer.Builder(ctx).build() }

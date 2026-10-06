@@ -19,8 +19,15 @@ object Mosques {
             "[out:json][timeout:25];(node[\"amenity\"=\"place_of_worship\"][\"religion\"=\"muslim\"](around:%d,%.6f,%.6f);" +
                 "way[\"amenity\"=\"place_of_worship\"][\"religion\"=\"muslim\"](around:%d,%.6f,%.6f););out center 80;",
             radius, lat, lng, radius, lat, lng)
-        val body = http.newCall(Request.Builder().url("https://overpass-api.de/api/interpreter").post(FormBody.Builder().add("data", q).build())
-            .header("User-Agent", "Safi-app").build()).execute().use { r -> if (!r.isSuccessful) error("HTTP ${r.code}"); r.body!!.string() }
+        // the main Overpass server, then public mirrors if it's busy
+        val servers = listOf("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter")
+        var last: Throwable? = null
+        val body = servers.firstNotNullOfOrNull { url ->
+            runCatching {
+                http.newCall(Request.Builder().url(url).post(FormBody.Builder().add("data", q).build()).header("User-Agent", "Safi-app").build())
+                    .execute().use { r -> if (!r.isSuccessful) error("HTTP ${r.code}"); r.body!!.string() }
+            }.onFailure { last = it }.getOrNull()
+        } ?: throw (last ?: IllegalStateException("no server"))
         val els = JSONObject(body).optJSONArray("elements") ?: return@withContext emptyList()
         (0 until els.length()).mapNotNull { i ->
             val e = els.getJSONObject(i)
