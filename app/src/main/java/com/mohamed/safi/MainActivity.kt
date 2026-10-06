@@ -191,6 +191,14 @@ fun AppRoot() {
     LaunchedEffect(pendingShare) {
         val text = pendingShare ?: return@LaunchedEffect
         UiBus.pendingShare.value = null
+        // a kid-mode setup code from the parent's phone
+        if (text.contains(com.mohamed.safi.kids.KidMode.PREFIX) && !com.mohamed.safi.kids.KidMode.on) {
+            com.mohamed.safi.kids.KidMode.pendingCode.value = text
+            runCatching { go(nav, "kidsetup") }
+            return@LaunchedEffect
+        }
+        // on a child's phone only quiz challenges are accepted (if the quiz is allowed)
+        if (com.mohamed.safi.kids.KidMode.on && !(com.mohamed.safi.quiz.Challenge.contains(text) && com.mohamed.safi.kids.KidMode.allows("quiz"))) return@LaunchedEffect
         // an encrypted update from a family member, shared from WhatsApp or any app
         if (text.contains(com.mohamed.safi.family.Family.PREFIX)) {
             val from = com.mohamed.safi.family.Family.importCard(text.substring(text.indexOf(com.mohamed.safi.family.Family.PREFIX)).lineSequence().first())
@@ -227,6 +235,12 @@ fun AppRoot() {
             toast(ctx, "مقدرتش ألاقي مبلغ في الرسالة دي")
         }
     }
+    // kid mode: only the sections the parent allowed can be opened
+    LaunchedEffect(current, com.mohamed.safi.kids.KidMode.version.intValue) {
+        if (com.mohamed.safi.kids.KidMode.on && !com.mohamed.safi.kids.KidMode.allows(current)) {
+            runCatching { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } }
+        }
+    }
     LaunchedEffect(pendingRoute) {
         pendingRoute?.let { r ->
             UiBus.pendingRoute.value = null
@@ -241,7 +255,8 @@ fun AppRoot() {
             @Suppress("UNUSED_VARIABLE") val slots = NavPrefs.slots.value // recompose when the user changes the bar
             val items = NavPrefs.items()
             var customize by remember { mutableStateOf(false) }
-            if (current in items.map { it.route }) {
+            @Suppress("UNUSED_VARIABLE") val km = com.mohamed.safi.kids.KidMode.version.intValue
+            if (!com.mohamed.safi.kids.KidMode.on && current in items.map { it.route }) {
                 NavigationBar {
                     items.forEach { t ->
                         NavigationBarItem(
@@ -263,8 +278,10 @@ fun AppRoot() {
     ) { pad ->
         val back: () -> Unit = { nav.popBackStack() }
         val open: (String) -> Unit = { nav.navigate(it) }
-        NavHost(nav, startDestination = if (SafiApp.prefs.onboarded) "home" else "welcome", modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
-            composable("welcome") { WelcomeScreen { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
+        NavHost(nav, startDestination = if (com.mohamed.safi.kids.KidMode.on) "kidhome" else if (SafiApp.prefs.onboarded) "home" else "welcome", modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
+            composable("welcome") { WelcomeScreen(onKid = { nav.navigate("kidsetup") }) { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
+            composable("kidhome") { KidHomeScreen(open) }
+            composable("kidsetup") { KidSetupScreen(back) { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }
             composable("finance") { FinanceScreen(null, open) }

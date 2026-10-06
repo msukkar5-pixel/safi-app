@@ -1,0 +1,104 @@
+package com.mohamed.safi.kids
+
+import android.content.Context
+import android.util.Base64
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.edit
+import com.mohamed.safi.SafiApp
+import org.json.JSONArray
+import org.json.JSONObject
+import java.security.MessageDigest
+import java.security.SecureRandom
+
+/**
+ * Kid mode for a child's phone: the app shows only the sections the parent picked, on a simple kids' home screen.
+ * Everything else (money, documents, places, diary, settings…) can't be opened. Leaving kid mode or changing the
+ * sections needs the parent's PIN (stored only as a salted hash).
+ * The parent can set it up on the child's phone, or on their own phone and pass it over as a QR / text code.
+ */
+object KidMode {
+    const val PREFIX = "SAFI-KID1:"
+
+    data class Section(val route: String, val title: String, val icon: String, val byDefault: Boolean)
+    val sections = listOf(
+        Section("kids", "مدينة الخير", "🌳", true), Section("quran", "القرآن الكريم", "📖", true),
+        Section("quranaudio", "القرآن المسموع", "🎧", true), Section("azkar", "الأذكار", "🤲", true),
+        Section("prayer", "مواعيد الصلاة", "🕌", true), Section("stories", "قصص الأنبياء والسيرة", "📚", true),
+        Section("quiz", "المسابقة", "🏆", true), Section("asmahusna", "أسماء الله الحسنى", "✨", true),
+        Section("sleep", "قبل النوم", "🌙", true), Section("ramadan", "رمضان", "🏮", true),
+        Section("hisn", "حصن المسلم", "🛡️", false), Section("prayertracker", "صلواتي", "✅", false),
+        Section("wird", "الورد اليومي", "📗", false), Section("radio", "إذاعات القرآن", "📻", false),
+        Section("tv", "قنوات القرآن", "📺", false), Section("islamiccalendar", "التقويم الهجري", "📅", false),
+        Section("audiobooks", "الكتب المسموعة", "🎙️", false), Section("library", "المكتبة", "🏛️", false),
+        Section("family", "العيلة", "👨‍👩‍👧", false), Section("assistant", "المساعد الذكي", "🤖", false),
+    )
+    val defaults get() = sections.filter { it.byDefault }.map { it.route }.toSet()
+
+    private fun sp() = SafiApp.instance.getSharedPreferences("safi_kidmode", Context.MODE_PRIVATE)
+    val version = mutableIntStateOf(0)
+    /** A setup code that arrived by share, waiting for the setup screen to confirm it. */
+    val pendingCode = mutableStateOf<String?>(null)
+
+    val on: Boolean get() = sp().getBoolean("on", false)
+    val name: String get() = sp().getString("name", "").orEmpty()
+    val allowed: Set<String> get() = sp().getStringSet("allowed", defaults) ?: defaults
+
+    private fun hash(salt: String, pin: String) =
+        MessageDigest.getInstance("SHA-256").digest((salt + pin).toByteArray()).joinToString("") { "%02x".format(java.util.Locale.US, it) }
+    private fun newSalt() = ByteArray(8).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+
+    fun checkPin(pin: String) = hash(sp().getString("salt", "").orEmpty(), pin) == sp().getString("pin", "")
+
+    private fun apply(name: String, allowed: Set<String>, salt: String, pinHash: String) {
+        sp().edit { putBoolean("on", true); putString("name", name); putStringSet("allowed", allowed); putString("salt", salt); putString("pin", pinHash) }
+        // the child also gets a profile in the kids' city
+        if ("kids" in allowed && Kids.kids().isEmpty()) Kids.saveKid(Kid(java.util.UUID.randomUUID().toString().take(8), name.ifBlank { "بطل" }, "🧒", 7))
+        com.mohamed.safi.SafiApp.prefs.onboarded = true
+        version.intValue++
+    }
+
+    fun enable(name: String, allowed: Set<String>, pin: String) { val s = newSalt(); apply(name.trim(), allowed, s, hash(s, pin)) }
+
+    fun setAllowed(v: Set<String>) { sp().edit { putStringSet("allowed", v) }; version.intValue++ }
+
+    fun disable(pin: String): Boolean {
+        if (!checkPin(pin)) return false
+        sp().edit { putBoolean("on", false) }
+        version.intValue++
+        return true
+    }
+
+    /** Can this nav route be opened in kid mode? Sub-routes follow their section. */
+    fun allows(route: String?): Boolean {
+        if (!on || route == null) return true
+        val base = route.substringBefore("/")
+        if (base == "kidhome" || base == "kidsetup") return true
+        val a = allowed
+        return when (base) {
+            "tafsir" -> "quran" in a
+            "book" -> a.any { it in setOf("library", "stories") }
+            "bidaya", "history" -> "stories" in a || "library" in a
+            "umrah", "hajj", "tool", "manasik" -> false
+            else -> base in a
+        }
+    }
+
+    // ------------------------------------------------------------------ setup code (QR or text), made on the parent's phone
+    fun setupCode(name: String, allowed: Set<String>, pin: String): String {
+        val s = newSalt()
+        val o = JSONObject().put("n", name.trim()).put("a", JSONArray(allowed.toList())).put("s", s).put("h", hash(s, pin))
+        return PREFIX + Base64.encodeToString(o.toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP or Base64.URL_SAFE)
+    }
+
+    data class Setup(val name: String, val allowed: Set<String>, val salt: String, val hash: String)
+    fun readCode(text: String): Setup? = runCatching {
+        val b = Regex("SAFI-KID1:[A-Za-z0-9_=-]+").find(text)!!.value.removePrefix(PREFIX)
+        val o = JSONObject(String(Base64.decode(b, Base64.NO_WRAP or Base64.URL_SAFE), Charsets.UTF_8))
+        val a = o.getJSONArray("a")
+        val known = sections.map { it.route }.toSet()
+        Setup(o.optString("n").take(20), (0 until a.length()).map { a.getString(it) }.filter { it in known }.toSet(), o.getString("s"), o.getString("h"))
+    }.getOrNull()
+
+    fun applyCode(s: Setup) = apply(s.name, s.allowed, s.salt, s.hash)
+}

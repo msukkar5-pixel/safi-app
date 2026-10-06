@@ -61,6 +61,7 @@ private val sections = listOf(
     "الإعدادات" to listOf(
         Entry("alerts", "التنبيهات", "الأذان، الأذكار، الورد", Icons.Default.NotificationsActive, Color(0xFF00796B)),
         Entry("app_guide", "دليل التطبيق", "شرح كل قسم وإزاي تستخدمه", Icons.Default.MenuBook, Color(0xFF5D4037)),
+        Entry("kidsetup", "وضع الطفل", "موبايل الطفل بأقسام تختارها انت", Icons.Default.ChildCare, Color(0xFF4FA3D9)),
         Entry("social", "المنشور اليومي", "آية وحديث ودعاء على السوشيال ميديا", Icons.Default.Campaign, Color(0xFF1565C0)),
         Entry("settings", "الإعدادات", "اللغة، الذكاء الاصطناعي، الصوت", Icons.Default.Settings, Color(0xFF6C7A89)),
         Entry("settings", "لغة التطبيق", "عربي، English، اردو و١٨ لغة تانية", Icons.Default.Translate, Color(0xFF3F6EB5)),
