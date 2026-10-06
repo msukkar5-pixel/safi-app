@@ -125,6 +125,33 @@ object Kids {
         sp().edit { putString("story_$id", today) }; bump(); return true
     }
 
+    // ------------------------------------------------------------------ home rewards the child asks for with stars
+    /** Star cost of each home reward (same order as [homeRewards]). */
+    val homeRewardCost = listOf(15, 20, 25, 60, 40)
+    fun spent(kid: String) = sp().getInt("spent_$kid", 0)
+    /** Stars the child can still spend (all earned stars keep growing the tree). */
+    fun available(kid: String) = (stars(kid) - spent(kid)).coerceAtLeast(0)
+    data class Request(val id: String, val kid: String, val kidName: String, val title: String, val cost: Int)
+    fun requests(): List<Request> = runCatching {
+        val a = JSONArray(sp().getString("requests", "[]"))
+        (0 until a.length()).map { a.getJSONObject(it).let { o -> Request(o.getString("id"), o.getString("kid"), o.optString("name"), o.getString("t"), o.getInt("c")) } }
+    }.getOrDefault(emptyList())
+    private fun saveRequests(l: List<Request>) = sp().edit {
+        putString("requests", JSONArray(l.map { JSONObject().put("id", it.id).put("kid", it.kid).put("name", it.kidName).put("t", it.title).put("c", it.cost) }).toString())
+    }
+    /** The child asks for a reward; returns false if there aren't enough stars. */
+    fun request(k: Kid, title: String, cost: Int): Boolean {
+        val pending = requests().filter { it.kid == k.id }.sumOf { it.cost }
+        if (available(k.id) - pending < cost) return false
+        saveRequests(requests() + Request(java.util.UUID.randomUUID().toString().take(8), k.id, k.name, title, cost)); bump(); return true
+    }
+    /** The parent says yes (stars are spent) or no. */
+    fun decide(id: String, yes: Boolean) {
+        val r = requests().firstOrNull { it.id == id } ?: return
+        if (yes) sp().edit { putInt("spent_${r.kid}", spent(r.kid) + r.cost) }
+        saveRequests(requests().filter { it.id != id }); bump()
+    }
+
     /** Kids' TV channels the parent chose to hide. */
     var hiddenChannels: Set<String> get() = sp().getStringSet("tv_hidden", emptySet()) ?: emptySet(); set(v) { sp().edit { putStringSet("tv_hidden", v) }; bump() }
 

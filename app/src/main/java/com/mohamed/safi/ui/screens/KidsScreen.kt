@@ -305,6 +305,17 @@ private fun RewardsCard(kid: Kid) {
                 }
             }
         }
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        Text("اطلب مكافأة من بابا وماما (معاك ${Kids.available(kid.id)} ⭐)", fontWeight = FontWeight.Bold)
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Kids.homeRewards.forEachIndexed { i, t ->
+                val cost = Kids.homeRewardCost.getOrElse(i) { 30 }
+                AssistChip(onClick = { toast(ctx, if (Kids.request(kid, t, cost)) "الطلب وصل لبابا وماما 🎉" else "محتاج نجوم أكتر ⭐") }, label = { Text("$t • $cost ⭐") })
+            }
+        }
+        Kids.requests().filter { it.kid == kid.id }.forEach { r -> Text("⏳ مستني موافقة: ${r.title}", style = MaterialTheme.typography.bodySmall) }
     }
 }
 
@@ -477,6 +488,19 @@ private fun ParentArea(onClose: () -> Unit) {
     tasksFor?.let { k -> TaskPicker(k) { tasksFor = null }; return }
     ScreenScaffold("ركن الوالدين", onBack = onClose) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            val reqs = Kids.requests()
+            if (reqs.isNotEmpty()) item {
+                GoldCard {
+                    Text("طلبات المكافآت", fontWeight = FontWeight.Bold)
+                    reqs.forEach { r ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.Text("${r.kidName}: ${tr(r.title)} • ⭐${r.cost}", Modifier.weight(1f))
+                            TextButton(onClick = { Kids.decide(r.id, true) }) { Text("موافق") }
+                            TextButton(onClick = { Kids.decide(r.id, false) }) { Text("لأ", color = Danger) }
+                        }
+                    }
+                }
+            }
             item {
                 AppCard {
                     Text("الخصوصية", fontWeight = FontWeight.Bold)

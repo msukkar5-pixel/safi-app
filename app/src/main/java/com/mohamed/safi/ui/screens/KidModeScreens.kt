@@ -37,7 +37,7 @@ fun KidHomeScreen(open: (String) -> Unit) {
     @Suppress("UNUSED_VARIABLE") val v = KidMode.version.intValue
     var askPin by remember { mutableStateOf(false) }
     val allowed = KidMode.allowed
-    val list = KidMode.sections.filter { it.route in allowed }
+    val list = KidMode.sections.filter { it.route in allowed && KidMode.allows(it.route) }
     Column(Modifier.fillMaxSize().background(KBg).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -49,6 +49,15 @@ fun KidHomeScreen(open: (String) -> Unit) {
         }
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             @Suppress("UNUSED_VARIABLE") val live = KidMode.version.intValue // re-run the list when the data changes
+            if (KidMode.timeUp) item {
+                Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFF1A2A4F), modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        androidx.compose.material3.Text(if (KidMode.isBedtime) "🌙" else "⏰", fontSize = 44.sp)
+                        Text(if (KidMode.isBedtime) "وقت النوم! تصبح على خير" else "خلص وقت التطبيق النهارده", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp, textAlign = TextAlign.Center)
+                        Text(if (KidMode.keepQuran) "القرآن والأذكار مفتوحين دايماً 🤍" else "نكمّل بكرة إن شاء الله", color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
+                    }
+                }
+            } else KidMode.minutesLeft?.let { left -> item { Text("⏳ فاضلك $left دقيقة النهارده", color = KInk, fontWeight = FontWeight.SemiBold) } }
             list.chunked(2).forEachIndexed { r, row ->
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -179,6 +188,12 @@ fun KidSetupScreen(onBack: () -> Unit, onKidHome: () -> Unit) {
                     OutlinedButton(onClick = { if (pinOk()) confirmOn = true }, modifier = Modifier.fillMaxWidth()) { Text("شغّل وضع الطفل على الموبايل ده") }
                 }
             } else item {
+                ScreenTimeCard()
+            }
+            if (KidMode.on) item {
+                RewardRequestsCard()
+            }
+            if (KidMode.on) item {
                 var off by remember { mutableStateOf(false) }
                 Button(onClick = onKidHome, modifier = Modifier.fillMaxWidth()) { Text("رجوع لشاشة الطفل") }
                 TextButton(onClick = { off = true }) { Text("اقفل وضع الطفل (التطبيق الكامل)", color = Danger) }
@@ -221,4 +236,58 @@ private fun qrBitmapFor(text: String, size: Int = 640): android.graphics.Bitmap 
     val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.RGB_565)
     for (x in 0 until size) for (y in 0 until size) bmp.setPixel(x, y, if (m[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
     return bmp
+}
+
+/** Parent's screen-time settings for kid mode. */
+@Composable
+private fun ScreenTimeCard() {
+    @Suppress("UNUSED_VARIABLE") val v = KidMode.version.intValue
+    GoldCard {
+        Text("وقت الشاشة", fontWeight = FontWeight.Bold)
+        Text("مستخدم النهارده: ${KidMode.usedToday} دقيقة" + (KidMode.minutesLeft?.let { " • ${tr("فاضل")} $it" } ?: ""), style = MaterialTheme.typography.bodySmall)
+        Text("حد يومي", style = MaterialTheme.typography.bodySmall)
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(0, 30, 60, 90, 120, 180).forEach { m -> FilterChip(KidMode.dailyLimit == m, { KidMode.dailyLimit = m }, label = { Text(if (m == 0) "من غير حد" else "$m دقيقة") }) }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("قفل وقت النوم", Modifier.weight(1f))
+            Switch(KidMode.bedtimeOn, { KidMode.bedtimeOn = it })
+        }
+        if (KidMode.bedtimeOn) {
+            Text("من الساعة ${KidMode.bedFrom} لحد ${KidMode.bedTo} الصبح", style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(20, 21, 22, 23).forEach { h -> FilterChip(KidMode.bedFrom == h, { KidMode.bedFrom = h }, label = { androidx.compose.material3.Text("$h") }) } }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(5, 6, 7).forEach { h -> FilterChip(KidMode.bedTo == h, { KidMode.bedTo = h }, label = { androidx.compose.material3.Text("$h") }) } }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("القرآن والأذكار يفضلوا مفتوحين بعد الوقت", Modifier.weight(1f))
+            Switch(KidMode.keepQuran, { KidMode.keepQuran = it })
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { KidMode.addBonus(30) }) { Text("زوّد ٣٠ دقيقة النهارده") }
+            if (KidMode.isBedtime) OutlinedButton(onClick = { KidMode.skipBedtimeTonight() }) { Text("افتح الليلة دي") }
+        }
+        Text("ده بيحدد وقت صافي بس. لقفل الموبايل كله استخدم Google Family Link (مجاني).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+    }
+}
+
+/** Home rewards the child asked for with their stars, waiting for the parent. */
+@Composable
+private fun RewardRequestsCard() {
+    @Suppress("UNUSED_VARIABLE") val v = com.mohamed.safi.kids.Kids.version.intValue
+    val reqs = com.mohamed.safi.kids.Kids.requests()
+    AppCard {
+        Text("طلبات المكافآت", fontWeight = FontWeight.Bold)
+        if (reqs.isEmpty()) Text("مفيش طلبات دلوقتي", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        reqs.forEach { r ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    androidx.compose.material3.Text("${r.kidName}: ${tr(r.title)}", fontWeight = FontWeight.SemiBold)
+                    Text("⭐ ${r.cost}", style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(onClick = { com.mohamed.safi.kids.Kids.decide(r.id, true) }) { Text("موافق") }
+                TextButton(onClick = { com.mohamed.safi.kids.Kids.decide(r.id, false) }) { Text("لأ", color = Danger) }
+            }
+        }
+    }
 }

@@ -159,15 +159,16 @@ object Study {
 object StudyAlerts {
     private const val ID_LESSON = 8_960_001
     private const val ID_HW = 8_960_002
+    private const val ID_WEEK = 8_960_003
 
     private fun pi(ctx: Context, action: String, extra: String = "") = PendingIntent.getBroadcast(
-        ctx, if (action == "hw") ID_HW else ID_LESSON, Intent(ctx, StudyReceiver::class.java).setAction(action).putExtra("x", extra),
+        ctx, when (action) { "hw" -> ID_HW; "weekly" -> ID_WEEK; else -> ID_LESSON }, Intent(ctx, StudyReceiver::class.java).setAction(action).putExtra("x", extra),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
     fun schedule(ctx: Context) {
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
-        am.cancel(pi(ctx, "lesson")); am.cancel(pi(ctx, "hw"))
+        am.cancel(pi(ctx, "lesson")); am.cancel(pi(ctx, "hw")); am.cancel(pi(ctx, "weekly"))
         if (!Study.alertsOn) return
         val now = LocalDateTime.now(zone)
         val students = Study.students().let { s -> Study.me?.let { me -> s.filter { it.id == me } } ?: s }
@@ -182,6 +183,12 @@ object StudyAlerts {
         if (students.isNotEmpty()) {
             val c = now.toLocalDate().atTime(Study.checkHour, 0).let { if (it.isAfter(now)) it else it.plusDays(1) }
             set(am, c, pi(ctx, "hw"))
+        }
+        // the parent's weekly report, Friday 8 pm (not on a child's own phone)
+        if (Study.me == null && Study.students().isNotEmpty()) {
+            var w = now.toLocalDate().atTime(20, 0)
+            while (w.dayOfWeek != java.time.DayOfWeek.FRIDAY || !w.isAfter(now)) w = w.plusDays(1)
+            set(am, w, pi(ctx, "weekly"))
         }
     }
 
@@ -212,6 +219,19 @@ object StudyAlerts {
                 Notifier.show(ctx, ID_HW, Notifier.CH_REMIND, "✏️ $who${tr("عملت الواجب؟")}",
                     open.joinToString("، ") { it.second.subject } + if (open.any { it.second.due == today }) " — ${tr("مطلوب بكرة أو النهارده")}" else "",
                     route = "study", actions = listOf(NotificationCompat.Action(R.drawable.ic_notify, tr("عملته ✓"), done)))
+            }
+            "weekly" -> {
+                val from = LocalDate.now(zone).minusDays(6)
+                val lines = Study.students().map { st ->
+                    val min = Study.minutesBySubject(st.id, from).values.sum()
+                    val hw = Study.homework(st.id)
+                    val done = hw.count { it.done && it.doneAt >= from.atStartOfDay(zone).toInstant().toEpochMilli() }
+                    val open = hw.count { !it.done }
+                    val exam = Study.exams(st.id).firstOrNull { it.date >= LocalDate.now(zone).toString() && it.grade.isBlank() }
+                    "${st.name}: ${tr("ذاكر")} $min ${tr("د")} • ✓$done • ${tr("فاضل")} $open" + (exam?.let { " • 📝 ${it.subject} ${it.date}" } ?: "")
+                }
+                if (lines.isEmpty()) return
+                Notifier.show(ctx, ID_WEEK, Notifier.CH_DAILY, "📊 ${tr("تقرير الأسبوع للأولاد")}", lines.joinToString("\n"), route = "study")
             }
             "done" -> {
                 Study.students().forEach { st -> Study.homework(st.id).firstOrNull { it.id == extra }?.let { Study.setDone(it, true) } }

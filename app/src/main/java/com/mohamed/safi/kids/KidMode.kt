@@ -79,6 +79,7 @@ object KidMode {
         if (!on || route == null) return true
         val base = route.substringBefore("/")
         if (base == "kidhome" || base == "kidsetup") return true
+        if (timeUp) return keepQuran && base in alwaysOpen && base in allowed
         val a = allowed
         return when (base) {
             "tafsir" -> "quran" in a
@@ -114,4 +115,30 @@ object KidMode {
         s.invite?.let { inv -> if (!com.mohamed.safi.family.Family.joined) com.mohamed.safi.family.Family.join(inv, s.name.ifBlank { "بطل" }, s.role) }
         apply(s.name, s.allowed, s.salt, s.hash, s.student)
     }
+
+    // ------------------------------------------------------------------ screen time (inside Safi only)
+    /** Minutes a day the child can use the app (0 = no limit). */
+    var dailyLimit: Int get() = sp().getInt("limit", 0); set(v) { sp().edit { putInt("limit", v) }; version.intValue++ }
+    var bedtimeOn: Boolean get() = sp().getBoolean("bed_on", false); set(v) { sp().edit { putBoolean("bed_on", v) }; version.intValue++ }
+    var bedFrom: Int get() = sp().getInt("bed_from", 21); set(v) { sp().edit { putInt("bed_from", v) }; version.intValue++ }
+    var bedTo: Int get() = sp().getInt("bed_to", 6); set(v) { sp().edit { putInt("bed_to", v) }; version.intValue++ }
+    /** Quran, adhkar and prayer times stay open when the time is up. */
+    var keepQuran: Boolean get() = sp().getBoolean("keep_quran", true); set(v) { sp().edit { putBoolean("keep_quran", v) }; version.intValue++ }
+    val alwaysOpen = setOf("quran", "quranaudio", "azkar", "prayer", "hisn")
+
+    private fun today() = java.time.LocalDate.now(com.mohamed.safi.data.zone).toString()
+    val usedToday: Int get() = if (sp().getString("used_day", "") == today()) sp().getInt("used", 0) else 0
+    private val bonusToday: Int get() = if (sp().getString("bonus_day", "") == today()) sp().getInt("bonus", 0) else 0
+    fun tick(minutes: Int = 1) { sp().edit { putString("used_day", today()); putInt("used", usedToday + minutes) }; version.intValue++ }
+    /** The parent gives extra minutes for today. */
+    fun addBonus(min: Int) { sp().edit { putString("bonus_day", today()); putInt("bonus", bonusToday + min) }; version.intValue++ }
+    val minutesLeft: Int? get() = if (dailyLimit <= 0) null else (dailyLimit + bonusToday - usedToday).coerceAtLeast(0)
+    val isBedtime: Boolean get() {
+        if (!bedtimeOn || sp().getBoolean("bed_skip_" + today(), false)) return false
+        val h = java.time.LocalTime.now(com.mohamed.safi.data.zone).hour
+        return if (bedFrom > bedTo) h >= bedFrom || h < bedTo else h in bedFrom until bedTo
+    }
+    fun skipBedtimeTonight() { sp().edit { putBoolean("bed_skip_" + today(), true) }; addBonus(30) }
+    /** Time is up (daily limit or bedtime): only kid home and the always-open sections. */
+    val timeUp: Boolean get() = on && (minutesLeft == 0 || isBedtime)
 }

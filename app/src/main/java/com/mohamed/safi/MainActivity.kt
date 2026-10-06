@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.*
 import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -234,6 +235,13 @@ fun AppRoot() {
             runCatching { go(nav, "assistant") }
         } else {
             toast(ctx, "مقدرتش ألاقي مبلغ في الرسالة دي")
+        }
+    }
+    // kid mode: count the minutes the child spends in the app (only while it's on screen)
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(Unit) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            while (true) { kotlinx.coroutines.delay(60_000); if (com.mohamed.safi.kids.KidMode.on) com.mohamed.safi.kids.KidMode.tick() }
         }
     }
     // kid mode: only the sections the parent allowed can be opened
