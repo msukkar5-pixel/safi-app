@@ -200,7 +200,7 @@ private fun ZikrReader(c: ZikrCategory, onBack: () -> Unit) {
                                 Spacer(Modifier.width(8.dp))
                                 Text(if (z.count > 1) "التكرار: ${z.count} • دوس على الكارت تعدّ" else "مرة واحدة", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                                 IconButton(onClick = {
-                                    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, z.text), "شارك").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    ShareBus.open("🤲", z.text, "")
                                 }) { Icon(Icons.Default.Share, "شارك") }
                             }
                         }

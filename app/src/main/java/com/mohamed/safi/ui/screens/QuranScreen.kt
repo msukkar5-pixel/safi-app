@@ -435,8 +435,7 @@ private fun AyahSheet(
                     Spacer(Modifier.width(4.dp)); Text(if (marked) "شيل العلامة" else "علامة")
                 }
                 OutlinedButton(onClick = {
-                    val share = "${a.text}\n[${s.name}: ${a.n}]" + (text?.let { "\n\n${com.mohamed.safi.faith.Tafsir.editions.first { it.first == edition }.second}: $it" } ?: "")
-                    ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, share), "شارك").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    ShareBus.open("📖", "﴿ ${a.text} ﴾", "${s.name}: ${a.n}", text?.let { "${com.mohamed.safi.faith.Tafsir.editions.first { it.first == edition }.second}: $it" } ?: "")
                 }) { Icon(Icons.Default.Share, null); Spacer(Modifier.width(4.dp)); Text("شارك") }
             }
             Spacer(Modifier.height(24.dp))

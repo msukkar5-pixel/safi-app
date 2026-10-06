@@ -13,12 +13,14 @@ import androidx.compose.material.icons.filled.*
 import com.mohamed.safi.ui.Text
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavHostController
@@ -161,15 +163,6 @@ private fun LockScreen(onUnlock: () -> Unit) {
     }
 }
 
-private data class Tab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-
-private val tabs = listOf(
-    Tab("home", "الرئيسية", Icons.Default.Home),
-    Tab("finance", "الحسابات", Icons.Default.AccountBalanceWallet),
-    Tab("assistant", "${com.mohamed.safi.AppName.v}", Icons.Default.Mic),
-    Tab("schedule", "المواعيد", Icons.Default.Event),
-    Tab("more", "المزيد", Icons.Default.GridView),
-)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -191,13 +184,41 @@ fun AppRoot() {
         }
         if (SafiApp.prefs.locationOn) runCatching { com.mohamed.safi.location.LocationService.start(ctx) }
         runCatching { com.mohamed.safi.data.Carpool.schedule(ctx) }
-        runCatching { com.mohamed.safi.faith.Prayer.schedule(ctx) }
+        // prayer times follow wherever the phone is (location, country method, time zone)
+        withContext(Dispatchers.IO) { runCatching { com.mohamed.safi.faith.Prayer.autoUpdate(ctx) } }
         runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(ctx) }
     }
     val pendingShare by UiBus.pendingShare.collectAsState()
     LaunchedEffect(pendingShare) {
         val text = pendingShare ?: return@LaunchedEffect
         UiBus.pendingShare.value = null
+        // a kid-mode setup code from the parent's phone
+        if (text.contains(com.mohamed.safi.kids.KidMode.PREFIX) && !com.mohamed.safi.kids.KidMode.on) {
+            com.mohamed.safi.kids.KidMode.pendingCode.value = text
+            runCatching { go(nav, "kidsetup") }
+            return@LaunchedEffect
+        }
+        // on a child's phone only quiz challenges are accepted (if the quiz is allowed)
+        if (com.mohamed.safi.kids.KidMode.on && !text.contains(com.mohamed.safi.family.Family.PREFIX) &&
+            !(com.mohamed.safi.quiz.Challenge.contains(text) && com.mohamed.safi.kids.KidMode.allows("quiz"))) return@LaunchedEffect
+        // an encrypted update from a family member, shared from WhatsApp or any app
+        if (text.contains(com.mohamed.safi.family.Family.PREFIX)) {
+            val from = com.mohamed.safi.family.Family.importCard(text.substring(text.indexOf(com.mohamed.safi.family.Family.PREFIX)).lineSequence().first())
+            toast(ctx, if (from != null) "وصل تحديث من $from" else "التحديث ده مش لعيلتك أو انضم للعيلة الأول")
+            runCatching { go(nav, if (com.mohamed.safi.kids.KidMode.on) "study" else "family") }
+            return@LaunchedEffect
+        }
+        // a friends challenge, or a friend's result for one I sent
+        if (com.mohamed.safi.quiz.Challenge.contains(text)) {
+            val c = com.mohamed.safi.quiz.Challenge.decode(text)
+            if (c == null) toast(ctx, "كود التحدي ناقص")
+            else if (c.reply) toast(ctx, when (com.mohamed.safi.quiz.Challenge.importReply(c)) {
+                null -> "النتيجة دي متسجلة قبل كده أو مش لتحدي بعته"; 1 -> "🏆 كسبت ${c.from}!"; 0 -> "🤝 تعادل مع ${c.from}"; else -> "${c.from} كسب المرة دي"
+            })
+            else if (c.fromId != com.mohamed.safi.quiz.Challenge.myId) com.mohamed.safi.quiz.Challenge.incoming.value = c
+            runCatching { go(nav, "quiz") }
+            return@LaunchedEffect
+        }
         val res = withContext(Dispatchers.IO) { com.mohamed.safi.sms.SmsProcessor.processText(ctx, text) }
         if (res.added.isNotEmpty()) {
             val e = res.added.first()
@@ -216,6 +237,19 @@ fun AppRoot() {
             toast(ctx, "مقدرتش ألاقي مبلغ في الرسالة دي")
         }
     }
+    // kid mode: count the minutes the child spends in the app (only while it's on screen)
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(Unit) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            while (true) { kotlinx.coroutines.delay(60_000); if (com.mohamed.safi.kids.KidMode.on) com.mohamed.safi.kids.KidMode.tick() }
+        }
+    }
+    // kid mode: only the sections the parent allowed can be opened
+    LaunchedEffect(current, com.mohamed.safi.kids.KidMode.version.intValue) {
+        if (com.mohamed.safi.kids.KidMode.on && !com.mohamed.safi.kids.KidMode.allows(current)) {
+            runCatching { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } }
+        }
+    }
     LaunchedEffect(pendingRoute) {
         pendingRoute?.let { r ->
             UiBus.pendingRoute.value = null
@@ -227,26 +261,42 @@ fun AppRoot() {
         bottomBar = {
             Column {
             MiniPlayer(current) { r -> runCatching { go(nav, r) } }
-            if (current in tabs.map { it.route }) {
+            @Suppress("UNUSED_VARIABLE") val slots = NavPrefs.slots.value // recompose when the user changes the bar
+            val items = NavPrefs.items()
+            var customize by remember { mutableStateOf(false) }
+            @Suppress("UNUSED_VARIABLE") val km = com.mohamed.safi.kids.KidMode.version.intValue
+            if (!com.mohamed.safi.kids.KidMode.on && current in items.map { it.route }) {
                 NavigationBar {
-                    tabs.forEach { t ->
+                    items.forEach { t ->
                         NavigationBarItem(
                             selected = current == t.route,
                             onClick = { go(nav, t.route) },
                             icon = { Icon(t.icon, t.label) },
-                            label = { Text(t.label) },
+                            label = { Text(t.label, fontSize = 10.sp, maxLines = 1) },
+                            alwaysShowLabel = true,
                         )
                     }
                 }
             }
+            LaunchedEffect(Unit) { UiBus.customizeNav.collect { if (it) { customize = true; UiBus.customizeNav.value = false } } }
+            if (customize) NavCustomizeDialog { customize = false }
+            ShareSheetHost()
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { pad ->
         val back: () -> Unit = { nav.popBackStack() }
         val open: (String) -> Unit = { nav.navigate(it) }
-        NavHost(nav, startDestination = if (SafiApp.prefs.onboarded) "home" else "welcome", modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
-            composable("welcome") { WelcomeScreen { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
+        NavHost(nav, startDestination = if (com.mohamed.safi.kids.KidMode.on) "kidhome" else if (SafiApp.prefs.onboarded) "home" else "welcome", modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
+            composable("welcome") { WelcomeScreen(onKid = { nav.navigate("kidsetup") }) { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
+            composable("kidhome") { KidHomeScreen(open) }
+            composable("study") { StudyScreen(back, open) }
+            composable("hifz") { HifzScreen(back) }
+            composable("familylists") { FamilyListsScreen(back, open) }
+            composable("mosques") { MosquesScreen(back) }
+            composable("sos") { SosScreen(back) }
+            composable("dictionary") { DictionaryScreen(back, open) }
+            composable("kidsetup") { KidSetupScreen(back) { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }
             composable("finance") { FinanceScreen(null, open) }
@@ -267,6 +317,8 @@ fun AppRoot() {
             composable("places") { PlacesScreen(back) }
             composable("reports") { ReportsScreen(back) }
             composable("settings") { SettingsScreen(back) }
+            composable("app_guide") { AppGuideScreen(back, open) }
+            composable("social") { SocialScreen(back) }
             composable("carpool") { CarpoolScreen(back) }
             composable("fitness") { FitnessScreen(back) }
             composable("quran") { QuranScreen(back) }
@@ -303,13 +355,17 @@ fun AppRoot() {
             composable("sleep") { SleepScreen(back, open) }
             composable("radio") { RadioScreen(back) }
             composable("tv") { TvScreen(back) }
+            composable("kidstv") { TvScreen(back, kids = true) }
+            composable("kids") { KidsScreen(back, open) }
+            composable("ramadan") { RamadanScreen(back, open) }
+            composable("family") { FamilyScreen(back) }
             composable("tool/{id}") { e -> DeenToolScreen(e.arguments?.getString("id") ?: "", back) }
         }
     }
 }
 
 private fun go(nav: NavHostController, route: String) {
-    if (route in tabs.map { it.route }) {
+    if (route in NavPrefs.routes()) {
         nav.navigate(route) {
             popUpTo("home") { saveState = true }
             launchSingleTop = true

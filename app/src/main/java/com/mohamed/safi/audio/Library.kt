@@ -59,16 +59,46 @@ object Library {
     // Islamic subjects only (in several languages)
     private const val ISLAMIC = "(islam OR islamic OR muslim OR muslims OR إسلام OR الإسلام OR إسلامي OR إسلامية OR الاسلام OR اسلامي OR سيرة OR السيرة OR النبوية OR الرسول OR الأنبياء OR الانبياء OR الصحابة OR حديث OR الحديث OR فقه OR الفقه OR تفسير OR التفسير OR عقيدة OR العقيدة OR seerah OR sirah OR hadith OR tafsir OR fiqh OR aqeedah OR sunnah OR muhammad OR prophets OR islami OR islamique OR islamisch)"
 
+    /** Topics in every field of life. Each is a search clause; the blocklist below applies to all of them. */
+    val topics = linkedMapOf(
+        "islamic" to "إسلامية",
+        "history" to "تاريخ وسير",
+        "self" to "تطوير الذات",
+        "family" to "الأسرة والتربية",
+        "health" to "الصحة",
+        "science" to "علوم ومعرفة",
+        "kids" to "قصص أطفال",
+        "language" to "لغة وأدب",
+    )
+    private val topicQ = mapOf(
+        "history" to "(history OR تاريخ OR التاريخ OR biography OR سيرة OR سير OR حضارة OR civilization)",
+        "self" to "(\"self help\" OR \"self-help\" OR \"personal development\" OR productivity OR success OR habits OR \"تطوير الذات\" OR \"تنمية بشرية\" OR النجاح OR العادات OR الإدارة OR management OR leadership OR قيادة)",
+        "family" to "(parenting OR family OR marriage OR تربية OR الأسرة OR الأبناء OR الزواج OR الطفل)",
+        "health" to "(health OR nutrition OR medicine OR الصحة OR التغذية OR الطب OR طب OR صحة)",
+        "science" to "(science OR astronomy OR physics OR chemistry OR geography OR علوم OR العلوم OR الفلك OR الجغرافيا OR الفيزياء OR الكيمياء)",
+        "kids" to "(children OR \"children's stories\" OR \"قصص أطفال\" OR \"قصص الأطفال\" OR \"قصص للأطفال\" OR kids)",
+        "language" to "(grammar OR \"arabic language\" OR النحو OR اللغة OR البلاغة OR الأدب OR شعر OR poetry OR خطابة)",
+    )
+
+    /**
+     * Never shown, whatever the topic or search: unbelief and attacks on Islam, other religions' scripture and missionary
+     * material, sects outside Ahl al-Sunnah, magic and the occult, romance/erotica and music.
+     */
+    private const val BLOCK = "(atheism OR atheist OR atheists OR agnostic OR secularism OR إلحاد OR الإلحاد OR ملحد OR الملحدين OR علمانية OR \"god delusion\" OR nietzsche OR darwin OR evolution OR التطور OR bible OR christian OR christianity OR gospel OR jesus OR church OR catholic OR missionary OR تبشير OR الإنجيل OR المسيحية OR torah OR judaism OR hindu OR buddhism OR buddhist OR shia OR shiite OR شيعة OR الشيعة OR شيعي OR اثنى OR ahmadiyya OR قاديانية OR bahai OR بهائية OR magic OR witchcraft OR occult OR astrology OR tarot OR سحر OR شعوذة OR أبراج OR romance OR erotic OR erotica OR sex OR love OR غرام OR رومانسية OR جنس OR music OR موسيقى OR song OR songs OR horror OR رعب OR vampire)"
+
     private fun esc(s: String) = s.replace(Regex("[\\\\\"():^~*?+\\-!{}\\[\\]/]"), " ").trim()
 
     /** Islamic audiobooks and lectures-as-books from the Internet Archive (incl. LibriVox). */
-    suspend fun search(source: String, text: String, lang: String, page: Int): Pair<List<AudioBook>, Int> = withContext(Dispatchers.IO) {
+    suspend fun search(source: String, text: String, lang: String, page: Int, topic: String = "islamic"): Pair<List<AudioBook>, Int> = withContext(Dispatchers.IO) {
         val parts = mutableListOf<String>()
         parts += "mediatype:audio"
         parts += "NOT collection:(etree OR georgeblood OR 78rpm OR audio_music OR opensource_audio_music OR podcasts)"
-        parts += "(subject:$ISLAMIC OR title:$ISLAMIC)"
+        val tq = topicQ[topic]
+        parts += if (tq == null) "(subject:$ISLAMIC OR title:$ISLAMIC)" else "(subject:$tq OR title:$tq)"
+        parts += "NOT subject:$BLOCK"
+        parts += "NOT title:$BLOCK"
         // books, not recitations / nasheed / music
-        parts += "NOT subject:(bible OR christian OR christianity OR gospel OR jesus OR church OR catholic OR fiction OR poetry OR novel)"
+        if (topic != "kids") parts += "NOT subject:(fiction OR novel OR novels OR رواية OR روايات)"
         parts += "NOT title:(bible OR gospel OR gibran OR famine)"
         parts += "NOT subject:(تلاوة OR تلاوات OR مرتل OR مجود OR recitation OR qiraat OR nasheed OR نشيد OR اناشيد OR أناشيد OR music OR موسيقى OR song OR songs)"
         langQ[lang]?.let { parts += "language:$it" }

@@ -192,10 +192,7 @@ fun HadithCard(h: Hadith, sectionName: String? = null) {
                 fav = !fav
             }) { Icon(if (fav) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "احفظ") }
             IconButton(onClick = {
-                ctx.startActivity(
-                    Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "${h.text}\n\n[$ref]"), "شارك")
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
+                ShareBus.open("🌿", h.text, ref)
             }) { Icon(Icons.Default.Share, "شارك") }
         }
     }

@@ -64,6 +64,19 @@ fun AlertsScreen(onBack: () -> Unit) {
                     TestButton { FaithAlerts.notify(ctx, "pre", Prayer.nextPrayer().first, test = true) }
                 }
 
+                // ------------------------------------------------ Ramadan
+                SectionTitle("رمضان")
+                GoldCard {
+                    SwitchRow("تنبيه السحور", "قبل الفجر بـ ${FaithAlerts.suhoorMin} دقيقة، في أيام رمضان بس", FaithAlerts.suhoorOn) { FaithAlerts.suhoorOn = it; changed("suhoor") }
+                    if (FaithAlerts.suhoorOn) MinutesSlider("قبل الفجر بـ", FaithAlerts.suhoorMin, 15..120) { FaithAlerts.suhoorMin = it; changed("suhoor") }
+                    NextLine("suhoor")
+                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                    SwitchRow("تنبيه الإفطار", "قبل المغرب بـ ${FaithAlerts.iftarMin} دقيقة، في أيام رمضان بس", FaithAlerts.iftarOn) { FaithAlerts.iftarOn = it; changed("iftar") }
+                    if (FaithAlerts.iftarOn) MinutesSlider("قبل المغرب بـ", FaithAlerts.iftarMin, 5..60) { FaithAlerts.iftarMin = it; changed("iftar") }
+                    NextLine("iftar")
+                    TestButton { FaithAlerts.notify(ctx, "iftar", "", test = true) }
+                }
+
                 // ------------------------------------------------ adhkar
                 SectionTitle("الأذكار")
                 FaithAlerts.azkarSlots.forEach { s ->
@@ -143,7 +156,7 @@ private fun MinutesSlider(label: String, value: Int, range: IntRange, onDone: (I
 private fun NextLine(id: String) {
     val n = remember(id) { runCatching { FaithAlerts.next(id) }.getOrNull() }
     if (n != null) Text(
-        "الجاي: " + (if (n.first.toLocalDate() == LocalDate.now(zone)) "النهارده" else "بكرة") + " ${t12(n.first.toLocalTime())}",
+        "الجاي: " + (when (n.first.toLocalDate()) { LocalDate.now(zone) -> "النهارده"; LocalDate.now(zone).plusDays(1) -> "بكرة"; else -> com.mohamed.safi.data.dateStr(n.first.atZone(zone).toInstant().toEpochMilli()) }) + " ${t12(n.first.toLocalTime())}",
         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,
     )
 }

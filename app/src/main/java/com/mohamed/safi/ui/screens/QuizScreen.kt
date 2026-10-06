@@ -34,13 +34,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mohamed.safi.quiz.Challenge
 import com.mohamed.safi.quiz.Question
 import com.mohamed.safi.quiz.Quiz
 import com.mohamed.safi.ui.*
 import kotlinx.coroutines.delay
 
-private data class Game(val mode: String, val title: String, val questions: List<Question>, val suddenDeath: Boolean = false, val stage: Int = 0)
-private data class Answer(val q: Question, val picked: Int?, val points: Int)
+/**
+ * [lives] > 0: lose one per mistake (3 lives). [timeAttack]: one 60-second clock for the whole game.
+ * [players]: pass-and-play, players take turns. [ladder]: 15 questions, harder each step, safe points at 5 and 10.
+ */
+private data class Game(
+    val mode: String, val title: String, val questions: List<Question>, val suddenDeath: Boolean = false, val stage: Int = 0,
+    val lives: Int = 0, val timeAttack: Boolean = false, val players: List<String> = emptyList(), val ladder: Boolean = false,
+    val ch: Challenge.Code? = null,
+)
+private data class Answer(val q: Question, val picked: Int?, val points: Int, val player: Int = 0)
+
+private val ladderLevels = listOf(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3)
+
+/** Short beeps for right/wrong, if the user didn't mute them. */
+private object QuizSound {
+    private val tone by lazy { runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 60) }.getOrNull() }
+    fun ok() { if (Quiz.sound) runCatching { tone?.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 120) } }
+    fun bad() { if (Quiz.sound) runCatching { tone?.startTone(android.media.ToneGenerator.TONE_PROP_NACK, 160) } }
+}
 
 @Composable
 fun QuizScreen(onBack: () -> Unit) {
@@ -60,9 +78,33 @@ fun QuizScreen(onBack: () -> Unit) {
         "cats" -> { QuizCategories(onBack = { screen = "home" }) { cats, lvl, title -> start(Game("cat", title, Quiz.pick(10, cats, lvl))) }; return }
         "stages" -> { QuizStages(onBack = { screen = "home" }) { n -> start(Game("stage", "المرحلة $n", Quiz.stageQuestions(n), stage = n)) }; return }
         "stats" -> { QuizStats { screen = "home" }; return }
+        "remote" -> { ChallengeHub(onBack = { screen = "home"; rev++ }) { c -> start(Game("challenge", challengeTitle(c), Challenge.questions(c), ch = c)) }; return }
+    }
+
+    // a friend's challenge that was shared into the app
+    val incoming = Challenge.incoming.value
+    if (incoming != null) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        AlertDialog(
+            onDismissRequest = { Challenge.incoming.value = null },
+            title = { Text("⚔️ ${incoming.from.ifBlank { tr("صاحبك") }} بيتحداك!") },
+            text = { Text("جاب ${incoming.correct} من ${incoming.qs.size}. هتلعب نفس الأسئلة بالظبط، وبعدها ابعتله نتيجتك.") },
+            confirmButton = {
+                Button(onClick = {
+                    Challenge.incoming.value = null
+                    if (Challenge.played(incoming)) toast(ctx, "لعبت التحدي ده قبل كده") else start(Game("challenge", challengeTitle(incoming), Challenge.questions(incoming), ch = incoming))
+                }) { Text("يلا ألعب") }
+            },
+            dismissButton = { TextButton(onClick = { Challenge.incoming.value = null }) { Text("بعدين") } },
+        )
     }
 
     val bank = remember { Quiz.load() }
+    var friends by remember { mutableStateOf(false) }
+    if (friends) FriendsDialog({ friends = false }) { names ->
+        friends = false
+        start(Game("friends", "تحدّي ${names.joinToString(" × ")}", Quiz.pick(names.size * 8), players = names))
+    }
     key(rev) {
         ScreenScaffold("مسابقة صافي", onBack = onBack) { pad ->
             LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -128,6 +170,45 @@ fun QuizScreen(onBack: () -> Unit) {
                         ModeCard("إحصائياتي", "دقتك في كل قسم", Icons.Default.BarChart, Color(0xFF6C7A89), Modifier.weight(1f)) { screen = "stats" }
                     }
                 }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ModeCard("٣ أرواح", "كل غلطة بروح، لحد إمتى هتصمد؟", Icons.Default.Favorite, Color(0xFFD81B60), Modifier.weight(1f)) {
+                            start(Game("lives", "٣ أرواح", Quiz.pick(80, levels = List(80) { i -> if (i < 8) 1 else if (i < 25) 2 else 3 }), lives = 3))
+                        }
+                        ModeCard("سباق الدقيقة", "أكبر عدد صح في ٦٠ ثانية", Icons.Default.Timer, Color(0xFF00897B), Modifier.weight(1f)) {
+                            start(Game("time", "سباق الدقيقة", Quiz.pick(60), timeAttack = true))
+                        }
+                    }
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ModeCard("سلّم الأبطال", "١٥ سؤال من السهل للصعب", Icons.Default.Stairs, Color(0xFF8E24AA), Modifier.weight(1f)) {
+                            start(Game("ladder", "سلّم الأبطال", Quiz.pick(15, levels = ladderLevels), ladder = true))
+                        }
+                        ModeCard("تحدّي صاحبك", "اتنين على نفس الموبايل بالدور", Icons.Default.Groups, Color(0xFF3949AB), Modifier.weight(1f)) { friends = true }
+                    }
+                }
+                item {
+                    GoldCard(onClick = { screen = "remote" }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⚔️", fontSize = 32.sp)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("تحدّي أصحابك من أي مكان", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Text("العب ١٠ أسئلة وابعت التحدي بواتساب. صاحبك يلعب نفس الأسئلة ويبعتلك نتيجته.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            }
+                            Icon(Icons.Default.ChevronLeft, null)
+                        }
+                    }
+                }
+                item { Badges() }
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("أصوات المسابقة", Modifier.weight(1f))
+                        var snd by remember { mutableStateOf(Quiz.sound) }
+                        Switch(snd, { snd = it; Quiz.sound = it })
+                    }
+                }
                 item { Text("${bank.size} سؤال • الأسئلة الدينية من مصادر أهل السنة (القرآن والصحيحين وكتب السيرة المعتمدة)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
             }
         }
@@ -135,10 +216,14 @@ fun QuizScreen(onBack: () -> Unit) {
 }
 
 private fun rebuild(g: Game): Game = when (g.mode) {
+    "lives" -> g.copy(questions = Quiz.pick(80, levels = List(80) { i -> if (i < 8) 1 else if (i < 25) 2 else 3 }))
+    "time" -> g.copy(questions = Quiz.pick(60))
+    "ladder" -> g.copy(questions = Quiz.pick(15, levels = ladderLevels))
+    "friends" -> g.copy(questions = Quiz.pick(g.players.size * 8))
     "stage" -> g.copy(questions = Quiz.stageQuestions(g.stage))
     "sudden" -> g.copy(questions = Quiz.pick(60, levels = List(60) { i -> if (i < 10) 1 else if (i < 25) 2 else 3 }))
     "religion" -> g.copy(questions = Quiz.pick(10, Quiz.religionCats.keys))
-    "daily" -> g.copy(mode = "quick", title = "تحدي سريع", questions = Quiz.pick(10))
+    "daily", "challenge" -> g.copy(mode = "quick", title = "تحدي سريع", questions = Quiz.pick(10), ch = null)
     else -> g.copy(questions = Quiz.pick(10, g.questions.map { it.cat }.toSet().takeIf { g.mode == "cat" }))
 }
 
@@ -184,13 +269,24 @@ private fun QuizPlay(g: Game, onQuit: () -> Unit, onFinish: (List<Answer>) -> Un
     val limit = if ((q?.lvl ?: 1) >= 3) 30 else 20
     var left by remember(idx) { mutableIntStateOf(limit) }
     var lastPoints by remember { mutableIntStateOf(0) }
+    var lives by remember { mutableIntStateOf(g.lives) }
+    var clock by remember { mutableIntStateOf(60) }
+    var finished by remember { mutableStateOf(false) }
+    val player = if (g.players.isEmpty()) 0 else idx % g.players.size
 
     BackHandler { confirmQuit = true }
 
-    fun finish() = onFinish(answers.toList())
+    fun finish() { if (!finished) { finished = true; onFinish(answers.toList()) } }
     fun next() {
-        if (g.suddenDeath && answers.lastOrNull()?.let { it.picked != it.q.correct } == true) { finish(); return }
+        val lastWrong = answers.lastOrNull()?.let { it.picked != it.q.correct } == true
+        if ((g.suddenDeath || g.ladder) && lastWrong) { finish(); return }
+        if (g.lives > 0 && lives <= 0) { finish(); return }
         if (idx + 1 >= g.questions.size) finish() else { idx++; picked = null; removed = emptySet() }
+    }
+    // one clock for the whole game in the 60-second race
+    if (g.timeAttack) LaunchedEffect(Unit) {
+        while (clock > 0) { delay(1000); clock-- }
+        finish()
     }
     fun answer(i: Int?) {
         val qq = q ?: return
@@ -198,14 +294,21 @@ private fun QuizPlay(g: Game, onQuit: () -> Unit, onFinish: (List<Answer>) -> Un
         picked = i ?: -1
         val ok = i == qq.correct
         haptic.performHapticFeedback(if (ok) HapticFeedbackType.TextHandleMove else HapticFeedbackType.LongPress)
+        if (ok) QuizSound.ok() else QuizSound.bad()
         combo = if (ok) combo + 1 else 0
-        val pts = if (ok) Quiz.points(qq.lvl, left, combo) else 0
+        val pts = if (ok) Quiz.points(qq.lvl, if (g.timeAttack) 10 else left, combo) else 0
         lastPoints = pts
         score += pts
-        answers += Answer(qq, i, pts)
+        answers += Answer(qq, i, pts, player)
         Quiz.record(qq, ok)
+        if (!ok && g.lives > 0) lives--
+    }
+    // the race moves on by itself
+    LaunchedEffect(idx, picked) {
+        if (g.timeAttack && picked != null) { delay(450); next() }
     }
     LaunchedEffect(idx, picked) {
+        if (g.timeAttack) return@LaunchedEffect
         if (picked != null) return@LaunchedEffect
         while (left > 0 && picked == null) { delay(1000); if (picked == null) left-- }
         if (picked == null && left <= 0) answer(null)
@@ -225,9 +328,39 @@ private fun QuizPlay(g: Game, onQuit: () -> Unit, onFinish: (List<Answer>) -> Un
                     if (combo >= 3) Text("x${if (combo >= 5) 3 else 2} 🔥", color = Warn, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
                 }
             }
-            if (!g.suddenDeath) LinearProgressIndicator(progress = { (idx + 1f) / total }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(5.dp).clip(CircleShape), drawStopIndicator = {})
+            if (!g.suddenDeath && g.lives == 0 && !g.timeAttack) LinearProgressIndicator(progress = { (idx + 1f) / total }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(5.dp).clip(CircleShape), drawStopIndicator = {})
+            if (g.players.isNotEmpty()) {
+                val scores = g.players.indices.map { p -> answers.filter { it.player == p }.sumOf { it.points } }
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    g.players.forEachIndexed { p, n ->
+                        Surface(shape = RoundedCornerShape(12.dp), color = if (p == player) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (p == player) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f)) {
+                            Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                androidx.compose.material3.Text(n, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text("${scores[p]}", fontSize = 18.sp)
+                            }
+                        }
+                    }
+                }
+                Text("الدور على: ${g.players[player]}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.CenterHorizontally))
+            }
+            if (g.lives > 0) Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.Center) {
+                repeat(g.lives) { i -> Text(if (i < lives) "❤️" else "🤍", fontSize = 24.sp) }
+                Spacer(Modifier.width(10.dp))
+                Text("صح: ${answers.count { it.picked == it.q.correct }}", fontWeight = FontWeight.Bold)
+            }
+            if (g.ladder) Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                repeat(15) { i ->
+                    val safe = i == 4 || i == 9
+                    Box(Modifier.weight(1f).height(if (safe) 12.dp else 8.dp).clip(CircleShape).background(
+                        when { i < idx -> Positive; i == idx -> Gold; safe -> Gold.copy(alpha = 0.35f); else -> MaterialTheme.colorScheme.surfaceVariant },
+                    ))
+                }
+            }
             Spacer(Modifier.height(8.dp))
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TimerRing(left, limit, picked == null) }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                if (g.timeAttack) TimerRing(clock, 60, true) else TimerRing(left, limit, picked == null)
+            }
             Spacer(Modifier.height(12.dp))
             GoldCard {
                 Row {
@@ -267,7 +400,7 @@ private fun QuizPlay(g: Game, onQuit: () -> Unit, onFinish: (List<Answer>) -> Un
                 }
             }
             Spacer(Modifier.weight(1f))
-            if (picked == null) {
+            if (picked == null && !g.timeAttack) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     Lifeline("50:50", Icons.Default.ContentCut, !used5050, Modifier.weight(1f)) {
                         used5050 = true
@@ -279,7 +412,7 @@ private fun QuizPlay(g: Game, onQuit: () -> Unit, onFinish: (List<Answer>) -> Un
                     }
                     Lifeline("+١٥ ثانية", Icons.Default.MoreTime, !usedTime, Modifier.weight(1f)) { usedTime = true; left += 15 }
                 }
-            } else {
+            } else if (picked != null && !g.timeAttack) {
                 val ok = picked == q.correct
                 AppCard(color = if (ok) Positive.copy(alpha = 0.12f) else Danger.copy(alpha = 0.10f)) {
                     Text(if (ok) "صح! +$lastPoints" else if (picked == -1) "الوقت خلص" else "غلط", fontWeight = FontWeight.Bold, color = if (ok) Positive else Danger, fontSize = 18.sp)
@@ -288,7 +421,7 @@ private fun QuizPlay(g: Game, onQuit: () -> Unit, onFinish: (List<Answer>) -> Un
                 }
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = { next() }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                    Text(if (g.suddenDeath && !ok) "النتيجة" else if (idx + 1 >= g.questions.size) "النتيجة" else "التالي", fontSize = 18.sp)
+                    Text(if ((g.suddenDeath || g.ladder) && !ok) "النتيجة" else if (g.lives > 0 && lives <= 0) "النتيجة" else if (idx + 1 >= g.questions.size) "النتيجة" else "التالي", fontSize = 18.sp)
                 }
             }
         }
@@ -329,6 +462,7 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
     var newBest by remember { mutableStateOf(false) }
     var review by remember { mutableStateOf(false) }
     var xpGain by remember { mutableIntStateOf(0) }
+    var newBadges by remember { mutableStateOf<List<Quiz.Badge>>(emptyList()) }
     LaunchedEffect(Unit) {
         val bestKey = if (g.mode == "cat") "cat" else g.mode
         if (score > Quiz.best(bestKey)) { Quiz.setBest(bestKey, score); newBest = score > 0 }
@@ -336,7 +470,26 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
         Quiz.addXp(xpGain)
         if (g.mode == "daily") Quiz.markDaily(score)
         if (g.mode == "stage") { Quiz.setStageStars(g.stage, stars); if (correct >= 7 && g.stage >= Quiz.stage) Quiz.stage = g.stage + 1 }
+        var run = 0; var best = 0
+        answers.forEach { a -> run = if (a.picked == a.q.correct) run + 1 else 0; best = maxOf(best, run) }
+        val earned = buildList {
+            add("first")
+            if (answers.size == 10 && correct == 10) add("perfect")
+            if (best >= 5) add("combo5")
+            if (best >= 10) add("combo10")
+            if (g.mode == "lives" && correct >= 20) add("survivor")
+            if (g.mode == "time" && correct >= 15) add("speed15")
+            if (g.mode == "ladder" && correct >= 15) add("ladder")
+            if (g.mode == "friends" || g.mode == "challenge") add("friend")
+            if (Quiz.catStats("quran").first >= 50) add("quran50")
+            if (Quiz.level() >= 5) add("level5")
+            if (Quiz.level() >= 10) add("level10")
+            if (Quiz.streak >= 7) add("streak7")
+        }
+        newBadges = Quiz.unlock(earned)
     }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val sendCode = remember { g.ch?.let { Challenge.afterPlay(it, correct, score) } }
     BackHandler { onHome() }
     if (review) {
         BackHandler { review = false }
@@ -370,6 +523,41 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
         Text("$score", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
         Text("نقطة", color = MaterialTheme.colorScheme.outline)
         if (newBest) Text("🏆 رقم قياسي جديد!", color = Gold, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.padding(top = 6.dp))
+        if (g.players.isNotEmpty()) {
+            val scores = g.players.indices.map { p -> answers.filter { it.player == p }.sumOf { it.points } }
+            val top = scores.maxOrNull() ?: 0
+            val winners = g.players.filterIndexed { i, _ -> scores[i] == top }
+            Text(if (winners.size > 1) "🤝 تعادل!" else "🏆 الفايز: ${winners.first()}", color = Gold, fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(top = 6.dp))
+            g.players.forEachIndexed { i, n -> Text("$n: ${scores[i]}", fontWeight = FontWeight.SemiBold) }
+        }
+        g.ch?.let { c ->
+            if (c.fromId != Challenge.myId) {
+                val r = compareValuesBy(correct to score, c.correct to c.score, { it.first }, { it.second })
+                Text(if (r > 0) "🏆 كسبت ${c.from}!" else if (r < 0) "${c.from} كسب المرة دي 💪" else "🤝 تعادل!", color = Gold, fontWeight = FontWeight.Bold, fontSize = 22.sp, modifier = Modifier.padding(top = 6.dp))
+                Text("انت $correct • ${c.from} ${c.correct}", fontWeight = FontWeight.SemiBold)
+            }
+            Button(onClick = {
+                val msg = if (c.fromId == Challenge.myId) tr("⚔️ بتحداك في مسابقة صافي! جبت $correct من ${answers.size}. افتح الرسالة دي بصافي (مشاركة ← صافي) والعب نفس الأسئلة:")
+                    else tr("نتيجتي في تحديك: $correct من ${answers.size}. شاركها مع صافي عشان تتسجل:")
+                ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_TEXT, msg + "\n" + sendCode), tr("ابعت")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }, modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Positive)) {
+                Icon(Icons.Default.Send, null); Spacer(Modifier.width(6.dp))
+                Text(if (c.fromId == Challenge.myId) "ابعت التحدي لأصحابك" else "ابعت نتيجتك لـ ${c.from}", fontSize = 17.sp)
+            }
+        }
+        if (g.ladder) Text(
+            when { correct >= 15 -> "وصلت لقمة السلّم! 🏆"; correct >= 10 -> "عديت محطة الأمان التانية"; correct >= 5 -> "عديت محطة الأمان الأولى"; else -> "حاول توصل لمحطة الأمان (السؤال ٥)" },
+            fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp),
+        )
+        newBadges.forEach { b ->
+            Surface(shape = RoundedCornerShape(14.dp), color = Gold.copy(alpha = 0.18f), modifier = Modifier.padding(top = 8.dp)) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(b.icon, fontSize = 24.sp); Spacer(Modifier.width(8.dp))
+                    Column { Text("إنجاز جديد: ${b.title}", fontWeight = FontWeight.Bold); Text(b.how, style = MaterialTheme.typography.bodySmall) }
+                }
+            }
+        }
         Spacer(Modifier.height(16.dp))
         GoldCard {
             Row {
@@ -386,6 +574,7 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
         Button(onClick = onAgain, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text(if (g.mode == "daily") "العب تحدي سريع" else "العب تاني", fontSize = 18.sp) }
         TextButton(onClick = onHome) { Text("الرئيسية") }
     }
+    if (accuracy >= 90 || newBadges.isNotEmpty()) Confetti()
 }
 
 // ============================================================================ categories, stages, stats
@@ -469,6 +658,154 @@ private fun QuizStats(onBack: () -> Unit) {
                 val f = if (all == 0) 0f else ok.toFloat() / all
                 BarRow(n, if (all == 0) "—" else "${(f * 100).toInt()}% ($ok/$all)", f, if (f >= 0.7f) Positive else if (f >= 0.4f) Warn else Danger)
             }
+        }
+    }
+}
+
+
+// ============================================================================ remote friends challenge
+
+private fun challengeTitle(c: Challenge.Code) = if (c.fromId == Challenge.myId) tr("تحدّي الأصحاب") else tr("تحدّي ${c.from}")
+
+@Composable
+private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    @Suppress("UNUSED_VARIABLE") val v = Challenge.version.intValue
+    var name by remember { mutableStateOf(Challenge.myName) }
+    var cats by remember { mutableStateOf("all") }
+    var code by remember { mutableStateOf("") }
+    fun open(text: String) {
+        val c = Challenge.decode(text) ?: run { toast(ctx, "ده مش كود تحدي صافي"); return }
+        if (c.reply) {
+            when (Challenge.importReply(c)) {
+                null -> toast(ctx, "النتيجة دي متسجلة قبل كده أو مش لتحدي بعته")
+                1 -> toast(ctx, "🏆 كسبت ${c.from}!")
+                0 -> toast(ctx, "🤝 تعادل مع ${c.from}")
+                else -> toast(ctx, "${c.from} كسب المرة دي")
+            }
+            code = ""
+        } else if (c.fromId == Challenge.myId) toast(ctx, "ده التحدي بتاعك، ابعته لأصحابك")
+        else if (Challenge.played(c)) toast(ctx, "لعبت التحدي ده قبل كده")
+        else onPlay(c)
+    }
+    // a code copied from WhatsApp is picked up when the screen opens
+    LaunchedEffect(Unit) {
+        val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+        val clip = runCatching { cm?.primaryClip?.getItemAt(0)?.text?.toString() }.getOrNull().orEmpty()
+        if (Challenge.contains(clip)) code = clip
+    }
+    BackHandler { onBack() }
+    ScreenScaffold("تحدّي الأصحاب", onBack = onBack) { pad ->
+        LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                AppCard {
+                    Text("إزاي بيشتغل؟", fontWeight = FontWeight.Bold)
+                    Text("١. تلعب ١٠ أسئلة.\n٢. تبعت كود التحدي لصاحبك أو لجروب بواتساب.\n٣. صاحبك يعمل «مشاركة» للرسالة مع صافي ويلعب نفس الأسئلة.\n٤. يبعتلك نتيجته بنفس الطريقة، وتتسجل عندك في الترتيب.", style = MaterialTheme.typography.bodySmall)
+                    Text("من غير سيرفر ومن غير حساب: كل حاجة بتتحفظ على موبايلك بس.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                }
+            }
+            item {
+                GoldCard {
+                    OutlinedTextField(name, { name = it.take(20) }, label = { Text("اسمك اللي أصحابك هيشوفوه") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("all" to "منوّع", "religion" to "ديني", "general" to "عام").forEach { (k, t) -> FilterChip(cats == k, { cats = k }, label = { Text(t) }) }
+                    }
+                    Button(onClick = {
+                        if (name.isBlank()) { toast(ctx, "اكتب اسمك الأول"); return@Button }
+                        Challenge.myName = name
+                        onPlay(Challenge.create(cats))
+                    }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("ابدأ تحدي جديد") }
+                }
+            }
+            item {
+                AppCard {
+                    Text("وصلك تحدي أو نتيجة؟", fontWeight = FontWeight.Bold)
+                    OutlinedTextField(code, { code = it }, label = { Text("الصق الرسالة هنا") }, maxLines = 3, modifier = Modifier.fillMaxWidth())
+                    Button(onClick = {
+                        if (name.isNotBlank()) Challenge.myName = name
+                        open(code)
+                    }, enabled = Challenge.contains(code), modifier = Modifier.fillMaxWidth()) { Text("افتح") }
+                }
+            }
+            val list = Challenge.friends()
+            item { SectionTitle("الترتيب بيني وبين أصحابي") }
+            if (list.isEmpty()) item { EmptyState(Icons.Default.EmojiEvents, "لسه مفيش نتايج. ابعت أول تحدي!") }
+            itemsIndexed(list, key = { _, f -> f.id }) { i, f ->
+                AppCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(when (i) { 0 -> "🥇"; 1 -> "🥈"; 2 -> "🥉"; else -> "${i + 1}" }, fontSize = 22.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            androidx.compose.material3.Text(f.name.ifBlank { "?" }, fontWeight = FontWeight.Bold)
+                            Text("آخر مرة: ${f.last}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Text("✅ ${f.wins}  🤝 ${f.draws}  ❌ ${f.losses}", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================ extras
+
+@Composable
+private fun FriendsDialog(onDismiss: () -> Unit, onStart: (List<String>) -> Unit) {
+    var a by remember { mutableStateOf("") }
+    var b by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("تحدّي صاحبك") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("كل واحد ياخد سؤال بالدور، ٨ أسئلة لكل واحد. اللي يجمع نقط أكتر يكسب.", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(a, { a = it }, label = { Text("اللاعب الأول") }, singleLine = true)
+                OutlinedTextField(b, { b = it }, label = { Text("اللاعب التاني") }, singleLine = true)
+            }
+        },
+        confirmButton = { Button(onClick = { onStart(listOf(a.ifBlank { tr("اللاعب ١") }, b.ifBlank { tr("اللاعب ٢") })) }) { Text("يلا") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+    )
+}
+
+@Composable
+private fun Badges() {
+    val got = Quiz.badges.filter { Quiz.hasBadge(it.id) }
+    GoldCard {
+        Text("الإنجازات (${got.size}/${Quiz.badges.size})", fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(6.dp))
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Quiz.badges.forEach { b ->
+                val on = Quiz.hasBadge(b.id)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(72.dp)) {
+                    Text(if (on) b.icon else "🔒", fontSize = 26.sp)
+                    Text(b.title, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 2,
+                        color = if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline)
+                }
+            }
+        }
+    }
+}
+
+/** A short burst of falling confetti for a great result. */
+@Composable
+private fun Confetti() {
+    val anim = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) { anim.animateTo(1f, tween(2600, easing = LinearEasing)) }
+    val pieces = remember {
+        val r = kotlin.random.Random(System.currentTimeMillis())
+        List(70) { Triple(r.nextFloat(), r.nextFloat() * 0.6f + 0.4f, listOf(Gold, Positive, Color(0xFFE53935), Color(0xFF1E88E5), Color(0xFF8E24AA))[r.nextInt(5)]) }
+    }
+    if (anim.value >= 1f) return
+    Canvas(Modifier.fillMaxSize()) {
+        val t = anim.value
+        pieces.forEachIndexed { i, (x, speed, c) ->
+            val y = (t * speed * 1.4f - (i % 7) * 0.05f) * size.height
+            if (y < 0f || y > size.height) return@forEachIndexed
+            val wob = kotlin.math.sin((t * 12 + i).toDouble()).toFloat() * 14f
+            drawRect(c.copy(alpha = 1f - t * 0.6f), androidx.compose.ui.geometry.Offset(x * size.width + wob, y), Size(9f, 14f))
         }
     }
 }

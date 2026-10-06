@@ -188,7 +188,7 @@ fun PermRow(icon: ImageVector, title: String, desc: String, ok: Boolean, onGrant
 }
 
 @Composable
-fun WelcomeScreen(onDone: () -> Unit) {
+fun WelcomeScreen(onKid: () -> Unit = {}, onDone: () -> Unit) {
     val prefs = SafiApp.prefs
     val ctx = LocalContext.current
     var name by remember { mutableStateOf(prefs.userName) }
@@ -222,6 +222,7 @@ fun WelcomeScreen(onDone: () -> Unit) {
             },
             modifier = Modifier.fillMaxWidth().height(52.dp),
         ) { Text("يلا نبدأ", fontWeight = FontWeight.Bold) }
+        OutlinedButton(onClick = onKid, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("👧 ده موبايل طفل؟ جهّزه بأقسام تختارها") }
         Spacer(Modifier.height(8.dp))
         Text(
             "تقدر تغير أي حاجة بعدين من الإعدادات. علشان المساعد الذكي وقراءة الفواتير اربط أي ذكاء اصطناعي (Claude أو ChatGPT أو Gemini أو غيرهم) من الإعدادات.",

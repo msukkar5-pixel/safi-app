@@ -105,7 +105,27 @@ object Books {
         "adhkar" to "الأذكار والرقية والطب النبوي",
         "egypt" to "تاريخ مصر",
         "uae" to "تاريخ الإمارات",
+        "aqeedah" to "العقيدة",
+        "tafsir" to "التفسير",
+        "hadith" to "الحديث وشروحه",
+        "fiqh" to "الفقه والسياسة الشرعية",
+        "tazkiya" to "الرقائق وتزكية النفس",
+        "family" to "الأسرة والتربية",
+        "thought" to "فكر وخواطر إيمانية معاصرة",
+        "adab" to "الأدب واللغة والحكمة",
+        "kids" to "كتب للأطفال",
+        "saudi" to "تاريخ السعودية (الحجاز ونجد)", "sham" to "تاريخ الشام وسوريا", "palestine" to "تاريخ فلسطين والقدس",
+        "lebanon" to "تاريخ لبنان", "iraq" to "تاريخ العراق", "yemen" to "تاريخ اليمن", "sudan" to "تاريخ السودان",
+        "maghrib" to "تاريخ المغرب", "tunisia" to "تاريخ تونس", "mauritania" to "تاريخ موريتانيا", "andalus" to "تاريخ الأندلس",
+        "dict" to "المعاجم والقواميس",
+        "kuwait" to "تاريخ الكويت", "qatar" to "تاريخ قطر", "bahrain" to "تاريخ البحرين", "oman" to "تاريخ عُمان", "jordan" to "تاريخ الأردن",
+        "libya" to "تاريخ ليبيا", "algeria" to "تاريخ الجزائر", "somalia" to "تاريخ الصومال", "djibouti" to "تاريخ جيبوتي", "comoros" to "تاريخ جزر القمر",
     )
+
+    /** Categories shown inside their own sections (Stories, History, Hajj guide, Ruqyah guide); the library shows the rest. */
+    val sectionCats = setOf("prophets", "seerah", "sahaba", "egypt", "uae", "hajj", "adhkar", "kids",
+        "saudi", "sham", "palestine", "lebanon", "iraq", "yemen", "sudan", "maghrib", "tunisia", "mauritania", "andalus",
+        "kuwait", "qatar", "bahrain", "oman", "jordan", "libya", "algeria", "somalia", "djibouti", "comoros")
 
     val bidaya = BookMeta(
         "bidaya", "history", "البداية والنهاية", "الحافظ ابن كثير (ت ٧٧٤هـ)",
@@ -155,6 +175,15 @@ object Books {
         return all
     }
 
+    private val refreshLock = Mutex()
+    @Volatile private var refreshed = false
+
+    /** One catalog refresh per app run, shared by every book list on screen (they used to race and overwrite the file). */
+    suspend fun refreshOnce(ctx: Context = SafiApp.instance): Boolean = refreshLock.withLock {
+        if (refreshed) return@withLock false
+        refreshCatalog(ctx).also { refreshed = true }
+    }
+
     suspend fun refreshCatalog(ctx: Context = SafiApp.instance): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             http.newCall(Request.Builder().url(BASE + "catalog.json").build()).execute().use { r ->
@@ -163,7 +192,10 @@ object Books {
                 val parsed = parse(JSONArray(txt))
                 if (parsed.isEmpty()) return@runCatching false
                 root(ctx).mkdirs()
-                File(root(ctx), "catalog.json").writeText(txt)
+                // write then rename, so a reader never sees half a file
+                val tmp = File(root(ctx), "catalog.json.tmp")
+                tmp.writeText(txt)
+                tmp.renameTo(File(root(ctx), "catalog.json"))
                 catalogCache = null
                 true
             }

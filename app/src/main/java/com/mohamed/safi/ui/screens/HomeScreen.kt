@@ -94,22 +94,15 @@ fun HomeScreen(open: (String) -> Unit) {
             }
         }
 
+        item { RamadanHomeCard(open) }
+        item { QuickRow(open) }
+        item { AyahOfDayCard(open) }
         item { WirdHomeCard(open) }
         item { PrayerTrackerHomeCard(open) }
         item { NextUpCard(reminders, open) }
         item { OccasionHomeCard(open) }
 
         item { CarpoolCard(open) }
-
-        // Quick actions
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickAction(Icons.Default.Mic, "سجّل بالصوت", Brand, Modifier.weight(1f)) { voice() }
-                QuickAction(Icons.Default.CameraAlt, "صوّر فاتورة", Color2, Modifier.weight(1f)) { receipt.open() }
-                QuickAction(Icons.Default.Payments, "مصروف كاش", Positive, Modifier.weight(1f)) { adding = true }
-                QuickAction(Icons.Default.SwapHoriz, "تحويل مصر", Warn, Modifier.weight(1f)) { open("transfers") }
-            }
-        }
 
         if (soon.isNotEmpty()) {
             item {
@@ -305,7 +298,70 @@ private fun HomeHeader(greeting: String, open: (String) -> Unit) {
                     Text(leftText(left), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
                 }
             }
+            // the day's five prayers, the next one highlighted
+            val day = remember(now.toLocalDate()) { com.mohamed.safi.faith.Prayer.today() }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                day.times.filter { it.first != com.mohamed.safi.faith.PrayerDay.SUNRISE }.forEach { (n, t) ->
+                    val isNext = n == next.first && t.toLocalDate() == next.second.toLocalDate()
+                    Column(
+                        Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                            .background(if (isNext) Gold.copy(alpha = 0.95f) else Color.White.copy(alpha = 0.10f)).padding(vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(n, color = if (isNext) Color.Black else Color.White.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(t12(t).substringBefore(" "), color = if (isNext) Color.Black else Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
+    }
+}
+
+/** Round shortcuts to the places used most. */
+@Composable
+private fun QuickRow(open: (String) -> Unit) {
+    val items = listOf(
+        Triple("quran", "القرآن", Icons.Default.MenuBook), Triple("azkar", "الأذكار", Icons.Default.Favorite),
+        Triple("hisn", "حصن المسلم", Icons.Default.Shield), Triple("kids", "الأطفال", Icons.Default.ChildCare),
+        Triple("radio", "الإذاعات", Icons.Default.Radio), Triple("sleep", "قبل النوم", Icons.Default.Bedtime),
+        Triple("quiz", "المسابقة", Icons.Default.EmojiEvents), Triple("library", "المكتبة", Icons.Default.LocalLibrary),
+        Triple("manasik", "الحج والعمرة", Icons.Default.Landscape), Triple("tv", "القنوات", Icons.Default.LiveTv),
+    )
+    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(items.size) { i ->
+            val (r, label, icon) = items[i]
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(68.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).clickable { open(r) }.padding(vertical = 4.dp)) {
+                Box(Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(label, fontSize = 11.sp, maxLines = 1)
+            }
+        }
+    }
+}
+
+/** One verse a day, taken from the bundled Mushaf (the same verse all day). */
+@Composable
+private fun AyahOfDayCard(open: (String) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var ayah by remember { mutableStateOf<Triple<String, String, Pair<Int, Int>>?>(null) }
+    LaunchedEffect(Unit) {
+        ayah = runCatching {
+            val surahs = com.mohamed.safi.faith.Quran.surahs(ctx)
+            val pool = surahs.flatMap { s -> s.ayahs.filter { it.text.length in 60..200 }.map { s to it } }
+            val (s, a) = pool[(java.time.LocalDate.now(zone).toEpochDay() % pool.size).toInt()]
+            Triple(a.text, "${s.name} • ${a.n}", s.number to a.n)
+        }.getOrNull()
+    }
+    val a = ayah ?: return
+    GoldCard(onClick = { UiBus.pendingQuran.value = a.third; open("quran") }) {
+        Text("آية اليوم", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(6.dp))
+        androidx.compose.material3.Text("﴿ ${a.first} ﴾", fontFamily = Amiri, fontSize = 20.sp, lineHeight = 36.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(4.dp))
+        Text(a.second, style = MaterialTheme.typography.labelMedium, color = Gold, modifier = Modifier.align(Alignment.End))
     }
 }
 

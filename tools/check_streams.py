@@ -1,4 +1,4 @@
-"""Check the bundled live streams (assets/media/radio.json, tv.json) and drop the dead ones.
+"""Check the bundled live streams (assets/media/radio.json, tv.json, kidstv.json) and drop the dead ones.
 
 Run in CI before the build:  python3 tools/check_streams.py app/src/main/assets/media --prune
 A stream counts as alive when it answers 2xx and sends audio/video bytes (or a valid HLS playlist).
@@ -35,7 +35,7 @@ def alive(url, timeout=12):
 def main():
     folder = sys.argv[1]
     prune = "--prune" in sys.argv
-    for name in ("radio.json", "tv.json"):
+    for name in ("radio.json", "tv.json", "kidstv.json"):
         path = os.path.join(folder, name)
         if not os.path.exists(path):
             continue

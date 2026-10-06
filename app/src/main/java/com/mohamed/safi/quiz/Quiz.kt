@@ -24,7 +24,7 @@ object Quiz {
     )
     val generalCats = linkedMapOf(
         "general" to "معلومات عامة", "geography" to "جغرافيا", "science" to "علوم", "history" to "تاريخ",
-        "sports" to "رياضة", "egypt" to "مصر", "uae" to "الإمارات", "tech" to "تكنولوجيا", "language" to "لغة عربية",
+        "sports" to "رياضة", "egypt" to "مصر", "uae" to "الإمارات", "tech" to "تكنولوجيا", "language" to "لغة عربية", "math" to "ألغاز وحساب",
     )
     val allCats get() = religionCats + generalCats
 
@@ -105,8 +105,44 @@ object Quiz {
                     ?: generateSequence { rest.removeFirstOrNull() }.firstOrNull { it.q !in used }
                 q?.also { used += it.q }
             }
-        } else base.shuffled(r).take(n)
+        } else balanced(base, n, r)
         return chosen.map { it.shuffled(r) }
+    }
+
+    /** Mixes categories evenly, so the 1000+ Quran questions don't crowd out the rest. */
+    private fun balanced(pool: List<Question>, n: Int, r: Random): List<Question> {
+        val groups = pool.groupBy { it.cat }.values.map { ArrayDeque(it.shuffled(r)) }.shuffled(r)
+        val out = ArrayList<Question>(n)
+        while (out.size < n && groups.any { it.isNotEmpty() }) {
+            for (g in groups) { if (out.size >= n) break; g.removeFirstOrNull()?.let { out += it } }
+        }
+        return out.shuffled(r)
+    }
+
+    // ------------------------------------------------------------------ fun extras
+    var sound: Boolean get() = sp().getBoolean("sound", true); set(v) = sp().edit { putBoolean("sound", v) }
+
+    data class Badge(val id: String, val icon: String, val title: String, val how: String)
+    val badges = listOf(
+        Badge("first", "🌱", "البداية", "أول لعبة تخلّصها"),
+        Badge("perfect", "💯", "العلامة الكاملة", "كل الإجابات صح في لعبة ١٠ أسئلة"),
+        Badge("combo5", "🔥", "على نار", "٥ إجابات صح ورا بعض"),
+        Badge("combo10", "☄️", "مايتوقفش", "١٠ إجابات صح ورا بعض"),
+        Badge("survivor", "❤️", "الناجي", "٢٠ سؤال صح في ٣ أرواح"),
+        Badge("speed15", "⚡", "البرق", "١٥ إجابة صح في سباق الدقيقة"),
+        Badge("ladder", "🏆", "قمة السلّم", "توصل للسؤال ١٥ في سلّم الأبطال"),
+        Badge("friend", "🤝", "التحدي", "تلعب تحدي مع صاحبك"),
+        Badge("quran50", "📖", "صاحب القرآن", "٥٠ إجابة صح في أسئلة القرآن"),
+        Badge("level5", "⭐", "المستوى ٥", "توصل للمستوى الخامس"),
+        Badge("level10", "🌟", "المستوى ١٠", "توصل للمستوى العاشر"),
+        Badge("streak7", "📅", "أسبوع كامل", "تلعب ٧ أيام ورا بعض"),
+    )
+    fun hasBadge(id: String) = sp().getBoolean("badge_$id", false)
+    /** Unlocks the badges these conditions earned; returns only the new ones. */
+    fun unlock(ids: Collection<String>): List<Badge> {
+        val fresh = ids.filter { !hasBadge(it) }
+        if (fresh.isNotEmpty()) sp().edit { fresh.forEach { putBoolean("badge_$it", true) } }
+        return badges.filter { it.id in fresh }
     }
 
     fun daily(): List<Question> {
