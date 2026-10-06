@@ -103,6 +103,7 @@ fun KidSetupScreen(onBack: () -> Unit, onKidHome: () -> Unit) {
     var pin2 by remember { mutableStateOf("") }
     var confirmOn by remember { mutableStateOf(false) }
     var qr by remember { mutableStateOf<String?>(null) }
+    var role by remember { mutableStateOf("ابن") }
     var incoming by remember { mutableStateOf<KidMode.Setup?>(KidMode.pendingCode.value?.let { KidMode.readCode(it) }) }
     LaunchedEffect(Unit) { KidMode.pendingCode.value = null }
 
@@ -134,7 +135,10 @@ fun KidSetupScreen(onBack: () -> Unit, onKidHome: () -> Unit) {
             }
             item {
                 GoldCard {
-                    if (!KidMode.on) OutlinedTextField(name, { name = it.take(20) }, label = { Text("اسم الطفل") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    if (!KidMode.on) {
+                        OutlinedTextField(name, { name = it.take(20) }, label = { Text("اسم الطفل") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("ابن", "ابنة").forEach { r -> FilterChip(role == r, { role = r }, label = { Text(r) }) } }
+                    }
                     Text("الأقسام اللي تظهر للطفل", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
                     @OptIn(ExperimentalLayoutApi::class)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -155,10 +159,20 @@ fun KidSetupScreen(onBack: () -> Unit, onKidHome: () -> Unit) {
             }
             if (!KidMode.on) {
                 item {
-                    Button(onClick = { if (pinOk()) qr = KidMode.setupCode(name, allowed, pin) }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    Button(onClick = {
+                        if (name.isBlank()) { toast(ctx, "اكتب اسم الطفل"); return@Button }
+                        if (pinOk()) {
+                            // the same student on this (parent) phone, so lessons and homework match up after syncing
+                            val st = com.mohamed.safi.study.Study
+                            val sid = st.students().firstOrNull { it.name == name.trim() }?.id ?: st.addStudent(name)
+                            qr = KidMode.setupCode(name, allowed, pin, sid, if (com.mohamed.safi.family.Family.joined) com.mohamed.safi.family.Family.inviteText() else null, role)
+                        }
+                    }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                         Icon(Icons.Default.QrCode, null); Spacer(Modifier.width(6.dp)); Text("اعمل كود لموبايل الطفل")
                     }
                     Text("من موبايلك: اعمل الكود، وعلى موبايل الطفل نزّل صافي واختار «ده موبايل طفل» وامسحه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Text(if (com.mohamed.safi.family.Family.joined) "✓ الكود هيربط موبايل الطفل بالعيلة كمان، عشان تتابع دروسه وواجباته." else "💡 لو عملت «ربط العيلة» الأول، الكود هيربط موبايل الطفل بيها وتتابع دروسه وواجباته.",
+                        style = MaterialTheme.typography.bodySmall)
                 }
                 item {
                     OutlinedButton(onClick = { if (pinOk()) confirmOn = true }, modifier = Modifier.fillMaxWidth()) { Text("شغّل وضع الطفل على الموبايل ده") }

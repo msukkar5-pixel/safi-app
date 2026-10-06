@@ -163,7 +163,7 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
 - {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
 - {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
-- {"type":"open_screen","screen":"kidsetup|app_guide|social|family|kids|ramadan|radio|tv|sleep|hisn|manasik|umrah|hajj|ruqyah|quiz|prayertracker|islamiccalendar|asmahusna|alerts|vitals|finance|vehicle|quran|quranaudio|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"open_screen","screen":"study|kidsetup|app_guide|social|family|kids|ramadan|radio|tv|sleep|hisn|manasik|umrah|hajj|ruqyah|quiz|prayertracker|islamiccalendar|asmahusna|alerts|vitals|finance|vehicle|quran|quranaudio|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
 - {"type":"add_diary","text":"the diary text exactly as he said it, cleaned punctuation only","mood":"one emoji or empty"}   (when he says سجّل في مذكراتي / اكتب في المذكرات)
 - {"type":"add_document","title":"","owner":"","expiry":"YYYY-MM-DD"}
 - {"type":"add_medication","name":"","dose":"","times":"08:00, 20:00","with_food":"قبل الأكل|بعد الأكل|مع الأكل|","reason":"","end":"YYYY-MM-DD or empty"}

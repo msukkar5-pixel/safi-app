@@ -198,12 +198,13 @@ fun AppRoot() {
             return@LaunchedEffect
         }
         // on a child's phone only quiz challenges are accepted (if the quiz is allowed)
-        if (com.mohamed.safi.kids.KidMode.on && !(com.mohamed.safi.quiz.Challenge.contains(text) && com.mohamed.safi.kids.KidMode.allows("quiz"))) return@LaunchedEffect
+        if (com.mohamed.safi.kids.KidMode.on && !text.contains(com.mohamed.safi.family.Family.PREFIX) &&
+            !(com.mohamed.safi.quiz.Challenge.contains(text) && com.mohamed.safi.kids.KidMode.allows("quiz"))) return@LaunchedEffect
         // an encrypted update from a family member, shared from WhatsApp or any app
         if (text.contains(com.mohamed.safi.family.Family.PREFIX)) {
             val from = com.mohamed.safi.family.Family.importCard(text.substring(text.indexOf(com.mohamed.safi.family.Family.PREFIX)).lineSequence().first())
             toast(ctx, if (from != null) "وصل تحديث من $from" else "التحديث ده مش لعيلتك أو انضم للعيلة الأول")
-            runCatching { go(nav, "family") }
+            runCatching { go(nav, if (com.mohamed.safi.kids.KidMode.on) "study" else "family") }
             return@LaunchedEffect
         }
         // a friends challenge, or a friend's result for one I sent
@@ -281,6 +282,7 @@ fun AppRoot() {
         NavHost(nav, startDestination = if (com.mohamed.safi.kids.KidMode.on) "kidhome" else if (SafiApp.prefs.onboarded) "home" else "welcome", modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
             composable("welcome") { WelcomeScreen(onKid = { nav.navigate("kidsetup") }) { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
             composable("kidhome") { KidHomeScreen(open) }
+            composable("study") { StudyScreen(back, open) }
             composable("kidsetup") { KidSetupScreen(back) { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }

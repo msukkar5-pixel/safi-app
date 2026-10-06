@@ -124,6 +124,7 @@
         <receiver android:name=".faith.PrayerReceiver" android:exported="false" />
         <receiver android:name=".faith.FaithAlertReceiver" android:exported="false" />
         <receiver android:name=".social.SocialReceiver" android:exported="false" />
+        <receiver android:name=".study.StudyReceiver" android:exported="false" />
         <receiver android:name=".widget.SafiWidget" android:exported="true" android:label="صافي">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

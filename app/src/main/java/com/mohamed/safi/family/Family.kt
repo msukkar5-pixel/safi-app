@@ -136,6 +136,8 @@ object Family {
         if (shareCity) o.put("city", com.mohamed.safi.faith.Prayer.city)
         if (status.isNotBlank()) o.put("status", status)
         o.put("khr", khRound).put("khm", khMine.joinToString(",")).put("khd", khDone.joinToString(","))
+        // lessons, homework and study time travel with the card so parent and child stay in sync
+        runCatching { com.mohamed.safi.study.Study.export() }.getOrNull()?.let { o.put("study", it) }
         return PREFIX + familyId + ":" + encrypt(o.toString())
     }
 
@@ -153,6 +155,8 @@ object Family {
     private fun store(o: JSONObject): Boolean {
         val id = o.optString("id")
         if (id.isBlank() || id == myId) return false
+        o.optJSONObject("study")?.let { runCatching { com.mohamed.safi.study.Study.merge(it) } }
+        o.remove("study")
         val prev = sp().getLong("at_$id", 0)
         if (o.optLong("at") >= prev) sp().edit { putString("card_$id", o.toString()); putLong("at_$id", o.optLong("at")) }
         val r = o.optInt("khr", 0)

@@ -22,7 +22,7 @@ object KidMode {
 
     data class Section(val route: String, val title: String, val icon: String, val byDefault: Boolean)
     val sections = listOf(
-        Section("kids", "مدينة الخير", "🌳", true), Section("quran", "القرآن الكريم", "📖", true),
+        Section("kids", "مدينة الخير", "🌳", true), Section("study", "دروسي وواجباتي", "📝", true), Section("quran", "القرآن الكريم", "📖", true),
         Section("quranaudio", "القرآن المسموع", "🎧", true), Section("azkar", "الأذكار", "🤲", true),
         Section("prayer", "مواعيد الصلاة", "🕌", true), Section("stories", "قصص الأنبياء والسيرة", "📚", true),
         Section("quiz", "المسابقة", "🏆", true), Section("asmahusna", "أسماء الله الحسنى", "✨", true),
@@ -50,8 +50,13 @@ object KidMode {
 
     fun checkPin(pin: String) = hash(sp().getString("salt", "").orEmpty(), pin) == sp().getString("pin", "")
 
-    private fun apply(name: String, allowed: Set<String>, salt: String, pinHash: String) {
+    private fun apply(name: String, allowed: Set<String>, salt: String, pinHash: String, studentId: String? = null) {
         sp().edit { putBoolean("on", true); putString("name", name); putStringSet("allowed", allowed); putString("salt", salt); putString("pin", pinHash) }
+        // this phone belongs to one student: the same id the parent's phone uses, so lessons and homework match up
+        val st = com.mohamed.safi.study.Study
+        val sid = studentId ?: st.students().firstOrNull { it.name == name }?.id ?: st.newId()
+        if (st.student(sid) == null) st.addStudent(name.ifBlank { "بطل" }, sid)
+        st.me = sid
         // the child also gets a profile in the kids' city
         if ("kids" in allowed && Kids.kids().isEmpty()) Kids.saveKid(Kid(java.util.UUID.randomUUID().toString().take(8), name.ifBlank { "بطل" }, "🧒", 7))
         com.mohamed.safi.SafiApp.prefs.onboarded = true
@@ -85,20 +90,28 @@ object KidMode {
     }
 
     // ------------------------------------------------------------------ setup code (QR or text), made on the parent's phone
-    fun setupCode(name: String, allowed: Set<String>, pin: String): String {
+    /** [studentId] links the child's lessons on both phones; [familyInvite] joins the child's phone to the family. */
+    fun setupCode(name: String, allowed: Set<String>, pin: String, studentId: String? = null, familyInvite: String? = null, role: String = "ابن"): String {
         val s = newSalt()
-        val o = JSONObject().put("n", name.trim()).put("a", JSONArray(allowed.toList())).put("s", s).put("h", hash(s, pin))
+        val o = JSONObject().put("n", name.trim()).put("a", JSONArray(allowed.toList())).put("s", s).put("h", hash(s, pin)).put("r", role)
+        studentId?.let { o.put("st", it) }
+        familyInvite?.let { o.put("f", it) }
         return PREFIX + Base64.encodeToString(o.toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP or Base64.URL_SAFE)
     }
 
-    data class Setup(val name: String, val allowed: Set<String>, val salt: String, val hash: String)
+    data class Setup(val name: String, val allowed: Set<String>, val salt: String, val hash: String, val student: String?, val invite: String?, val role: String)
     fun readCode(text: String): Setup? = runCatching {
         val b = Regex("SAFI-KID1:[A-Za-z0-9_=-]+").find(text)!!.value.removePrefix(PREFIX)
         val o = JSONObject(String(Base64.decode(b, Base64.NO_WRAP or Base64.URL_SAFE), Charsets.UTF_8))
         val a = o.getJSONArray("a")
         val known = sections.map { it.route }.toSet()
-        Setup(o.optString("n").take(20), (0 until a.length()).map { a.getString(it) }.filter { it in known }.toSet(), o.getString("s"), o.getString("h"))
+        Setup(o.optString("n").take(20), (0 until a.length()).map { a.getString(it) }.filter { it in known }.toSet(), o.getString("s"), o.getString("h"),
+            o.optString("st").ifBlank { null }, o.optString("f").ifBlank { null }, o.optString("r").ifBlank { "ابن" })
     }.getOrNull()
 
-    fun applyCode(s: Setup) = apply(s.name, s.allowed, s.salt, s.hash)
+    fun applyCode(s: Setup) {
+        // join the parent's family first, so the first update can already carry the lessons
+        s.invite?.let { inv -> if (!com.mohamed.safi.family.Family.joined) com.mohamed.safi.family.Family.join(inv, s.name.ifBlank { "بطل" }, s.role) }
+        apply(s.name, s.allowed, s.salt, s.hash, s.student)
+    }
 }
