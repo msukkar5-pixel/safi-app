@@ -126,6 +126,36 @@ object Assistant {
                 val lessons = x.lessonsNow()
                 if (lessons.isNotEmpty()) appendLine("KIDS LESSONS (EGP/month): " + lessons.joinToString("; ") { "${it.child} ${it.subject} ${it.teacher} ${fmt(it.monthlyFeeEgp)}" })
             }
+            runCatching {
+                val family = com.mohamed.safi.family.Family
+                if (family.joined) {
+                    appendLine("FAMILY SHARED CARDS (only fields each member explicitly enabled; no conversations/audio):")
+                    family.members().forEach { m ->
+                        appendLine("- ${m.name} (${m.role})" + listOfNotNull(
+                            m.status?.takeIf { it.isNotBlank() }?.let { "status=$it" },
+                            m.prayers?.let { "prayers=$it/5" }, m.wird?.let { "wird=$it" },
+                            m.kids?.let { "kids=$it" }, m.city?.let { "city=$it" },
+                        ).joinToString("; ").let { if (it.isBlank()) "" else ": $it" })
+                    }
+                    val familyIds = (family.members().map { it.id } + family.myId).toSet()
+                    val familyEvents = com.mohamed.safi.quiz.Challenge.localUpdates().count { it.participantId in familyIds }
+                    appendLine("FAMILY SHARED CHALLENGE PROGRESS: $familyEvents verified local/imported events")
+                }
+            }
+            runCatching {
+                val students = com.mohamed.safi.study.Study.students()
+                if (students.isNotEmpty()) {
+                    appendLine("STUDY (local family-linked records):")
+                    students.forEach { st ->
+                        val open = com.mohamed.safi.study.Study.openHomework(st.id).take(8)
+                        val exams = com.mohamed.safi.study.Study.exams(st.id).take(5)
+                        val todayLessons = com.mohamed.safi.study.Study.lessonsOn(st.id, LocalDate.now(zone))
+                        appendLine("- ${st.name}: open homework=" + (open.joinToString(", ") { "${it.subject}${if (it.due.isBlank()) "" else " due ${it.due}"}" }.ifBlank { "none" }) +
+                            "; today lessons=" + (todayLessons.joinToString(", ") { "${it.subject} ${it.time}" }.ifBlank { "none" }) +
+                            "; next exams=" + (exams.joinToString(", ") { "${it.subject} ${it.date}" }.ifBlank { "none" }))
+                    }
+                }
+            }
             val today = Brief.todayLines()
             if (today.isNotEmpty()) appendLine("DUE SOON:\n" + today.joinToString("\n"))
         }
@@ -186,6 +216,7 @@ Rules:
 - If he says he paid something in cash, method "cash". Guess the best category yourself.
 - When the user explicitly says "افتكر/اتعود/خليك" about how to speak or help, save only that preference with remember_preference. When he says "انسَ/امسح تفضيلي", use forget_preference or clear the named preference; never save private conversation content as a preference.
 - Never claim to hear, monitor, or share family conversations. The companion only uses data the user explicitly gives it inside the app.
+- FAMILY SHARED CARDS and STUDY records are user-controlled app data, not surveillance. Never infer private conversations, emotions, location, or wrongdoing from them; mention only the fields present.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
 - If something essential is missing (e.g. amount), ask briefly and don't add the action.
