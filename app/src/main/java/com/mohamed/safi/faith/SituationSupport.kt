@@ -24,6 +24,16 @@ object SituationSupport {
 
     private val cues = listOf(
         Cue(
+            "الهلع والذعر",
+            listOf("نوبة هلع" to 7, "نوبه هلع" to 7, "نوبة ذعر" to 7, "نوبه ذعر" to 7, "مش قادر أتنفس" to 6, "مش قادر اتنفس" to 6, "ضيق نفس" to 6, "نفسي مقطوع" to 6, "حاسس هموت" to 6, "هفقد السيطرة" to 6, "قلبي سريع" to 5, "رجفة" to 5, "رعشة" to 5, "دوخة" to 4, "محبوس" to 3),
+            listOf("تطمئن", "ضيق", "حسبنا الله", "وسعها"), listOf("الكرب", "الهم والحزن", "الفرج"), listOf("الكرب", "الهم", "الخوف"),
+        ),
+        Cue(
+            "قلق التوقع وكثرة التفكير",
+            listOf("تفكير زائد" to 5, "كثرة التفكير" to 5, "مش عارف أبطل تفكير" to 5, "مش عارف ابطل تفكير" to 5, "مستني النتيجة" to 4, "قلقان من بكرة" to 5, "خايف يحصل" to 4, "قبل الامتحان" to 3, "قبل المقابلة" to 3, "مش عارف أنام من التفكير" to 5),
+            listOf("العسر", "تطمئن", "يتوكل"), listOf("الهم والحزن", "التوكل", "الكرب"), listOf("الهم", "التوكل", "النوم"),
+        ),
+        Cue(
             "الضيق والقلق",
             listOf("مضايق" to 4, "مخنوق" to 4, "قلقان" to 4, "قلق" to 3, "متوتر" to 3, "توتر" to 3, "ضغط" to 2, "هم" to 2, "مش قادر" to 2, "مش عارف اتصرف" to 2),
             listOf("تطمئن", "العسر", "وسعها"), listOf("الهم والحزن", "الكرب"), listOf("الهم", "الكرب", "الضيق"),
@@ -67,9 +77,9 @@ object SituationSupport {
 
     private fun cueFor(text: String): Pair<Cue, Int>? {
         val t = normalized(text)
-        val asksForReligious = listOf("اية", "آية", "حديث", "دعاء", "ذكر", "اذكار", "أذكار").any { it in t }
+        val asksForReligious = listOf("اية", "حديث", "دعاء", "ذكر", "اذكار").any { normalized(it) in t }
         val ranked = cues.map { cue ->
-            val matched = cue.triggers.filter { (phrase, _) -> phrase in t }
+            val matched = cue.triggers.filter { (phrase, _) -> normalized(phrase) in t }
             val score = matched.sumOf { it.second } + if (asksForReligious && matched.isNotEmpty()) 2 else 0
             cue to score
         }.filter { it.second >= 3 }.sortedByDescending { it.second }
@@ -129,11 +139,13 @@ object SituationSupport {
             g.dua != null -> "🤲 ${g.dua.text}${if (g.dua.ref.isBlank()) "" else " — ${g.dua.ref}"}"
             else -> return null
         }
-        return "$reply\n\n${when (g.situation) { "الغضب والانفعال" -> "خد لحظة قبل ما ترد."; "الخوف" -> "ربنا يطمّن قلبك."; "الحزن والفقد" -> "ربنا يربط على قلبك."; else -> "ربنا يخفف عنك." }}\n$line"
+        return "$reply\n\n${when (g.situation) { "الهلع والذعر" -> "خد نفسًا هادئًا، وخلي الخطوة الجاية بسيطة."; "قلق التوقع وكثرة التفكير" -> "خلّي تركيزك في الخطوة اللي قدامك بس."; "الغضب والانفعال" -> "خد لحظة قبل ما ترد."; "الخوف" -> "ربنا يطمّن قلبك."; "الحزن والفقد" -> "ربنا يربط على قلبك."; else -> "ربنا يخفف عنك." }}\n$line"
     }
 
     fun spokenGuidance(g: Guidance): String {
         val opening = when (g.situation) {
+            "الهلع والذعر" -> "خد نفسًا هادئًا، وخلي الخطوة الجاية بسيطة."
+            "قلق التوقع وكثرة التفكير" -> "خلّي تركيزك في الخطوة اللي قدامك بس."
             "الغضب والانفعال" -> "خد لحظة قبل ما ترد."
             "الخوف" -> "ربنا يطمّن قلبك."
             "الحزن والفقد" -> "ربنا يربط على قلبك."
