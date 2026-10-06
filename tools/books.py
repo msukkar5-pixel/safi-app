@@ -18,7 +18,8 @@ def get(url, tries=3):
             return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=90).read()
         except Exception as e:
             err = e
-            time.sleep(2 + i * 3)
+            # "too many requests" (Wikipedia): back off much longer before retrying
+            time.sleep((20 + i * 30) if getattr(e, "code", 0) == 429 else 2 + i * 3)
     raise err
 
 
@@ -221,7 +222,8 @@ def wiki_sections(lang, title, vol):
     import urllib.parse
     u = (f"https://{lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=wiki"
          f"&redirects=1&format=json&titles={urllib.parse.quote(title)}")
-    d = json.loads(get(u))
+    time.sleep(3)  # be gentle with the Wikipedia API between articles
+    d = json.loads(get(u, tries=5))
     page = next(iter(d["query"]["pages"].values()))
     text = page.get("extract") or ""
     if len(text) < 1500:
