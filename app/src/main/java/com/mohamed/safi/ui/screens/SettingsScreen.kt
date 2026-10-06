@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.mohamed.safi.SafiApp
 import com.mohamed.safi.ai.Claude
 import com.mohamed.safi.data.Fx
@@ -375,6 +377,15 @@ private fun AppNameCard() {
 
 @Composable
 private fun VoiceSettingsCard() {
+    val ctx = LocalContext.current
+    var voiceOn by remember { mutableStateOf(SafiApp.prefs.emotionVoiceOn) }
+    val requestMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            SafiApp.prefs.emotionVoiceOn = true
+            voiceOn = true
+            com.mohamed.safi.ai.EmotionVoiceService.start(ctx)
+        } else toast(ctx, "لازم إذن الميكروفون لتشغيل مساعد النبرة")
+    }
     var lang by remember { mutableStateOf(com.mohamed.safi.ui.VoicePrefs.lang) }
     var engine by remember { mutableStateOf(com.mohamed.safi.ui.VoicePrefs.engine) }
     val canAi = com.mohamed.safi.ui.VoicePrefs.aiCanTranscribe()
@@ -401,6 +412,17 @@ private fun VoiceSettingsCard() {
         }
         if (engine == "ai") SttKeyBox()
         Text("المساعد بيرد بنفس اللغة اللي بتكلمه بيها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("مساعد النبرة الصوتية", fontWeight = FontWeight.SemiBold)
+                Text("يحلل ارتفاع الصوت محليًا فقط، ثم يقول ذكرًا أو دعاءً مناسبًا. لا يحفظ ولا يرفع أي تسجيل. الميزة مغلقة افتراضيًا.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(voiceOn, {
+                if (it) requestMic.launch(android.Manifest.permission.RECORD_AUDIO)
+                else { voiceOn = false; SafiApp.prefs.emotionVoiceOn = false; com.mohamed.safi.ai.EmotionVoiceService.stop(ctx) }
+            })
+        }
     }
 }
 

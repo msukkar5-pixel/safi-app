@@ -69,6 +69,8 @@ class Prefs(context: Context) {
     var briefOn: Boolean get() = b("briefOn", true); set(v) = putB("briefOn", v)
     var briefHour: Int get() = i("briefHour", 8); set(v) = putI("briefHour", v)
     var familySyncOn: Boolean get() = b("familySyncOn", true); set(v) = putB("familySyncOn", v)
+    /** Optional on-device voice-signal helper; raw audio is never stored or uploaded. */
+    var emotionVoiceOn: Boolean get() = b("emotionVoiceOn", false); set(v) = putB("emotionVoiceOn", v)
     var lastMonthlySummary: String get() = s("lastMonthly", ""); set(v) = putS("lastMonthly", v)
     var lastBriefDay: String get() = s("lastBriefDay", ""); set(v) = putS("lastBriefDay", v)
 

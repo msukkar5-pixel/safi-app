@@ -131,4 +131,18 @@ object SituationSupport {
         }
         return "$reply\n\n${when (g.situation) { "الغضب والانفعال" -> "خد لحظة قبل ما ترد."; "الخوف" -> "ربنا يطمّن قلبك."; "الحزن والفقد" -> "ربنا يربط على قلبك."; else -> "ربنا يخفف عنك." }}\n$line"
     }
+
+    fun spokenGuidance(g: Guidance): String {
+        val opening = when (g.situation) {
+            "الغضب والانفعال" -> "خد لحظة قبل ما ترد."
+            "الخوف" -> "ربنا يطمّن قلبك."
+            "الحزن والفقد" -> "ربنا يربط على قلبك."
+            else -> "ربنا يخفف عنك."
+        }
+        val content = g.ayah?.let { it.ayah.text }
+            ?: g.hadith?.text
+            ?: g.dua?.text
+            ?: return opening
+        return "$opening $content"
+    }
 }
