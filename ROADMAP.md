@@ -96,6 +96,7 @@ Built and emulator-tested OK up to c871afd; later commits were pushed and CI was
 - Fixed: LazyColumn lists not refreshing after Family/KidMode/Study changes (read the version state inside the list lambda).
 
 - Kids' library: 9 authentic books in `tools/books.json` cat `kids` (Nawawi 40, Tuhfat al-Atfal, Jazariyya, Thalathat al-Usul, Shurut al-Salat, Adab al-Mashy, Mukhtasar al-Shamail, Mukhtasar al-Sira, Fada'il al-Quran); shown only in Kids → «مكتبة الأطفال». The `books` release is rebuilt by books.yml on push to dev/main (or dispatch) — needed before they appear in the app.
+- Arab countries' history: 41 more OpenITI books (cats saudi, sham, palestine, lebanon, iraq, yemen, sudan, maghrib, tunisia, mauritania, andalus) in History (route `history`) as country tabs; Algeria/Libya/Jordan/Gulf have no verified free book yet ("others" tab shows general history).
 - Picture-book stories: every story page / choice node has a `scene` ("background|emojis") drawn by `StoryScene` (Canvas backgrounds + animated emoji figures).
 
 Next: check the latest CI run on the branch, fix any compile error, look at the screenshots; then release (PR branch → dev, then dev → main; Mohamed merges PRs himself; books.yml runs on the dev merge).

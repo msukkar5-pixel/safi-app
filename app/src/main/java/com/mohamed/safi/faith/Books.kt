@@ -114,10 +114,14 @@ object Books {
         "thought" to "فكر وخواطر إيمانية معاصرة",
         "adab" to "الأدب واللغة والحكمة",
         "kids" to "كتب للأطفال",
+        "saudi" to "تاريخ السعودية (الحجاز ونجد)", "sham" to "تاريخ الشام وسوريا", "palestine" to "تاريخ فلسطين والقدس",
+        "lebanon" to "تاريخ لبنان", "iraq" to "تاريخ العراق", "yemen" to "تاريخ اليمن", "sudan" to "تاريخ السودان",
+        "maghrib" to "تاريخ المغرب", "tunisia" to "تاريخ تونس", "mauritania" to "تاريخ موريتانيا", "andalus" to "تاريخ الأندلس",
     )
 
     /** Categories shown inside their own sections (Stories, History, Hajj guide, Ruqyah guide); the library shows the rest. */
-    val sectionCats = setOf("prophets", "seerah", "sahaba", "egypt", "uae", "hajj", "adhkar", "kids")
+    val sectionCats = setOf("prophets", "seerah", "sahaba", "egypt", "uae", "hajj", "adhkar", "kids",
+        "saudi", "sham", "palestine", "lebanon", "iraq", "yemen", "sudan", "maghrib", "tunisia", "mauritania", "andalus")
 
     val bidaya = BookMeta(
         "bidaya", "history", "البداية والنهاية", "الحافظ ابن كثير (ت ٧٧٤هـ)",

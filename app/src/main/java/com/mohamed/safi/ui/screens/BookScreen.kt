@@ -352,7 +352,7 @@ fun LibraryScreen(onBack: () -> Unit, openBook: (String) -> Unit, openRoute: (St
                     Triple("bidaya", "البداية والنهاية", Icons.Default.Book),
                     Triple("stories", "القصص والسير", Icons.Default.HistoryEdu),
                     Triple("hadith", "الأحاديث الصحيحة", Icons.Default.LibraryBooks),
-                    Triple("history", "تاريخ مصر والإمارات", Icons.Default.AccountBalance),
+                    Triple("history", "تاريخ الدول العربية والأندلس", Icons.Default.AccountBalance),
                     Triple("audiobooks", "الكتب المسموعة", Icons.Default.Headphones),
                     Triple("hisn", "حصن المسلم", Icons.Default.Shield),
                     Triple("manasik", "الحج والعمرة", Icons.Default.Landscape),

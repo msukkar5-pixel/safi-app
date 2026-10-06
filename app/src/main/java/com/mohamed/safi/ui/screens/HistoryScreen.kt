@@ -25,16 +25,16 @@ fun HistoryScreen(onBack: () -> Unit, open: (String) -> Unit) {
     val ctx = LocalContext.current
     var tab by remember { mutableIntStateOf(0) }
     var expanded by remember { mutableStateOf(setOf<String>()) }
-    val eras = if (tab == 0) History.egypt else History.uae
+    val country = historyCountries[tab]
+    val eras = when (country.first) { "egypt" -> History.egypt; "uae" -> History.uae; else -> emptyList() }
 
-    ScreenScaffold("تاريخ مصر والإمارات", onBack = onBack) { pad ->
+    ScreenScaffold("تاريخ الدول العربية والأندلس", onBack = onBack) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-            TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
-                Tab(tab == 0, { tab = 0 }, text = { Text("تاريخ مصر") })
-                Tab(tab == 1, { tab = 1 }, text = { Text("تاريخ الإمارات") })
+            ScrollableTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background, edgePadding = 8.dp) {
+                historyCountries.forEachIndexed { i, (_, name) -> Tab(tab == i, { tab = i }, text = { Text(name) }) }
             }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (tab == 1) item {
+                if (country.first == "uae") item {
                     AppCard(color = MaterialTheme.colorScheme.primaryContainer) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Verified, null); Spacer(Modifier.width(8.dp))
@@ -42,10 +42,16 @@ fun HistoryScreen(onBack: () -> Unit, open: (String) -> Unit) {
                         }
                     }
                 }
+                if (country.first == "others") item {
+                    AppCard {
+                        Text("الجزائر وليبيا والأردن والكويت وقطر والبحرين وعُمان", fontWeight = FontWeight.Bold)
+                        Text("لسه ملقيتش لكل دولة منهم كتاب تاريخ موثوق ومتاح مجاناً يتضاف. تاريخهم موجود في الكتب العامة دي، وفي تبويب الشام (للأردن) والمغرب وتونس (للجزائر وليبيا).", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
                 item { SectionTitle("الكتب — تتقرا جوه التطبيق") }
-                item { BookList(if (tab == 0) listOf("egypt") else listOf("uae")) { open("book/$it") } }
-                if (tab == 0) item { BookCard(com.mohamed.safi.faith.Books.bidaya) { open("bidaya") } }
-                if (tab == 1) item {
+                item { BookList(if (country.first == "others") listOf("history") else listOf(country.first)) { open("book/$it") } }
+                if (country.first == "egypt" || country.first == "others") item { BookCard(com.mohamed.safi.faith.Books.bidaya) { open("bidaya") } }
+                if (country.first == "uae") item {
                     AppCard(color = MaterialTheme.colorScheme.tertiaryContainer) {
                         Text("علمتني الحياة — الشيخ محمد بن راشد آل مكتوم", fontWeight = FontWeight.Bold)
                         Text("الكتاب كامل محفوظ الحقوق ومتاح في المكتبات بس (صدر ٢٥ سبتمبر ٢٠٢٥). اللي في التطبيق هو الإعلان الرسمي والمقتطفات اللي نشرها مكتب دبي الإعلامي.", style = MaterialTheme.typography.bodySmall)
@@ -56,7 +62,7 @@ fun HistoryScreen(onBack: () -> Unit, open: (String) -> Unit) {
                         }
                     }
                 }
-                item { SectionTitle(if (tab == 0) "خلاصة سريعة: من الفراعنة لليوم" else "خلاصة سريعة: من العصور القديمة لليوم") }
+                if (eras.isNotEmpty()) item { SectionTitle(if (country.first == "egypt") "خلاصة سريعة: من الفراعنة لليوم" else "خلاصة سريعة: من العصور القديمة لليوم") }
                 items(eras) { e ->
                     val k = "$tab:${e.title}"
                     EraCard(e, k in expanded) { expanded = if (k in expanded) expanded - k else expanded + k }
@@ -111,3 +117,10 @@ private fun SourceCard(s: SourceLink, highlight: Boolean = false) {
         }
     }
 }
+
+/** Country tabs: the book category for each (see Books.categories). "others" shows the general Islamic history books. */
+private val historyCountries = listOf(
+    "egypt" to "مصر", "uae" to "الإمارات", "saudi" to "السعودية", "sham" to "الشام وسوريا", "palestine" to "فلسطين والقدس",
+    "lebanon" to "لبنان", "iraq" to "العراق", "yemen" to "اليمن", "sudan" to "السودان", "maghrib" to "المغرب",
+    "tunisia" to "تونس", "mauritania" to "موريتانيا", "andalus" to "الأندلس", "others" to "باقي الدول",
+)
