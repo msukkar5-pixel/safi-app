@@ -63,4 +63,18 @@ class CompanionProfileTest {
         val anticipatory = SituationSupport.forMessage("قلقان من نتيجة الامتحان ومش عارف أبطل تفكير")
         assertEquals("قلق التوقع وكثرة التفكير", anticipatory?.situation)
     }
+
+    @Test
+    fun alertPolicyHonorsQuietHoursVoiceAndCooldown() {
+        val hour = java.time.LocalTime.now(com.mohamed.safi.data.zone).hour
+        CompanionProfile.setAlertPolicy(supportOn = true, voiceOn = false, quietFrom = hour, quietUntil = (hour + 1) % 24, cooldownMinutes = 30)
+        assertTrue(!CompanionProfile.alertPolicy().voiceOn)
+        assertEquals(30, CompanionProfile.alertPolicy().cooldownMinutes)
+        assertTrue(!CompanionProfile.autoSupportAllowed("voice"))
+
+        CompanionProfile.setAlertPolicy(voiceOn = true, quietFrom = -1, quietUntil = -1)
+        assertTrue(CompanionProfile.autoSupportAllowed("voice"))
+        CompanionProfile.recordAutoSupport("voice")
+        assertTrue(!CompanionProfile.autoSupportAllowed("voice"))
+    }
 }

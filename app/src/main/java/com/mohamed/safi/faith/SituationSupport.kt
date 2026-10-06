@@ -9,6 +9,7 @@ object SituationSupport {
     data class Guidance(
         val situation: String,
         val confidence: Int,
+        val urgentPhysicalSignal: Boolean,
         val ayah: Quran.Hit?,
         val hadith: Hadith?,
         val dua: Zikr?,
@@ -75,6 +76,11 @@ object SituationSupport {
         .replace(Regex("\\s+"), " ")
         .trim()
 
+    private fun urgentPhysicalSignal(text: String): Boolean {
+        val t = normalized(text)
+        return listOf("ألم صدر", "الم صدر", "ضيق نفس شديد", "مش قادر أتنفس", "مش قادر اتنفس", "إغماء", "اغماء", "تنميل شديد").any { normalized(it) in t }
+    }
+
     private fun cueFor(text: String): Pair<Cue, Int>? {
         val t = normalized(text)
         val asksForReligious = listOf("اية", "حديث", "دعاء", "ذكر", "اذكار").any { normalized(it) in t }
@@ -112,7 +118,7 @@ object SituationSupport {
         val ayah = ayahFor(cue)
         val hadith = hadithFor(cue)
         val dua = duaFor(cue)
-        return Guidance(cue.label, score, ayah, hadith, dua).takeIf { it.ayah != null || it.hadith != null || it.dua != null }
+        return Guidance(cue.label, score, urgentPhysicalSignal(text), ayah, hadith, dua).takeIf { it.ayah != null || it.hadith != null || it.dua != null }
     }
 
     fun prompt(g: Guidance): String = buildString {
@@ -120,6 +126,7 @@ object SituationSupport {
         g.ayah?.let { appendLine("QURAN AYAH: ${it.ayah.text} — سورة ${it.surah.name}, آية ${it.ayah.n}") }
         g.hadith?.let { appendLine("AUTHENTIC HADITH: ${it.text} — ${Hadiths.bookTitle(it.book)}, رقم ${it.number}") }
         g.dua?.let { appendLine("DUA/AZKAR: ${it.text}${if (it.ref.isBlank()) "" else " — ${it.ref}"}") }
+        if (g.urgentPhysicalSignal) appendLine("SAFETY: If severe breathing difficulty, chest pain, fainting, or severe numbness is present, advise urgent medical help calmly; spiritual support does not replace emergency care.")
         appendLine("Use gentle wording, offer one short practical step, and never claim to diagnose or to have heard anything in the background. Do not invent or alter religious attributions. If confidence is low or the quote is not relevant, do not force it.")
     }
 
@@ -139,7 +146,8 @@ object SituationSupport {
             g.dua != null -> "🤲 ${g.dua.text}${if (g.dua.ref.isBlank()) "" else " — ${g.dua.ref}"}"
             else -> return null
         }
-        return "$reply\n\n${when (g.situation) { "الهلع والذعر" -> "خد نفسًا هادئًا، وخلي الخطوة الجاية بسيطة."; "قلق التوقع وكثرة التفكير" -> "خلّي تركيزك في الخطوة اللي قدامك بس."; "الغضب والانفعال" -> "خد لحظة قبل ما ترد."; "الخوف" -> "ربنا يطمّن قلبك."; "الحزن والفقد" -> "ربنا يربط على قلبك."; else -> "ربنا يخفف عنك." }}\n$line"
+        val safety = if (g.urgentPhysicalSignal) " لو ضيق النفس شديد أو فيه ألم صدر أو إغماء، اطلب مساعدة طبية فورًا." else ""
+        return "$reply\n\n${when (g.situation) { "الهلع والذعر" -> "خد نفسًا هادئًا، وخلي الخطوة الجاية بسيطة."; "قلق التوقع وكثرة التفكير" -> "خلّي تركيزك في الخطوة اللي قدامك بس."; "الغضب والانفعال" -> "خد لحظة قبل ما ترد."; "الخوف" -> "ربنا يطمّن قلبك."; "الحزن والفقد" -> "ربنا يربط على قلبك."; else -> "ربنا يخفف عنك." }}$safety\n$line"
     }
 
     fun spokenGuidance(g: Guidance): String {
@@ -155,6 +163,7 @@ object SituationSupport {
             ?: g.hadith?.text
             ?: g.dua?.text
             ?: return opening
-        return "$opening $content"
+        val safety = if (g.urgentPhysicalSignal) " لو ضيق النفس شديد أو فيه ألم صدر أو إغماء، اطلب مساعدة طبية فورًا." else ""
+        return "$opening$safety $content"
     }
 }
