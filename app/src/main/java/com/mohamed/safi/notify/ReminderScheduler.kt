@@ -297,6 +297,11 @@ class BootReceiver : BroadcastReceiver() {
                 runCatching { com.mohamed.safi.social.Social.schedule(context) }
                 runCatching { com.mohamed.safi.study.StudyAlerts.schedule(context) }
                 runCatching { com.mohamed.safi.family.FamilyLists.schedule(context) }
+                runCatching {
+                    if (com.mohamed.safi.family.Family.joined && SafiApp.prefs.familySyncOn) {
+                        com.mohamed.safi.family.FamilySyncService.start(context)
+                    }
+                }
                 // also on time-zone change: follow the new place's prayer times
                 runCatching { com.mohamed.safi.faith.Prayer.autoUpdate(context) }
                 if (SafiApp.prefs.locationOn) {

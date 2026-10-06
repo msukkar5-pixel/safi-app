@@ -54,14 +54,15 @@ fun FamilyScreen(onBack: () -> Unit) {
     var scanned by remember { mutableStateOf<String?>(null) }
     var showReply by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<com.mohamed.safi.family.MemberCard?>(null) }
+    var syncOn by remember { mutableStateOf(com.mohamed.safi.SafiApp.prefs.familySyncOn) }
     val newcomer = Family.joinedName.value
     LaunchedEffect(newcomer) {
         if (newcomer != null) { toast(ctx, "اتضاف للعيلة: $newcomer"); Family.joinedName.value = null; showQr = false }
     }
 
-    DisposableEffect(Family.joined) {
-        if (Family.joined) Family.startLan(ctx)
-        onDispose { Family.stopLan() }
+    DisposableEffect(Family.joined, syncOn) {
+        if (Family.joined && !com.mohamed.safi.SafiApp.prefs.familySyncOn) Family.startLan(ctx)
+        onDispose { if (!com.mohamed.safi.SafiApp.prefs.familySyncOn) Family.stopLan() }
     }
 
     fun handle(text: String) {
@@ -119,6 +120,18 @@ fun FamilyScreen(onBack: () -> Unit) {
                         }) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(4.dp)); Text("ابعت تحديثي") }
                     }
                     Text("على نفس الواي فاي: التحديث بيتبادل لوحده وانت فاتح الشاشة دي. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("المزامنة المستمرة", fontWeight = FontWeight.SemiBold)
+                            Text("إشعار واضح • بطاقات مشفّرة عبر الواي فاي فقط", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Switch(syncOn, {
+                            syncOn = it
+                            com.mohamed.safi.SafiApp.prefs.familySyncOn = it
+                            if (it) { Family.stopLan(); com.mohamed.safi.family.FamilySyncService.start(ctx) }
+                            else com.mohamed.safi.family.FamilySyncService.stop(ctx)
+                        })
+                    }
                 }
             }
             item { SectionTitle("العيلة") }
@@ -249,8 +262,8 @@ fun FamilyScreen(onBack: () -> Unit) {
             confirmButton = {
                 Button(onClick = {
                     val n = name.ifBlank { tr(role) }
-                    if (mode == "create") { Family.create(n, role); setup = null }
-                    else if (Family.join(scanned.orEmpty(), n, role)) { setup = null; showReply = true }
+                    if (mode == "create") { Family.create(n, role); com.mohamed.safi.family.FamilySyncService.start(ctx); setup = null }
+                    else if (Family.join(scanned.orEmpty(), n, role)) { com.mohamed.safi.family.FamilySyncService.start(ctx); setup = null; showReply = true }
                 else { toast(ctx, "الكود ده مش كود عيلة ${com.mohamed.safi.AppName.v}"); setup = null }
                 }) { Text("تمام") }
             },

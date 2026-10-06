@@ -14,6 +14,9 @@ class SafiApp : Application() {
         com.mohamed.safi.ui.I18n.init(this)
         Notifier.createChannels(this)
         DailyWorker.schedule(this, replace = false)
+        if (com.mohamed.safi.family.Family.joined && prefs.familySyncOn) {
+            com.mohamed.safi.family.FamilySyncService.start(this)
+        }
     }
 
     companion object {

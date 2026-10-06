@@ -104,6 +104,7 @@ object Family {
 
     fun leave() {
         val me = myId
+        FamilySyncService.stop(SafiApp.instance)
         sp().edit { clear(); putString("me", me) }
         bump()
     }
