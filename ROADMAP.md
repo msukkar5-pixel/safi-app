@@ -95,4 +95,7 @@ Built and emulator-tested OK up to c871afd; later commits were pushed and CI was
 - Nearby mosques (`faith/Mosques.kt`, Overpass/OSM, route `mosques`) and SOS (`safety/Sos.kt`, route `sos`, SEND_SMS optional, app shortcut).
 - Fixed: LazyColumn lists not refreshing after Family/KidMode/Study changes (read the version state inside the list lambda).
 
-Next (requested, in progress): religious books for kids + illustrated (picture) stories. Then: release (merge branch → dev → main; Mohamed merges PRs himself).
+- Kids' library: 9 authentic books in `tools/books.json` cat `kids` (Nawawi 40, Tuhfat al-Atfal, Jazariyya, Thalathat al-Usul, Shurut al-Salat, Adab al-Mashy, Mukhtasar al-Shamail, Mukhtasar al-Sira, Fada'il al-Quran); shown only in Kids → «مكتبة الأطفال». The `books` release is rebuilt by books.yml on push to dev/main (or dispatch) — needed before they appear in the app.
+- Picture-book stories: every story page / choice node has a `scene` ("background|emojis") drawn by `StoryScene` (Canvas backgrounds + animated emoji figures).
+
+Next: check the latest CI run on the branch, fix any compile error, look at the screenshots; then release (PR branch → dev, then dev → main; Mohamed merges PRs himself; books.yml runs on the dev merge).
