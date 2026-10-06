@@ -68,7 +68,7 @@ fun FamilyScreen(onBack: () -> Unit) {
         when {
             Family.isInvite(text) -> if (Family.joined) toast(ctx, "انت منضم لعيلة بالفعل") else { scanned = text; setup = "join" }
             Family.isCard(text) -> Family.importCard(text)?.let { toast(ctx, "اتضاف للعيلة: $it"); showQr = false } ?: toast(ctx, "الكود ده مش من عيلتك")
-            else -> toast(ctx, "الكود ده مش كود عيلة صافي")
+            else -> toast(ctx, "الكود ده مش كود عيلة ${com.mohamed.safi.AppName.v}")
         }
     }
 
@@ -118,7 +118,7 @@ fun FamilyScreen(onBack: () -> Unit) {
                             }
                         }) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(4.dp)); Text("ابعت تحديثي") }
                     }
-                    Text("على نفس الواي فاي: التحديث بيتبادل لوحده وانت فاتح الشاشة دي. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع صافي.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Text("على نفس الواي فاي: التحديث بيتبادل لوحده وانت فاتح الشاشة دي. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
             }
             item { SectionTitle("العيلة") }
@@ -251,7 +251,7 @@ fun FamilyScreen(onBack: () -> Unit) {
                     val n = name.ifBlank { tr(role) }
                     if (mode == "create") { Family.create(n, role); setup = null }
                     else if (Family.join(scanned.orEmpty(), n, role)) { setup = null; showReply = true }
-                    else { toast(ctx, "الكود ده مش كود عيلة صافي"); setup = null }
+                else { toast(ctx, "الكود ده مش كود عيلة ${com.mohamed.safi.AppName.v}"); setup = null }
                 }) { Text("تمام") }
             },
             dismissButton = { TextButton(onClick = { setup = null }) { Text("إلغاء") } },

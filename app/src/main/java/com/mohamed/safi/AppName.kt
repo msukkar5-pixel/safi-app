@@ -7,7 +7,7 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 
-/** The name the user chose for the app / assistant (default "صافي"). */
+/** The name the user chose for the app / assistant (default "أثر"). */
 object AppName {
     val v: String get() = SafiApp.prefs.appName
 

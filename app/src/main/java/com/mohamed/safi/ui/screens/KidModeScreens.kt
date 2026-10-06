@@ -180,7 +180,7 @@ fun KidSetupScreen(onBack: () -> Unit, onKidHome: () -> Unit) {
                     }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                         Icon(Icons.Default.QrCode, null); Spacer(Modifier.width(6.dp)); Text("اعمل كود لموبايل الطفل")
                     }
-                    Text("من موبايلك: اعمل الكود، وعلى موبايل الطفل نزّل صافي واختار «ده موبايل طفل» وامسحه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Text("من موبايلك: اعمل الكود، وعلى موبايل الطفل نزّل ${com.mohamed.safi.AppName.v} واختار «ده موبايل طفل» وامسحه.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     Text(if (com.mohamed.safi.family.Family.joined) "✓ الكود هيربط موبايل الطفل بالعيلة كمان، عشان تتابع دروسه وواجباته." else "💡 لو عملت «ربط العيلة» الأول، الكود هيربط موبايل الطفل بيها وتتابع دروسه وواجباته.",
                         style = MaterialTheme.typography.bodySmall)
                 }
@@ -218,7 +218,7 @@ fun KidSetupScreen(onBack: () -> Unit, onKidHome: () -> Unit) {
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(bmp.asImageBitmap(), null, Modifier.size(250.dp).background(Color.White))
-                    Text("أو ابعته كرسالة وافتحها بصافي على موبايل الطفل.", style = MaterialTheme.typography.bodySmall)
+                    Text("أو ابعته كرسالة وافتحها بـ${com.mohamed.safi.AppName.v} على موبايل الطفل.", style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = { TextButton(onClick = { qr = null }) { Text("تمام") } },
@@ -267,7 +267,7 @@ private fun ScreenTimeCard() {
             OutlinedButton(onClick = { KidMode.addBonus(30) }) { Text("زوّد ٣٠ دقيقة النهارده") }
             if (KidMode.isBedtime) OutlinedButton(onClick = { KidMode.skipBedtimeTonight() }) { Text("افتح الليلة دي") }
         }
-        Text("ده بيحدد وقت صافي بس. لقفل الموبايل كله استخدم Google Family Link (مجاني).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Text("ده بيحدد وقت ${com.mohamed.safi.AppName.v} بس. لقفل الموبايل كله استخدم Google Family Link (مجاني).", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
     }
 }
 

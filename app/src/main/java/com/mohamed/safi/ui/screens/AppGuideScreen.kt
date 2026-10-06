@@ -35,7 +35,7 @@ fun AppGuideScreen(onBack: () -> Unit, open: (String) -> Unit) {
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 GoldCard {
-                    Text("أهلاً بيك في صافي 👋", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                    Text("أهلاً بيك في ${com.mohamed.safi.AppName.v} 👋", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp)
                     Text("هنا شرح مختصر لكل قسم. اضغط على أي قسم تشوف إزاي تستخدمه، أو افتحه على طول.", style = MaterialTheme.typography.bodySmall)
                 }
             }

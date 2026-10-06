@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">أثر</string>
-    <string name="sc_voice">اتكلم مع صافي</string>
+    <string name="sc_voice">اتكلم مع أثر</string>
     <string name="sc_expense">المصاريف</string>
     <string name="sc_gym">الجيم</string>
     <string name="sc_sos">طوارئ</string>

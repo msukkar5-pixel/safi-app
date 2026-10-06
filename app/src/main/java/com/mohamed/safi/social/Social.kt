@@ -72,7 +72,7 @@ object Social {
         if (every >= 24) at.toLocalDate().toEpochDay() else at.atZone(zone).toEpochSecond() / 3600 / every
     val allTypes = listOf("ayah" to "آية", "hadith" to "حديث", "dua" to "دعاء", "wird" to "تذكير بالورد")
     var types: Set<String> get() = sp().getStringSet("types", setOf("ayah", "hadith", "dua")) ?: setOf("ayah"); set(v) = sp().edit { putStringSet("types", v) }
-    var signature: String get() = sp().getString("sig", "#صافي").orEmpty(); set(v) = sp().edit { putString("sig", v.take(120)) }
+    var signature: String get() = sp().getString("sig", "#أثر").orEmpty(); set(v) = sp().edit { putString("sig", v.take(120)) }
 
     // accounts (secrets are key_* so backups never carry them)
     var tgToken: String get() = sp().getString("key_tgtoken", "").orEmpty(); set(v) = sp().edit { putString("key_tgtoken", v.trim()) }

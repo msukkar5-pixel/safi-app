@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.mohamed.safi.quiz.Challenge
 import com.mohamed.safi.quiz.Question
 import com.mohamed.safi.quiz.Quiz
+import com.mohamed.safi.family.Family
 import com.mohamed.safi.ui.*
 import kotlinx.coroutines.delay
 
@@ -537,8 +538,8 @@ private fun QuizResult(g: Game, answers: List<Answer>, onAgain: () -> Unit, onHo
                 Text("انت $correct • ${c.from} ${c.correct}", fontWeight = FontWeight.SemiBold)
             }
             Button(onClick = {
-                val msg = if (c.fromId == Challenge.myId) tr("⚔️ بتحداك في مسابقة صافي! جبت $correct من ${answers.size}. افتح الرسالة دي بصافي (مشاركة ← صافي) والعب نفس الأسئلة:")
-                    else tr("نتيجتي في تحديك: $correct من ${answers.size}. شاركها مع صافي عشان تتسجل:")
+                val msg = if (c.fromId == Challenge.myId) tr("⚔️ بتحداك في مسابقة ${com.mohamed.safi.AppName.v}! جبت $correct من ${answers.size}. افتح الرسالة دي بـ${com.mohamed.safi.AppName.v} (مشاركة ← ${com.mohamed.safi.AppName.v}) والعب نفس الأسئلة:")
+                    else tr("نتيجتي في تحديك: $correct من ${answers.size}. شاركها مع ${com.mohamed.safi.AppName.v} عشان تتسجل:")
                 ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
                     .putExtra(android.content.Intent.EXTRA_TEXT, msg + "\n" + sendCode), tr("ابعت")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
             }, modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Positive)) {
@@ -675,7 +676,13 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
     var cats by remember { mutableStateOf("all") }
     var code by remember { mutableStateOf("") }
     fun open(text: String) {
-        val c = Challenge.decode(text) ?: run { toast(ctx, "ده مش كود تحدي صافي"); return }
+        if (Challenge.containsCapsule(text) || Challenge.containsFamilyCapsule(text)) {
+            val added = Challenge.importCapsule(text)
+            code = ""
+            toast(ctx, if (added > 0) "اتضافت $added نتيجة جديدة للترتيب" else "الكبسولة غير صالحة أو موجودة عندك قبل كده")
+            return
+        }
+        val c = Challenge.decode(text) ?: run { toast(ctx, "ده مش كود تحدي ${com.mohamed.safi.AppName.v}"); return }
         if (c.reply) {
             when (Challenge.importReply(c)) {
                 null -> toast(ctx, "النتيجة دي متسجلة قبل كده أو مش لتحدي بعته")
@@ -692,7 +699,7 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
     LaunchedEffect(Unit) {
         val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
         val clip = runCatching { cm?.primaryClip?.getItemAt(0)?.text?.toString() }.getOrNull().orEmpty()
-        if (Challenge.contains(clip)) code = clip
+        if (Challenge.contains(clip) || Challenge.containsCapsule(clip) || Challenge.containsFamilyCapsule(clip)) code = clip
     }
     BackHandler { onBack() }
     ScreenScaffold("تحدّي الأصحاب", onBack = onBack) { pad ->
@@ -700,7 +707,7 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
             item {
                 AppCard {
                     Text("إزاي بيشتغل؟", fontWeight = FontWeight.Bold)
-                    Text("١. تلعب ١٠ أسئلة.\n٢. تبعت كود التحدي لصاحبك أو لجروب بواتساب.\n٣. صاحبك يعمل «مشاركة» للرسالة مع صافي ويلعب نفس الأسئلة.\n٤. يبعتلك نتيجته بنفس الطريقة، وتتسجل عندك في الترتيب.", style = MaterialTheme.typography.bodySmall)
+                    Text("١. تلعب ١٠ أسئلة.\n٢. تبعت كود التحدي لصاحبك أو لجروب بواتساب.\n٣. صاحبك يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v} ويلعب نفس الأسئلة.\n٤. يبعتلك نتيجته بنفس الطريقة، وتتسجل عندك في الترتيب.", style = MaterialTheme.typography.bodySmall)
                     Text("من غير سيرفر ومن غير حساب: كل حاجة بتتحفظ على موبايلك بس.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
             }
@@ -725,7 +732,12 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
                     Button(onClick = {
                         if (name.isNotBlank()) Challenge.myName = name
                         open(code)
-                    }, enabled = Challenge.contains(code), modifier = Modifier.fillMaxWidth()) { Text("افتح") }
+                    }, enabled = Challenge.contains(code) || Challenge.containsCapsule(code) || Challenge.containsFamilyCapsule(code), modifier = Modifier.fillMaxWidth()) { Text("افتح") }
+                    OutlinedButton(onClick = {
+                        val share = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                            .putExtra(android.content.Intent.EXTRA_TEXT, Challenge.exportCapsule())
+                        ctx.startActivity(android.content.Intent.createChooser(share, "ابعت كبسولة التحديات"))
+                    }, modifier = Modifier.fillMaxWidth()) { Text("شارك تحديثات التحديات") }
                 }
             }
             val list = Challenge.friends()
@@ -744,7 +756,45 @@ private fun ChallengeHub(onBack: () -> Unit, onPlay: (Challenge.Code) -> Unit) {
                     }
                 }
             }
+            if (Family.joined) item { FamilyChallengeBoard() }
         }
+    }
+}
+
+@Composable
+private fun FamilyChallengeBoard() {
+    @Suppress("UNUSED_VARIABLE") val familyVersion = Family.version.intValue
+    @Suppress("UNUSED_VARIABLE") val challengeVersion = Challenge.version.intValue
+    val familyIds = (Family.members().map { it.id } + Family.myId).toSet()
+    val events = Challenge.localUpdates().filter { it.participantId in familyIds }.sortedByDescending { it.at }
+    val byPlayer = events.groupBy { it.participantId to it.participant.ifBlank { "فرد من العيلة" } }
+        .map { (key, rows) ->
+            val latest = rows.maxByOrNull { it.at }
+            val points = rows.sumOf { it.score }
+            key.second to (rows.size to (points to (latest?.correct ?: 0)))
+        }.sortedByDescending { it.second.second.first }
+    AppCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Groups, null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text("تقدم العيلة", fontWeight = FontWeight.Bold)
+                Text("نتائج التحديات المشفرة بين أفراد العيلة فقط", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (byPlayer.isEmpty()) {
+            Text("لسه مفيش نتيجة عائلية متزامنة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        } else {
+            byPlayer.take(6).forEachIndexed { index, (name, stats) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${index + 1}", modifier = Modifier.width(24.dp), fontWeight = FontWeight.Bold)
+                    Text(name, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                    Text("${stats.first} جولة • ${stats.second.first} نقطة", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        Text("تحديثات العيلة تنتقل تلقائيًا عبر الواي فاي أو بطاقة العيلة، ولا تظهر في ترتيب الأصدقاء.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
     }
 }
 

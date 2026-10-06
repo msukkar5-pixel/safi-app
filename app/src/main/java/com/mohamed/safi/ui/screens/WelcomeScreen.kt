@@ -212,7 +212,7 @@ fun WelcomeScreen(onKid: () -> Unit = {}, onDone: () -> Unit) {
         Button(
             onClick = {
                 prefs.userName = name.trim()
-                prefs.appName = appName.trim().ifBlank { "صافي" }
+                prefs.appName = appName.trim().ifBlank { "أثر" }
                 prefs.onboarded = true
                 if (LocationService.hasPermission(ctx)) {
                     prefs.locationOn = true

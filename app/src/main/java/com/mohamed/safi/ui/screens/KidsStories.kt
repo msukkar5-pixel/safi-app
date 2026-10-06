@@ -76,7 +76,7 @@ fun KidsStoriesScreen(kid: Kid, startId: String? = null, onDone: () -> Unit) {
             items(choices) { s -> StoryRow(s, true) { choice = s } }
             item { Text("قصص وعِبر", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = SGreen) }
             items(stories) { s -> StoryRow(s, false) { open = s } }
-            item { Text("قصص تربوية قصيرة من تأليف صافي، مش أحاديث ولا قصص حقيقية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
+            item { Text("قصص تربوية قصيرة من تأليف ${com.mohamed.safi.AppName.v}، مش أحاديث ولا قصص حقيقية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
         }
     }
 }

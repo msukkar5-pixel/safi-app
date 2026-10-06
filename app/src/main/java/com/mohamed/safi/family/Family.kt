@@ -124,6 +124,10 @@ object Family {
         String(c.doFinal(all.copyOfRange(12, all.size)), Charsets.UTF_8)
     }.getOrNull()
 
+    /** Controlled AES-GCM envelope for family-only features; the family key never leaves this object. */
+    fun encryptFamilyPayload(plain: String): String? = if (joined) runCatching { encrypt(plain) }.getOrNull() else null
+    fun decryptFamilyPayload(ciphertext: String): String? = if (joined) decrypt(ciphertext) else null
+
     /** My card, with only what I chose to share. */
     suspend fun myCard(): String {
         val o = JSONObject().put("id", myId).put("name", myName).put("role", myRole).put("at", System.currentTimeMillis())
@@ -139,6 +143,8 @@ object Family {
         // lessons, homework and study time travel with the card so parent and child stay in sync
         runCatching { com.mohamed.safi.study.Study.export() }.getOrNull()?.let { o.put("study", it) }
         runCatching { FamilyLists.export() }.getOrNull()?.let { o.put("lists", it) }
+        // Challenge progress is already family-encrypted by Challenge.exportCapsule().
+        runCatching { o.put("challenges", com.mohamed.safi.quiz.Challenge.exportCapsule()) }
         return PREFIX + familyId + ":" + encrypt(o.toString())
     }
 
@@ -160,6 +166,8 @@ object Family {
         o.remove("study")
         o.optJSONObject("lists")?.let { runCatching { FamilyLists.merge(it) } }
         o.remove("lists")
+        o.optString("challenges").takeIf { it.isNotBlank() }?.let { runCatching { com.mohamed.safi.quiz.Challenge.importCapsule(it) } }
+        o.remove("challenges")
         val prev = sp().getLong("at_$id", 0)
         if (o.optLong("at") >= prev) sp().edit { putString("card_$id", o.toString()); putLong("at_$id", o.optLong("at")) }
         val r = o.optInt("khr", 0)
