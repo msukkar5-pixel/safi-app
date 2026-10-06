@@ -54,7 +54,7 @@ fun SocialScreen(onBack: () -> Unit) {
                     Text("بيتنشر تلقائي على: قناة تيليجرام، صفحة فيسبوك، وX. وباقي التطبيقات (إنستجرام، واتساب، تيك توك، بروفايل فيسبوك الشخصي) بضغطة واحدة من الإشعار، لأنها مش بتسمح لأي تطبيق ينشر نيابة عنك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
             }
-            item { SectionTitle("منشور النهارده") }
+            item { SectionTitle("المنشور") }
             item {
                 GoldCard {
                     val bmp = preview
@@ -77,20 +77,34 @@ fun SocialScreen(onBack: () -> Unit) {
                     }
                 }
             }
-            item { SectionTitle("النشر كل يوم") }
+            item { SectionTitle("مواعيد النشر") }
             item {
                 AppCard {
                     var on by remember { mutableStateOf(Social.on) }
+                    var every by remember { mutableIntStateOf(Social.every) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("انشر كل يوم تلقائي", fontWeight = FontWeight.Bold)
-                            Text("الساعة ${"%02d:%02d".format(java.util.Locale.US, Social.hour, Social.minute)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            Text("النشر التلقائي", fontWeight = FontWeight.Bold)
+                            Text(if (every >= 24) "مرة في اليوم الساعة ${"%02d:00".format(java.util.Locale.US, Social.hour)}" else Social.everyOptions.first { it.first == every }.second,
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                         }
-                        Switch(on, { on = it; Social.on = it; Social.schedule(ctx) })
+                        Switch(on, { on = it; Social.on = it; Social.schedule(ctx); if (it && !(Social.tgReady || Social.fbReady || Social.xReady)) toast(ctx, "اربط حساب تحت عشان النشر يبقى تلقائي") })
                     }
-                    var h by remember { mutableFloatStateOf(Social.hour.toFloat()) }
-                    Text("الساعة: ${h.toInt()}", style = MaterialTheme.typography.bodySmall)
-                    Slider(h, { h = it }, valueRange = 0f..23f, steps = 22, onValueChangeFinished = { Social.hour = h.toInt(); Social.minute = 0; Social.schedule(ctx); rev++ })
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Social.everyOptions.forEach { (h, n) -> FilterChip(every == h, { every = h; Social.every = h; Social.schedule(ctx) }, label = { Text(n) }) }
+                    }
+                    if (every >= 24) {
+                        var h by remember { mutableFloatStateOf(Social.hour.toFloat()) }
+                        Text("الساعة: ${h.toInt()}", style = MaterialTheme.typography.bodySmall)
+                        Slider(h, { h = it }, valueRange = 0f..23f, steps = 22, onValueChangeFinished = { Social.hour = h.toInt(); Social.minute = 0; Social.schedule(ctx); rev++ })
+                    }
+                    var quiet by remember { mutableStateOf(Social.quietNight) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("ما تنشرش من ١٢ بالليل لـ ٦ الصبح", Modifier.weight(1f))
+                        Switch(quiet, { quiet = it; Social.quietNight = it })
+                    }
+                    if (every < 24) Text("كل منشور مختلف عن اللي قبله. فيسبوك وX ممكن يحدّوا النشر الكتير؛ لو حصل هتلاقي السبب في السجل.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     Text("نوع المحتوى", fontWeight = FontWeight.Bold)
                     @OptIn(ExperimentalLayoutApi::class)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

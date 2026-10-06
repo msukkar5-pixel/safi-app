@@ -61,6 +61,15 @@ object Social {
     var on: Boolean get() = sp().getBoolean("on", false); set(v) = sp().edit { putBoolean("on", v) }
     var hour: Int get() = sp().getInt("hour", 7); set(v) = sp().edit { putInt("hour", v) }
     var minute: Int get() = sp().getInt("minute", 0); set(v) = sp().edit { putInt("minute", v) }
+    /** Hours between posts: 1, 2, 3, 6 or 24 (once a day at [hour]). */
+    var every: Int get() = sp().getInt("every", 1); set(v) = sp().edit { putInt("every", v) }
+    val everyOptions = listOf(1 to "كل ساعة", 2 to "كل ساعتين", 3 to "كل ٣ ساعات", 6 to "كل ٦ ساعات", 24 to "مرة في اليوم")
+    /** Skip posting between midnight and 6 am. */
+    var quietNight: Boolean get() = sp().getBoolean("quiet", false); set(v) = sp().edit { putBoolean("quiet", v) }
+
+    /** Which post of the series this moment is: changes every [every] hours, so each post is different. */
+    fun slot(at: LocalDateTime = LocalDateTime.now(zone)): Long =
+        if (every >= 24) at.toLocalDate().toEpochDay() else at.atZone(zone).toEpochSecond() / 3600 / every
     val allTypes = listOf("ayah" to "آية", "hadith" to "حديث", "dua" to "دعاء", "wird" to "تذكير بالورد")
     var types: Set<String> get() = sp().getStringSet("types", setOf("ayah", "hadith", "dua")) ?: setOf("ayah"); set(v) = sp().edit { putStringSet("types", v) }
     var signature: String get() = sp().getString("sig", "#صافي").orEmpty(); set(v) = sp().edit { putString("sig", v.take(120)) }
@@ -86,9 +95,8 @@ object Social {
         }
     }
 
-    suspend fun today(ctx: Context = SafiApp.instance, d: LocalDate = LocalDate.now(zone)): Post? = withContext(Dispatchers.IO) {
+    suspend fun today(ctx: Context = SafiApp.instance, seed: Long = slot()): Post? = withContext(Dispatchers.IO) {
         val enabled = allTypes.map { it.first }.filter { it in types }.ifEmpty { listOf("ayah") }
-        val seed = d.toEpochDay()
         val order = enabled.indices.map { enabled[((seed + it) % enabled.size).toInt()] }
         for (t in order) runCatching { build(ctx, t, seed) }.getOrNull()?.let { return@withContext it }
         null
@@ -101,7 +109,7 @@ object Social {
             Post(type, "📖 آية اليوم", "﴿ ${a.text} ﴾", "${s.name} • ${a.n}")
         }
         "hadith" -> {
-            val book = if (seed % 2 == 0L) "bukhari" else "muslim"
+            val book = if ((seed / 3) % 2 == 0L) "bukhari" else "muslim"
             val b = Hadiths.load(book, ctx)
             val pool = b.hadiths.filter { it.text.length in 80..420 }
             val h = pool[(seed * 17 % pool.size).toInt()]
@@ -229,8 +237,14 @@ object Social {
         am.cancel(pi(ctx))
         if (!on) return
         val now = LocalDateTime.now(zone)
-        var at = now.toLocalDate().atTime(hour, minute)
-        if (!at.isAfter(now)) at = at.plusDays(1)
+        val at = if (every >= 24) {
+            now.toLocalDate().atTime(hour, minute).let { if (it.isAfter(now)) it else it.plusDays(1) }
+        } else {
+            // the next full hour that fits the interval (e.g. every 3 hours: 0, 3, 6 …)
+            var t = now.withMinute(0).withSecond(0).withNano(0).plusHours(1)
+            while (t.hour % every != 0) t = t.plusHours(1)
+            t
+        }
         // inexact is fine for a daily post and needs no special permission
         am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at.atZone(zone).toInstant().toEpochMilli(), pi(ctx))
     }
@@ -255,8 +269,12 @@ class SocialReceiver : BroadcastReceiver() {
 class SocialWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         val ctx = applicationContext
+        if (Social.quietNight && java.time.LocalTime.now(zone).hour < 6) return Result.success()
         val p = Social.today(ctx) ?: return Result.retry()
         val results = Social.postAll(ctx, p)
+        // with automatic accounts and frequent posts, only notify when something failed
+        val linked = Social.tgReady || Social.fbReady || Social.xReady
+        if (linked && Social.every < 24 && results.none { it.startsWith("✗") }) return Result.success()
         // a notification with the ready post: one tap to publish where there is no automatic posting
         val share = Social.shareIntent(ctx, p, null)
         val actions = buildList {
