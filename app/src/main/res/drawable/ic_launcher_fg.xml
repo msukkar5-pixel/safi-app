@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Wallet with a coin and a check mark, centered in the 66dp safe zone -->
+<!-- Athar mark: an open book with a growing leaf, centered in the safe zone -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,21 +7,19 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M34,38h40a6,6 0,0 1,6 6v26a6,6 0,0 1,-6 6h-40a6,6 0,0 1,-6 -6v-26a6,6 0,0 1,6 -6z" />
+        android:pathData="M25,38c12,-5 23,-2 29,5v38c-8,-6 -18,-8 -29,-3z" />
     <path
         android:fillColor="#FFE3F2EE"
-        android:pathData="M62,50h18v14h-18a7,7 0,0 1,0 -14z" />
+        android:pathData="M83,38c-12,-5 -23,-2 -29,5v38c8,-6 18,-8 29,-3z" />
     <path
-        android:fillColor="#FF0F6E5C"
-        android:pathData="M65,57m-3,0a3,3 0,1 1,6 0a3,3 0,1 1,-6 0" />
-    <path
-        android:fillColor="#00000000"
         android:strokeColor="#FF0F6E5C"
-        android:strokeWidth="4"
+        android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M37,57l6,6l10,-12" />
+        android:pathData="M54,43v38" />
     <path
         android:fillColor="#FFF2C14E"
-        android:pathData="M40,34a8,8 0,1 1,16 0z" />
+        android:pathData="M59,38c0,-13 10,-21 23,-20c-1,12 -8,21 -23,24z" />
+    <path
+        android:fillColor="#FF0F6E5C"
+        android:pathData="M60,43c9,-8 15,-13 22,-23c-5,11 -11,19 -22,27z" />
 </vector>

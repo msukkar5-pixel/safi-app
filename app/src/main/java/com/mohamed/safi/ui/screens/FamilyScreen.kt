@@ -119,7 +119,7 @@ fun FamilyScreen(onBack: () -> Unit) {
                             }
                         }) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(4.dp)); Text("ابعت تحديثي") }
                     }
-                    Text("على نفس الواي فاي: التحديث بيتبادل لوحده وانت فاتح الشاشة دي. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Text("على نفس الواي فاي: التحديث بيتبادل لوحده حتى لو قفلت الشاشة طالما المزامنة المستمرة مفعلة. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("المزامنة المستمرة", fontWeight = FontWeight.SemiBold)

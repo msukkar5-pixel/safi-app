@@ -37,8 +37,8 @@ data class MemberCard(
  *   Only phones that scanned the QR hold the key.
  * - Sharing: each member sends a small "card" with only what they turned on (nothing but their name by default).
  *   Every card is encrypted with AES-256-GCM using the family key, so whatever carries it can't read it.
- * - Transport: automatically over the home Wi-Fi (Android network service discovery + a socket) while the Family
- *   screen is open, or by sending the encrypted card through any app (WhatsApp…) when away.
+ * - Transport: automatically over the home Wi-Fi (Android network service discovery + a socket) through a visible
+ *   foreground service when enabled, or by sending the encrypted card through any app (WhatsApp…) when away.
  * - Only the latest card per member is kept. Leaving the family deletes the key and every card.
  * The key is stored as "key_family", which the app's backup strips out.
  */
@@ -145,7 +145,7 @@ object Family {
         runCatching { com.mohamed.safi.study.Study.export() }.getOrNull()?.let { o.put("study", it) }
         runCatching { FamilyLists.export() }.getOrNull()?.let { o.put("lists", it) }
         // Challenge progress is already family-encrypted by Challenge.exportCapsule().
-        runCatching { o.put("challenges", com.mohamed.safi.quiz.Challenge.exportCapsule()) }
+        runCatching { o.put("challenges", com.mohamed.safi.quiz.Challenge.exportCapsule(familyOnly = true)) }
         return PREFIX + familyId + ":" + encrypt(o.toString())
     }
 

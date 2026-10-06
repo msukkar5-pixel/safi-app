@@ -127,16 +127,16 @@ object Challenge {
     }
 
     /** Export only challenge events, not chat, family, money, or personal memory. */
-    fun exportCapsule(challengeId: String? = null): String {
+    fun exportCapsule(challengeId: String? = null, familyOnly: Boolean = false): String {
         val a = JSONArray()
         val familyIds = (Family.members().map { it.id } + Family.myId).toSet()
         localUpdates().filter { challengeId.isNullOrBlank() || it.challengeId == challengeId }
-            .filter { !Family.joined || it.participantId in familyIds }.forEach { u ->
+            .filter { !familyOnly || it.participantId in familyIds }.forEach { u ->
             a.put(JSONObject().put("e", u.eventId).put("c", u.challengeId).put("p", u.participantId).put("n", u.participant)
                 .put("k", u.kind).put("x", u.correct).put("s", u.score).put("t", u.at).put("prev", u.previousHash).put("h", u.hash))
         }
         val body = JSONObject().put("v", 2).put("events", a)
-        Family.encryptFamilyPayload(body.toString())?.let { encrypted ->
+        if (familyOnly) Family.encryptFamilyPayload(body.toString())?.let { encrypted ->
             return FAMILY_CAPSULE_PREFIX + Family.familyId + ":" + encrypted
         }
         return CAPSULE_PREFIX + Base64.encodeToString(body.toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP or Base64.URL_SAFE)
