@@ -113,10 +113,11 @@ object Books {
         "family" to "الأسرة والتربية",
         "thought" to "فكر وخواطر إيمانية معاصرة",
         "adab" to "الأدب واللغة والحكمة",
+        "kids" to "كتب للأطفال",
     )
 
     /** Categories shown inside their own sections (Stories, History, Hajj guide, Ruqyah guide); the library shows the rest. */
-    val sectionCats = setOf("prophets", "seerah", "sahaba", "egypt", "uae", "hajj", "adhkar")
+    val sectionCats = setOf("prophets", "seerah", "sahaba", "egypt", "uae", "hajj", "adhkar", "kids")
 
     val bidaya = BookMeta(
         "bidaya", "history", "البداية والنهاية", "الحافظ ابن كثير (ت ٧٧٤هـ)",

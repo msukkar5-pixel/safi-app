@@ -60,7 +60,7 @@ object Hifz {
 
     /** The last surah/range worked on, to continue from. */
     var last: Triple<Int, Int, Int>
-        get() = sp().getString("last", "114:1:6")!!.split(":").map { it.toIntOrNull() ?: 1 }.let { Triple(it[0], it[1], it.getOrElse(2) { it[1] }) }
+        get() = sp().getString("last", "114:1:6")!!.split(":").map { it.toIntOrNull() ?: 1 }.let { p -> Triple(p[0], p[1], p.getOrElse(2) { p[1] }) }
         set(v) = sp().edit { putString("last", "${v.first}:${v.second}:${v.third}") }
 
     /** Hides words for the self-test: [level] 1 = every other word, 2 = all but the first word, 3 = all. */

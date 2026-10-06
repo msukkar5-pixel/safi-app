@@ -72,6 +72,12 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
             "wudu" -> WuduGame(kid) { game = null }
             "quiz" -> KidsQuiz(kid) { game = null }
             "stories" -> KidsStoriesScreen(kid) { game = null }
+            "kidbooks" -> ScreenScaffold("مكتبة الأطفال", onBack = { game = null }) { pad ->
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    item { Text("كتب دينية أصيلة مناسبة للأطفال: الأربعون النووية، التجويد، أصول الدين، الصلاة، والشمائل والسيرة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
+                    item { BookList(listOf("kids")) { open("book/$it") } }
+                }
+            }
             else -> if (g.startsWith("story:")) KidsStoriesScreen(kid, g.removePrefix("story:")) { game = null } else KidsGame(g, kid) { game = null }
         }
         return
@@ -116,6 +122,7 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         KidTile("📝", "دروسي وواجباتي", Modifier.weight(1f)) { open("study") }
                         KidTile("📺", "قنوات الأطفال", Modifier.weight(1f)) { open("kidstv") }
+                        KidTile("📚", "مكتبة الأطفال", Modifier.weight(1f)) { game = "kidbooks" }
                     }
                 }
                 item { DailyKidsCard { game = it } }

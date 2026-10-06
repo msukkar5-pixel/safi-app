@@ -13,6 +13,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -103,12 +106,14 @@ private fun ValueStory(kid: Kid, s: JSONObject, onDone: () -> Unit) {
     var solved by remember { mutableStateOf(false) }
     ScreenScaffold(KidStories.t(s.optJSONObject("title")), onBack = onDone) { pad ->
         Column(Modifier.fillMaxSize().background(SBg).padding(pad).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            RawText(s.optString("icon"), fontSize = 72.sp)
+            val scenes = s.optJSONArray("scenes")
+            val scene = scenes?.optString(page.coerceAtMost(scenes.length() - 1))?.ifBlank { null }
+            if (scene != null) StoryScene(scene) else RawText(s.optString("icon"), fontSize = 72.sp)
             Spacer(Modifier.height(12.dp))
             if (page < pages.size) {
                 LinearProgressIndicator(progress = { (page + 1f) / (pages.size + 1) }, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(20.dp))
-                RawText(pages[page], fontSize = 22.sp, lineHeight = 36.sp, color = SInk, modifier = Modifier.weight(1f))
+                RawText(pages[page], fontSize = 22.sp, lineHeight = 36.sp, color = SInk, modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (page > 0) OutlinedButton(onClick = { page-- }, modifier = Modifier.weight(1f).height(52.dp)) { Text("رجوع") }
                     Button(onClick = { page++ }, modifier = Modifier.weight(1f).height(52.dp)) { Text("بعدين؟") }
@@ -148,7 +153,8 @@ private fun ChoiceStory(kid: Kid, s: JSONObject, onDone: () -> Unit) {
     LaunchedEffect(at) { if (end == "good" && Kids.markStory(s.optString("id"))) Kids.addStars(kid.id, 2) }
     ScreenScaffold(KidStories.t(s.optJSONObject("title")), onBack = onDone) { pad ->
         Column(Modifier.fillMaxSize().background(SBg).padding(pad).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            RawText(if (end == "good") "🌟" else if (end == "retry") "🤔" else s.optString("icon"), fontSize = 72.sp)
+            n.optString("scene").ifBlank { null }?.let { StoryScene(it) }
+                ?: RawText(if (end == "good") "🌟" else if (end == "retry") "🤔" else s.optString("icon"), fontSize = 72.sp)
             Spacer(Modifier.height(16.dp))
             RawText(KidStories.t(n.optJSONObject("t")), fontSize = 22.sp, lineHeight = 36.sp, color = SInk)
             Spacer(Modifier.height(20.dp))
@@ -164,6 +170,102 @@ private fun ChoiceStory(kid: Kid, s: JSONObject, onDone: () -> Unit) {
                 "retry" -> Button(onClick = { at = s.optString("start", "a") }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("جرّب تاني") }
                 "good" -> Button(onClick = onDone, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("برافو! قصة تانية") }
             }
+        }
+    }
+}
+
+// ================================================================= picture-book scenes
+
+/** A drawn scene for a story page: "background|emojis" (day, night, home, school, garden, street, rain, shop). */
+@Composable
+fun StoryScene(spec: String, modifier: Modifier = Modifier) {
+    val parts = spec.split("|", limit = 2)
+    val bg = parts[0]
+    val figures = remember(spec) { graphemes(parts.getOrElse(1) { "" }) }
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "scene")
+    val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2400, easing = androidx.compose.animation.core.LinearEasing)), label = "bob")
+    Box(modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(24.dp))) {
+        androidx.compose.foundation.Canvas(Modifier.matchParentSize()) { drawScene(bg) }
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+            figures.forEachIndexed { i, e ->
+                val dy = (kotlin.math.sin(phase + i * 1.3f) * 4f).dp
+                RawText(e, fontSize = if (figures.size <= 2) 72.sp else if (figures.size <= 3) 60.sp else 50.sp, modifier = Modifier.offset(y = dy))
+            }
+        }
+    }
+}
+
+private fun graphemes(s: String): List<String> {
+    val it = android.icu.text.BreakIterator.getCharacterInstance()
+    it.setText(s)
+    val out = ArrayList<String>()
+    var start = it.first(); var end = it.next()
+    while (end != android.icu.text.BreakIterator.DONE) { s.substring(start, end).takeIf { x -> x.isNotBlank() }?.let(out::add); start = end; end = it.next() }
+    return out
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScene(bg: String) {
+    val w = size.width; val h = size.height
+    fun sky(top: Color, bottom: Color) = drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(top, bottom)))
+    fun ground(c: Color, frac: Float = 0.26f) = drawRect(c, androidx.compose.ui.geometry.Offset(0f, h * (1 - frac)), androidx.compose.ui.geometry.Size(w, h * frac))
+    fun cloud(x: Float, y: Float, r: Float, c: Color = Color.White) { drawCircle(c, r, androidx.compose.ui.geometry.Offset(x, y)); drawCircle(c, r * 0.8f, androidx.compose.ui.geometry.Offset(x + r, y + r * 0.2f)); drawCircle(c, r * 0.7f, androidx.compose.ui.geometry.Offset(x - r * 0.9f, y + r * 0.3f)) }
+    fun wall(c: Color, floor: Color) { drawRect(c); ground(floor, 0.22f) }
+    when (bg) {
+        "night" -> {
+            sky(Color(0xFF0E1A3A), Color(0xFF2B3A6B))
+            listOf(0.1f to 0.15f, 0.3f to 0.08f, 0.55f to 0.2f, 0.75f to 0.1f, 0.2f to 0.35f, 0.65f to 0.32f).forEach { (x, y) -> drawCircle(Color(0xFFFFF3B0), 3.5f, androidx.compose.ui.geometry.Offset(w * x, h * y)) }
+            drawCircle(Color(0xFFF2C14E), h * 0.12f, androidx.compose.ui.geometry.Offset(w * 0.85f, h * 0.2f))
+            drawCircle(Color(0xFF14214A), h * 0.11f, androidx.compose.ui.geometry.Offset(w * 0.85f + h * 0.05f, h * 0.17f))
+            ground(Color(0xFF1F3B2A))
+        }
+        "home" -> {
+            wall(Color(0xFFFFE8C7), Color(0xFFB98552))
+            drawRect(Color(0xFF9ED3F5), androidx.compose.ui.geometry.Offset(w * 0.08f, h * 0.12f), androidx.compose.ui.geometry.Size(w * 0.22f, h * 0.3f))
+            drawRect(Color.White, androidx.compose.ui.geometry.Offset(w * 0.185f, h * 0.12f), androidx.compose.ui.geometry.Size(6f, h * 0.3f))
+            drawRect(Color(0xFFE09F3E), androidx.compose.ui.geometry.Offset(w * 0.72f, h * 0.14f), androidx.compose.ui.geometry.Size(w * 0.16f, h * 0.18f))
+        }
+        "school" -> {
+            wall(Color(0xFFFFF4C9), Color(0xFFC8A47A))
+            drawRect(Color(0xFF2E5E4E), androidx.compose.ui.geometry.Offset(w * 0.2f, h * 0.1f), androidx.compose.ui.geometry.Size(w * 0.6f, h * 0.32f))
+            drawRect(Color(0xFF8D6E63), androidx.compose.ui.geometry.Offset(w * 0.2f, h * 0.42f), androidx.compose.ui.geometry.Size(w * 0.6f, 6f))
+        }
+        "garden" -> {
+            sky(Color(0xFF8FD3FF), Color(0xFFDFF3FF))
+            drawCircle(Color(0xFFFFD54F), h * 0.1f, androidx.compose.ui.geometry.Offset(w * 0.86f, h * 0.18f))
+            cloud(w * 0.25f, h * 0.18f, h * 0.07f)
+            drawRect(Color(0xFF8D6E63), androidx.compose.ui.geometry.Offset(w * 0.07f, h * 0.38f), androidx.compose.ui.geometry.Size(w * 0.04f, h * 0.4f))
+            drawCircle(Color(0xFF43A047), h * 0.14f, androidx.compose.ui.geometry.Offset(w * 0.09f, h * 0.36f))
+            ground(Color(0xFF7CC576), 0.3f)
+            listOf(0.3f, 0.48f, 0.66f, 0.9f).forEach { x -> drawCircle(Color(0xFFFF8A80), 6f, androidx.compose.ui.geometry.Offset(w * x, h * 0.8f)) }
+        }
+        "street" -> {
+            sky(Color(0xFFA7DBFF), Color(0xFFE8F6FF))
+            listOf(0.05f to 0.32f, 0.22f to 0.22f, 0.7f to 0.28f, 0.86f to 0.18f).forEach { (x, top) ->
+                drawRect(Color(0xFFCFD8DC), androidx.compose.ui.geometry.Offset(w * x, h * top), androidx.compose.ui.geometry.Size(w * 0.12f, h * (0.74f - top)))
+            }
+            ground(Color(0xFF78909C), 0.26f)
+            for (i in 0 until 6) drawRect(Color.White, androidx.compose.ui.geometry.Offset(w * (0.04f + i * 0.17f), h * 0.86f), androidx.compose.ui.geometry.Size(w * 0.08f, 4f))
+        }
+        "rain" -> {
+            sky(Color(0xFF78909C), Color(0xFFB0BEC5))
+            cloud(w * 0.3f, h * 0.15f, h * 0.09f, Color(0xFFECEFF1)); cloud(w * 0.75f, h * 0.12f, h * 0.08f, Color(0xFFECEFF1))
+            for (i in 0 until 24) { val x = (i * 47 % 100) / 100f * w; val y = (i * 31 % 60) / 100f * h + h * 0.1f
+                drawLine(Color(0xFFBBDEFB), androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x - 6f, y + 18f), 3f) }
+            ground(Color(0xFF5D7F5A))
+        }
+        "shop" -> {
+            wall(Color(0xFFFFF8E1), Color(0xFFBCAAA4))
+            listOf(0.18f, 0.34f).forEach { y ->
+                drawRect(Color(0xFF8D6E63), androidx.compose.ui.geometry.Offset(w * 0.05f, h * y), androidx.compose.ui.geometry.Size(w * 0.9f, 5f))
+                for (i in 0 until 9) drawRect(listOf(Color(0xFFE57373), Color(0xFF64B5F6), Color(0xFFFFD54F), Color(0xFF81C784))[i % 4],
+                    androidx.compose.ui.geometry.Offset(w * (0.07f + i * 0.1f), h * y - 22f), androidx.compose.ui.geometry.Size(w * 0.06f, 22f))
+            }
+        }
+        else -> { // day
+            sky(Color(0xFF8FD3FF), Color(0xFFE3F5FF))
+            drawCircle(Color(0xFFFFD54F), h * 0.11f, androidx.compose.ui.geometry.Offset(w * 0.85f, h * 0.2f))
+            cloud(w * 0.2f, h * 0.2f, h * 0.07f); cloud(w * 0.55f, h * 0.12f, h * 0.05f)
+            ground(Color(0xFF8BC34A))
         }
     }
 }

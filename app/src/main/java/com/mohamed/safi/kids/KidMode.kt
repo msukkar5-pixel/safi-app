@@ -83,7 +83,7 @@ object KidMode {
         val a = allowed
         return when (base) {
             "tafsir" -> "quran" in a
-            "book" -> a.any { it in setOf("library", "stories") }
+            "book" -> a.any { it in setOf("library", "stories", "kids") }
             "bidaya", "history" -> "stories" in a || "library" in a
             "umrah", "hajj", "tool", "manasik" -> false
             else -> base in a
