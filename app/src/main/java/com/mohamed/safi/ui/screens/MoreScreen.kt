@@ -35,6 +35,7 @@ private val sections = listOf(
         Entry("ruqyah", "الرقية الشرعية", "الآيات والأدعية الصحيحة", Icons.Default.Healing, Color(0xFF2E7D5B)),
         Entry("sleep", "قبل النوم", "أذكار وتلاوة هادية بمؤقت", Icons.Default.Bedtime, Color(0xFF3F4E8C)),
         Entry("prayer", "الصلاة والقبلة", "المواعيد والأذان والبوصلة", Icons.Default.Mosque, Color(0xFF2E7DBA)),
+        Entry("mosques", "مساجد قريبة", "أقرب مسجد ليك بالاتجاهات", Icons.Default.Mosque, Color(0xFF1B5E20)),
         Entry("prayertracker", "متابعة الصلوات", "في وقتها، جماعة، القضاء", Icons.Default.TaskAlt, Color(0xFF1B7A4E)),
         Entry("islamiccalendar", "التقويم الهجري", "المناسبات وأيام الصيام", Icons.Default.CalendarMonth, Color(0xFF8F6E22)),
         Entry("asmahusna", "أسماء الله الحسنى", "الأسماء ومعانيها", Icons.Default.AutoAwesome, Color(0xFF00695C)),
@@ -62,6 +63,7 @@ private val sections = listOf(
         Entry("healthrecords", "حالتي الصحية", "أدوية، تحاليل، دكاترة", Icons.Default.MonitorHeart, Color(0xFFD32F2F)),
     ),
     "الإعدادات" to listOf(
+        Entry("sos", "زرار الطوارئ", "ابعت مكانك للعيلة بضغطة", Icons.Default.Sos, Color(0xFFC62828)),
         Entry("alerts", "التنبيهات", "الأذان، الأذكار، الورد", Icons.Default.NotificationsActive, Color(0xFF00796B)),
         Entry("app_guide", "دليل التطبيق", "شرح كل قسم وإزاي تستخدمه", Icons.Default.MenuBook, Color(0xFF5D4037)),
         Entry("kidsetup", "وضع الطفل", "موبايل الطفل بأقسام تختارها انت", Icons.Default.ChildCare, Color(0xFF4FA3D9)),

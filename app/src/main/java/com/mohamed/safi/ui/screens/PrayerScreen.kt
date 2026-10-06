@@ -76,7 +76,10 @@ fun PrayerScreen(onBack: () -> Unit) {
     }
     val next = day.next(now) ?: Prayer.nextPrayer()
 
-    ScreenScaffold("الصلاة والقبلة", onBack = onBack, actions = { IconButton(onClick = { UiBus.pendingRoute.value = "alerts" }) { Icon(Icons.Default.NotificationsActive, "التنبيهات") } }) { pad ->
+    ScreenScaffold("الصلاة والقبلة", onBack = onBack, actions = {
+        IconButton(onClick = { UiBus.pendingRoute.value = "mosques" }) { Icon(Icons.Default.Mosque, "مساجد قريبة") }
+        IconButton(onClick = { UiBus.pendingRoute.value = "alerts" }) { Icon(Icons.Default.NotificationsActive, "التنبيهات") }
+    }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
                 AppCard(color = MaterialTheme.colorScheme.primary) {
