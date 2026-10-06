@@ -56,3 +56,21 @@ Still to do:
 - More TV channels: only add a stream after CI shows it alive (check_streams output in the build log).
 - Look at the emulator screenshots of the new screens (uiplan has steps for them) and fix anything off.
 - Next 6 — merge into dev, then dev → main to publish the release (needs Mohamed's go-ahead).
+
+## Session of 2026-10-06 — user feedback round (branch `claude/kind-cannon-ljnz50`, based on dev after v1.0.42)
+
+Done (all built on CI, quick emulator plan passed with no crashes):
+- Stories/Seerah tabs show their own books (BookList was cached per first tab); one catalog refresh per run, atomic write.
+- Books: each section keeps its books; Library shows only the rest. +59 OpenITI books (paths verified) in aqeedah, tafsir, hadith, fiqh, tazkiya, family, thought, adab, history, seerah, sahaba. books.yml timeout 150 min.
+- Audiobooks: topics in all fields of life + a strict blocklist (unbelief, other scriptures/sects, magic, romance, music).
+- Voice: Google recognition service preferred, mic level, fallback to the system speech screen.
+- Prayer: auto location → country calculation method + place time zone; re-scheduled on app start and TIMEZONE_CHANGED.
+- Home: finance quick actions moved into Finance; prayer strip, round shortcuts, verse of the day, Ramadan card.
+- Languages: 21; non-shipped ones translated on the phone (ML Kit, from en.json). APK ships arm64 + x86_64 only.
+- Bottom bar: 6 places, Home/Safi/More fixed + 3 user-chosen (More → tune icon).
+- Radio: tools/radios.py checks every mp3quran station in CI (173/177 live) + 5 official; TV: 16 live Sunni channels.
+- Quiz: 2104 questions (gen_verified.py from Quran/Nawawi/Asma data, gen_world.py), balanced picks, 3 lives, 60-second race, ladder, challenge a friend, 12 badges, confetti, sounds.
+- Kids "مدينة الخير" (all year), Ramadan layer (auto in Ramadan, countdown otherwise), family linking without a server (QR + AES-GCM cards, home Wi-Fi or any messenger).
+
+Not done on purpose: the schools/teachers/admin platform from the Manus document (needs a server and multi-tenant accounts).
+Next: merge into dev → main to release (with Mohamed's go-ahead).
