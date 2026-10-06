@@ -213,6 +213,39 @@ def web_sections(url, vol):
     return secs
 
 
+WIKI_DROP = {"مراجع", "المراجع", "المصادر", "مصادر", "وصلات خارجية", "انظر أيضا", "انظر أيضًا", "ملاحظات", "هوامش", "قراءات إضافية", "روابط خارجية", "معرض الصور"}
+
+
+def wiki_sections(lang, title, vol):
+    """A Wikipedia article as plain text (no references or links), split at its headings."""
+    import urllib.parse
+    u = (f"https://{lang}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=wiki"
+         f"&redirects=1&format=json&titles={urllib.parse.quote(title)}")
+    d = json.loads(get(u))
+    page = next(iter(d["query"]["pages"].values()))
+    text = page.get("extract") or ""
+    if len(text) < 1500:
+        raise RuntimeError(f"too little text ({len(text)})")
+    secs, skip = [], False
+    cur = {"v": vol, "p": 0, "l": 1, "t": page.get("title", title), "paras": []}
+    for line in text.split("\n"):
+        line = line.strip()
+        m = re.match(r"^(=+)\s*(.*?)\s*=+$", line)
+        if m:
+            if cur["paras"] and not skip:
+                secs.append(cur)
+            name = m.group(2)
+            skip = name in WIKI_DROP
+            cur = {"v": vol, "p": 0, "l": min(len(m.group(1)), 5), "t": name, "paras": []}
+        elif line and not skip:
+            cur["paras"].append(line)
+    if cur["paras"] and not skip:
+        secs.append(cur)
+    secs[0]["l"] = 1
+    secs[-1]["paras"].append(f"المصدر: ويكيبيديا العربية، مقالة «{page.get('title', title)}» (رخصة المشاع الإبداعي CC BY-SA).")
+    return secs
+
+
 def build(b):
     out = os.path.join(WORK, "out_" + b["id"])
     shutil.rmtree(out, ignore_errors=True)
@@ -235,6 +268,19 @@ def build(b):
                     print("  skip", url, e)
         if not secs:
             raise RuntimeError("no pages")
+        os.makedirs(out, exist_ok=True)
+        return [(b, out, openiti.write(secs, out))]
+    if t == "wikipedia":
+        secs = []
+        for title in b["titles"]:
+            try:
+                secs += wiki_sections(b.get("lang", "ar"), title, 1); print("  ok", title)
+                if not b.get("all"):
+                    break
+            except Exception as e:
+                print("  skip", title, e)
+        if not secs:
+            raise RuntimeError("no article")
         os.makedirs(out, exist_ok=True)
         return [(b, out, openiti.write(secs, out))]
     if t == "hindawi_series":

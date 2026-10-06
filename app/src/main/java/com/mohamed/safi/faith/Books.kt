@@ -118,11 +118,14 @@ object Books {
         "lebanon" to "تاريخ لبنان", "iraq" to "تاريخ العراق", "yemen" to "تاريخ اليمن", "sudan" to "تاريخ السودان",
         "maghrib" to "تاريخ المغرب", "tunisia" to "تاريخ تونس", "mauritania" to "تاريخ موريتانيا", "andalus" to "تاريخ الأندلس",
         "dict" to "المعاجم والقواميس",
+        "kuwait" to "تاريخ الكويت", "qatar" to "تاريخ قطر", "bahrain" to "تاريخ البحرين", "oman" to "تاريخ عُمان", "jordan" to "تاريخ الأردن",
+        "libya" to "تاريخ ليبيا", "algeria" to "تاريخ الجزائر", "somalia" to "تاريخ الصومال", "djibouti" to "تاريخ جيبوتي", "comoros" to "تاريخ جزر القمر",
     )
 
     /** Categories shown inside their own sections (Stories, History, Hajj guide, Ruqyah guide); the library shows the rest. */
     val sectionCats = setOf("prophets", "seerah", "sahaba", "egypt", "uae", "hajj", "adhkar", "kids",
-        "saudi", "sham", "palestine", "lebanon", "iraq", "yemen", "sudan", "maghrib", "tunisia", "mauritania", "andalus")
+        "saudi", "sham", "palestine", "lebanon", "iraq", "yemen", "sudan", "maghrib", "tunisia", "mauritania", "andalus",
+        "kuwait", "qatar", "bahrain", "oman", "jordan", "libya", "algeria", "somalia", "djibouti", "comoros")
 
     val bidaya = BookMeta(
         "bidaya", "history", "البداية والنهاية", "الحافظ ابن كثير (ت ٧٧٤هـ)",

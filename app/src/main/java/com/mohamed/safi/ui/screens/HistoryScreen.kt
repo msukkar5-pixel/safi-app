@@ -29,6 +29,7 @@ fun HistoryScreen(onBack: () -> Unit, open: (String) -> Unit) {
     val eras = when (country.first) { "egypt" -> History.egypt; "uae" -> History.uae; else -> emptyList() }
 
     ScreenScaffold("تاريخ الدول العربية والأندلس", onBack = onBack) { pad ->
+        @Suppress("UNUSED_VARIABLE") val n = historyCountries.size
         Column(Modifier.fillMaxSize().padding(pad)) {
             ScrollableTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background, edgePadding = 8.dp) {
                 historyCountries.forEachIndexed { i, (_, name) -> Tab(tab == i, { tab = i }, text = { Text(name) }) }
@@ -42,11 +43,8 @@ fun HistoryScreen(onBack: () -> Unit, open: (String) -> Unit) {
                         }
                     }
                 }
-                if (country.first == "others") item {
-                    AppCard {
-                        Text("الجزائر وليبيا والأردن والكويت وقطر والبحرين وعُمان", fontWeight = FontWeight.Bold)
-                        Text("لسه ملقيتش لكل دولة منهم كتاب تاريخ موثوق ومتاح مجاناً يتضاف. تاريخهم موجود في الكتب العامة دي، وفي تبويب الشام (للأردن) والمغرب وتونس (للجزائر وليبيا).", style = MaterialTheme.typography.bodySmall)
-                    }
+                if (country.first != "others" && country.first != "uae") item {
+                    Text("كل دولة فيها نبذة شاملة من القديم لليوم (ويكيبيديا العربية)، ومعاها كتب التاريخ المتاحة عنها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
                 item { SectionTitle("الكتب — تتقرا جوه التطبيق") }
                 item { BookList(if (country.first == "others") listOf("history") else listOf(country.first)) { open("book/$it") } }
@@ -120,7 +118,9 @@ private fun SourceCard(s: SourceLink, highlight: Boolean = false) {
 
 /** Country tabs: the book category for each (see Books.categories). "others" shows the general Islamic history books. */
 private val historyCountries = listOf(
-    "egypt" to "مصر", "uae" to "الإمارات", "saudi" to "السعودية", "sham" to "الشام وسوريا", "palestine" to "فلسطين والقدس",
-    "lebanon" to "لبنان", "iraq" to "العراق", "yemen" to "اليمن", "sudan" to "السودان", "maghrib" to "المغرب",
-    "tunisia" to "تونس", "mauritania" to "موريتانيا", "andalus" to "الأندلس", "others" to "باقي الدول",
+    "egypt" to "مصر", "uae" to "الإمارات", "saudi" to "السعودية", "kuwait" to "الكويت", "qatar" to "قطر", "bahrain" to "البحرين",
+    "oman" to "عُمان", "yemen" to "اليمن", "iraq" to "العراق", "sham" to "سوريا", "lebanon" to "لبنان", "jordan" to "الأردن",
+    "palestine" to "فلسطين والقدس", "sudan" to "السودان", "libya" to "ليبيا", "tunisia" to "تونس", "algeria" to "الجزائر",
+    "maghrib" to "المغرب", "mauritania" to "موريتانيا", "somalia" to "الصومال", "djibouti" to "جيبوتي", "comoros" to "جزر القمر",
+    "andalus" to "الأندلس", "others" to "التاريخ الإسلامي العام",
 )
