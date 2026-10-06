@@ -54,8 +54,7 @@ object ShareCard {
         val mid = (h - b.height - s.height - 30) / 2f + 40f
         draw(s, draw(b, mid) + 30f)
         draw(f, h - bottom - f.height)
-        val brand = layout("صافي", 34f, gold, true)
-        draw(brand, h - bottom + 20f)
+        if ("صافي" !in footer) draw(layout("صافي", 34f, gold, true), h - bottom + 20f)
 
         val file = File(ctx.cacheDir, "$name.png")
         return runCatching { file.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }; file }.getOrNull()

@@ -56,6 +56,7 @@ fun StudyScreen(onBack: () -> Unit, open: (String) -> Unit) {
 
     ScreenScaffold("دروسي وواجباتي", onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            @Suppress("UNUSED_VARIABLE") val live = Study.version.intValue + Family.version.intValue // re-run the list when the data changes
             item {
                 @OptIn(ExperimentalLayoutApi::class)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -82,6 +82,7 @@ fun FamilyScreen(onBack: () -> Unit) {
 
     ScreenScaffold("ربط العيلة", onBack = onBack) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            @Suppress("UNUSED_VARIABLE") val live = Family.version.intValue // re-run the list when the data changes
             item {
                 AppCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {

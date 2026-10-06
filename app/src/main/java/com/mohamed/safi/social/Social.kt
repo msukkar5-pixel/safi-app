@@ -113,7 +113,9 @@ object Social {
         "hadith" -> {
             val book = if ((seed / 3) % 2 == 0L) "bukhari" else "muslim"
             val b = Hadiths.load(book, ctx)
-            val pool = b.hadiths.filter { it.text.length in 80..420 }
+            // only sayings of the Prophet ﷺ (not a Companion's words or a chain-only report)
+            val pool = b.hadiths.filter { it.text.length in 80..420 && ("قال رسول الله صلى الله عليه وسلم" in it.plain || "قال النبي صلى الله عليه وسلم" in it.plain) }
+                .ifEmpty { b.hadiths.filter { it.text.length in 80..420 && "صلى الله عليه وسلم" in it.plain } }
             val h = pool[(seed * 17 % pool.size).toInt()]
             Post(type, "🌿 حديث اليوم", h.text, "${Hadiths.bookTitle(book)} (${h.number})")
         }

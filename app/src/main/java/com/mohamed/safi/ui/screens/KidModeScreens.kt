@@ -48,6 +48,7 @@ fun KidHomeScreen(open: (String) -> Unit) {
             IconButton(onClick = { askPin = true }) { Icon(Icons.Default.Lock, "ولي الأمر", tint = KInk.copy(alpha = 0.5f)) }
         }
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            @Suppress("UNUSED_VARIABLE") val live = KidMode.version.intValue // re-run the list when the data changes
             list.chunked(2).forEachIndexed { r, row ->
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
