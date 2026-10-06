@@ -277,9 +277,10 @@ Rules:
                 (support?.let { "\n\n=== VERIFIED SPIRITUAL SUPPORT ===\n" + com.mohamed.safi.faith.SituationSupport.prompt(it) } ?: "")
             val raw = Claude.call(system, msgs, SafiApp.prefs.model, 4096, json = true)
             val json = Claude.extractJson(raw)
-            val reply = json?.optString("reply")?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+            val modelReply = json?.optString("reply")?.trim()?.takeIf { it.isNotBlank() && it != "null" }
                 ?: replyFromBroken(raw)
                 ?: (if (json != null) "تمام" else raw.trim())
+            val reply = support?.let { com.mohamed.safi.faith.SituationSupport.automaticAddition(modelReply, it) } ?: modelReply
             val actions = json?.optJSONArray("actions") ?: JSONArray()
             val done = execute(ctx, actions)
             dao.insertChat(ChatMsg(role = "assistant", text = reply, actions = done.joinToString("\n")))

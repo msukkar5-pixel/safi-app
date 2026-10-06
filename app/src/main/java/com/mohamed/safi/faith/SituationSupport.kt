@@ -112,4 +112,23 @@ object SituationSupport {
         g.dua?.let { appendLine("DUA/AZKAR: ${it.text}${if (it.ref.isBlank()) "" else " — ${it.ref}"}") }
         appendLine("Use gentle wording, offer one short practical step, and never claim to diagnose or to have heard anything in the background. Do not invent or alter religious attributions. If confidence is low or the quote is not relevant, do not force it.")
     }
+
+    /** Deterministic fallback so the feature is truly automatic even if the model ignores the support block. */
+    fun automaticAddition(reply: String, g: Guidance): String? {
+        if (g.confidence < 4) return null
+        val r = normalized(reply)
+        val alreadyQuoted = listOfNotNull(
+            g.ayah?.ayah?.text,
+            g.hadith?.text,
+            g.dua?.text,
+        ).any { quote -> normalized(quote).take(28).let { it.length >= 12 && it in r } }
+        if (alreadyQuoted || r.contains("سوره") || r.contains("حديث") || r.contains("دعاء")) return null
+        val line = when {
+            g.ayah != null -> "📖 ${g.ayah.ayah.text} — سورة ${g.ayah.surah.name}، آية ${g.ayah.ayah.n}"
+            g.hadith != null -> "📜 ${g.hadith.text} — ${Hadiths.bookTitle(g.hadith.book)}، رقم ${g.hadith.number}"
+            g.dua != null -> "🤲 ${g.dua.text}${if (g.dua.ref.isBlank()) "" else " — ${g.dua.ref}"}"
+            else -> return null
+        }
+        return "$reply\n\n${when (g.situation) { "الغضب والانفعال" -> "خد لحظة قبل ما ترد."; "الخوف" -> "ربنا يطمّن قلبك."; "الحزن والفقد" -> "ربنا يربط على قلبك."; else -> "ربنا يخفف عنك." }}\n$line"
+    }
 }
