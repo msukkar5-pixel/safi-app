@@ -82,6 +82,8 @@ object Social {
     var xKeys: List<String>
         get() = listOf("key_xck", "key_xcs", "key_xat", "key_xas").map { sp().getString(it, "").orEmpty() }
         set(v) = sp().edit { listOf("key_xck", "key_xcs", "key_xat", "key_xas").forEachIndexed { i, k -> putString(k, v.getOrElse(i) { "" }.trim()) } }
+    /** Optional Meta (Facebook) App ID: lets Instagram/Facebook open their story editor directly. Not a secret. */
+    var metaAppId: String get() = sp().getString("meta_app", "").orEmpty(); set(v) = sp().edit { putString("meta_app", v.trim()) }
     val tgReady get() = tgToken.isNotBlank() && tgChat.isNotBlank()
     val fbReady get() = fbToken.isNotBlank() && fbPage.isNotBlank()
     val xReady get() = xKeys.all { it.isNotBlank() }

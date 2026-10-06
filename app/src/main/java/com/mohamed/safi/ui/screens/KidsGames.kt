@@ -67,7 +67,7 @@ fun KidsGame(id: String, kid: Kid, onDone: () -> Unit) {
     }
 }
 
-/** Kids' content in ar/en/ur from assets/kids/*.json. */
+/** Kids' content in ar/en/ur from the JSON files in assets/kids. */
 object KidData {
     class Games(val pick: List<org.json.JSONObject>, val order: List<org.json.JSONObject>, val memory: List<org.json.JSONObject>)
     private var games: Games? = null

@@ -25,8 +25,8 @@ object ShareCard {
     }
 
     /** Draws the card into cache/[name].png and returns the file. */
-    fun render(ctx: Context, title: String, body: String, source: String, footer: String, name: String = "safi_card"): File? {
-        val w = 1080; val h = 1350
+    fun render(ctx: Context, title: String, body: String, source: String, footer: String, name: String = "safi_card", story: Boolean = false): File? {
+        val w = 1080; val h = if (story) 1920 else 1350
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), Paint().apply {
@@ -44,15 +44,18 @@ object ShareCard {
         val t = layout(title, 64f, gold, true)
         var bodySize = 58f
         var b = layout(body, bodySize, android.graphics.Color.WHITE, false)
-        while (b.height > 760 && bodySize > 30f) { bodySize -= 4f; b = layout(body, bodySize, android.graphics.Color.WHITE, false) }
+        val maxBody = if (story) 1200 else 760
+        while (b.height > maxBody && bodySize > 30f) { bodySize -= 4f; b = layout(body, bodySize, android.graphics.Color.WHITE, false) }
         val s = layout(source, 36f, gold, false)
         val f = layout(footer, 38f, 0xCCFFFFFF.toInt(), false)
-        draw(t, 130f)
+        // stories: keep text clear of the apps' top and bottom bars
+        val top = if (story) 300f else 130f; val bottom = if (story) 330f else 130f
+        draw(t, top)
         val mid = (h - b.height - s.height - 30) / 2f + 40f
         draw(s, draw(b, mid) + 30f)
-        draw(f, h - 130f - f.height)
+        draw(f, h - bottom - f.height)
         val brand = layout("صافي", 34f, gold, true)
-        draw(brand, h - 110f)
+        draw(brand, h - bottom + 20f)
 
         val file = File(ctx.cacheDir, "$name.png")
         return runCatching { file.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }; file }.getOrNull()

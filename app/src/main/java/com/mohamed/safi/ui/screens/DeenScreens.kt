@@ -366,7 +366,7 @@ fun GuideBlockView(b: GBlock, open: (String) -> Unit) {
                 androidx.compose.material3.Text("«${b.x}»", fontFamily = rs.family, fontSize = rs.size(17f), lineHeight = rs.lineH(17f), textAlign = TextAlign.Justify)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                     Text(b.src, style = MaterialTheme.typography.labelMedium, color = cs.primary, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { shareText(ctx, "«${b.x}»\n[${b.src}]") }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.Share, "شارك", Modifier.size(16.dp), tint = cs.outline) }
+                    IconButton(onClick = { ShareBus.open("🤲", b.x, b.src) }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.Share, "شارك", Modifier.size(16.dp), tint = cs.outline) }
                 }
             }
         }
@@ -447,7 +447,7 @@ private fun DuaCard(title: String, text: String, src: String, n: Int) {
                 Text("🤲", fontSize = 18.sp)
                 Spacer(Modifier.width(6.dp))
                 Text(title.ifBlank { "دعاء" }, fontWeight = FontWeight.Bold, color = cs.primary, modifier = Modifier.weight(1f))
-                IconButton(onClick = { shareText(ctx, "$text\n[$src]") }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.Share, "شارك", Modifier.size(16.dp), tint = cs.outline) }
+                IconButton(onClick = { ShareBus.open("🤲", text, src) }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.Share, "شارك", Modifier.size(16.dp), tint = cs.outline) }
             }
             androidx.compose.material3.Text(text, fontFamily = Amiri, fontSize = rs.size(20f), lineHeight = rs.lineH(20f), textAlign = TextAlign.Justify, modifier = Modifier.padding(vertical = 6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -632,7 +632,7 @@ private fun HisnChapterView(hisn: Hisn, ch: HisnChapter, fav: Set<String>, onFav
                             androidx.compose.material3.Text(z.x, fontFamily = Amiri, fontSize = rs.size(20f), lineHeight = rs.lineH(20f), textAlign = TextAlign.Justify)
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                                 Text(z.ref, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.weight(1f))
-                                IconButton(onClick = { shareText(ctx, "${z.x}\n[${z.ref}]") }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.Share, "شارك", Modifier.size(16.dp)) }
+                                IconButton(onClick = { ShareBus.open("🤲", z.x, z.ref) }, modifier = Modifier.size(30.dp)) { Icon(Icons.Default.Share, "شارك", Modifier.size(16.dp)) }
                                 Surface(shape = CircleShape, color = if (left == 0) Positive else MaterialTheme.colorScheme.primary, contentColor = Color.White) {
                                     Text(if (left == 0) "✓" else if (z.n > 1) "$left" else "١", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
                                 }

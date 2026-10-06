@@ -256,6 +256,7 @@ fun AppRoot() {
             }
             LaunchedEffect(Unit) { UiBus.customizeNav.collect { if (it) { customize = true; UiBus.customizeNav.value = false } } }
             if (customize) NavCustomizeDialog { customize = false }
+            ShareSheetHost()
             }
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
