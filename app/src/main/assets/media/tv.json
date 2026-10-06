@@ -62,5 +62,77 @@
   "urls": [
    "https://cdn.bestream.io:19360/elfaro1/elfaro1.m3u8"
   ]
+ },
+ {
+  "id": "makkah_tv",
+  "name": "قناة مكة",
+  "yt": "قناة مكة بث مباشر",
+  "urls": [
+   "https://media2.streambrothers.com:1936/8122/8122/playlist.m3u8"
+  ]
+ },
+ {
+  "id": "peace_en",
+  "name": "Peace TV English (د. ذاكر نايك وغيره)",
+  "yt": "Peace TV live",
+  "urls": [
+   "https://dzkyvlfyge.erbvr.com/PeaceTvEnglish/index.m3u8"
+  ]
+ },
+ {
+  "id": "peace_ur",
+  "name": "Peace TV اردو",
+  "yt": "Peace TV Urdu live",
+  "urls": [
+   "https://dzkyvlfyge.erbvr.com/PeaceTvUrdu/index.m3u8"
+  ]
+ },
+ {
+  "id": "peace_bn",
+  "name": "Peace TV বাংলা",
+  "yt": "Peace TV Bangla live",
+  "urls": [
+   "https://dzkyvlfyge.erbvr.com/PeaceTvBangla/index.m3u8"
+  ]
+ },
+ {
+  "id": "peace_zh",
+  "name": "Peace TV 中文",
+  "yt": "Peace TV Chinese live",
+  "urls": [
+   "https://dzkyvlfyge.erbvr.com/PeaceTvChinese/index.m3u8"
+  ]
+ },
+ {
+  "id": "islam_channel",
+  "name": "Islam Channel (بريطانيا، بالإنجليزي)",
+  "yt": "Islam Channel live",
+  "urls": [
+   "https://live.islamchannel.tv/live11/islamtv_english/bitrate1.isml/live.m3u8"
+  ]
+ },
+ {
+  "id": "sunna_tv_ng",
+  "name": "Sunna TV (نيجيريا)",
+  "yt": "Sunna TV live",
+  "urls": [
+   "https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_015/Stream/playlist.m3u8"
+  ]
+ },
+ {
+  "id": "tv_muslim_th",
+  "name": "TV Muslim (تايلاند)",
+  "yt": "TV Muslim Thailand live",
+  "urls": [
+   "https://vdo.plathong.net/tvmuslim/tvmuslim/playlist.m3u8"
+  ]
+ },
+ {
+  "id": "islamic_network_tt",
+  "name": "The Islamic Network (ترينيداد)",
+  "yt": "The Islamic Network live",
+  "urls": [
+   "https://video1.getstreamhosting.com:1936/8322/8322/playlist.m3u8"
+  ]
  }
 ]

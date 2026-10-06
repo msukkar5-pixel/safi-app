@@ -56,6 +56,8 @@ object UiBus {
     val pendingQuran = MutableStateFlow<Pair<Int, Int>?>(null)
     /** Open the hadith library searching this text. */
     val pendingHadith = MutableStateFlow<String?>(null)
+    /** Open the "customize bottom bar" dialog. */
+    val customizeNav = MutableStateFlow(false)
 }
 
 fun toast(ctx: Context, msg: String) = Toast.makeText(ctx, tr(msg), Toast.LENGTH_SHORT).show()

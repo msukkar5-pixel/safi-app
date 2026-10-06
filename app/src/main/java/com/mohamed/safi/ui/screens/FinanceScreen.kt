@@ -47,6 +47,11 @@ fun FinanceScreen(onBack: (() -> Unit)?, open: (String) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf(false) }
     var add by remember { mutableStateOf<String?>(null) }
+    val receipt = rememberReceiptController()
+    val voice = rememberVoiceInput { text ->
+        UiBus.pendingVoice.value = text
+        open("assistant")
+    }
     var showRate by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -90,6 +95,14 @@ fun FinanceScreen(onBack: (() -> Unit)?, open: (String) -> Unit) {
         ModalBottomSheet(onDismissRequest = { sheet = false }) {
             Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("سجّل جديد", style = MaterialTheme.typography.titleLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { sheet = false; voice() }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.Mic, null); Spacer(Modifier.width(6.dp)); Text("سجّل بالصوت")
+                    }
+                    FilledTonalButton(onClick = { sheet = false; receipt.open() }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.CameraAlt, null); Spacer(Modifier.width(6.dp)); Text("صوّر فاتورة")
+                    }
+                }
                 val opts = listOf(
                     Triple("expense", "مصروف", Icons.Default.ShoppingCart),
                     Triple("income", "دخل", Icons.Default.AccountBalanceWallet),
@@ -130,6 +143,7 @@ fun FinanceScreen(onBack: (() -> Unit)?, open: (String) -> Unit) {
         "lesson" -> LessonDialog(null, lessons.map { it.child }.distinct()) { add = null }
     }
     if (showRate) RateDialog { showRate = false }
+    ReceiptHost(receipt)
 }
 
 @Composable

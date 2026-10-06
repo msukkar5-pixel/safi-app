@@ -42,6 +42,13 @@ fun RadioScreen(onBack: () -> Unit) {
         scope.launch { stations = runCatching { Radio.all(ctx, force) }.getOrDefault(stations); loading = false }
     }
     LaunchedEffect(Unit) { reload(false) }
+    // remember which stations play on this phone and which don't
+    LaunchedEffect(now?.mediaId, now?.failed, now?.playing) {
+        val st = now ?: return@LaunchedEffect
+        if (!st.mediaId.startsWith("radio#")) return@LaunchedEffect
+        val id = st.mediaId.removePrefix("radio#")
+        if (st.failed) Radio.markFailed(id) else if (st.playing) Radio.markOk(id)
+    }
     val groups = remember(stations) { stations.map { it.group }.distinct() }
     val list = remember(stations, q, group, favs) {
         val p = Quran.plain(q.trim())
@@ -109,7 +116,11 @@ fun RadioScreen(onBack: () -> Unit) {
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 androidx.compose.material3.Text(s.name, fontWeight = FontWeight.SemiBold)
-                                Text(s.group, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                Text(
+                                    if (Radio.failedRecently(s.id)) "${tr(s.group)} • ${tr("ماشتغلتش آخر مرة")}" else s.group,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (Radio.failedRecently(s.id)) Warn else MaterialTheme.colorScheme.outline,
+                                )
                             }
                             IconButton(onClick = { favs = if (s.id in favs) favs - s.id else favs + s.id; Radio.favorites = favs }) {
                                 Icon(if (s.id in favs) Icons.Default.Star else Icons.Default.StarBorder, "مفضلة", tint = if (s.id in favs) Gold else MaterialTheme.colorScheme.outline)

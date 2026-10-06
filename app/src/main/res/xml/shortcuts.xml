@@ -39,4 +39,17 @@
             <extra android:name="route" android:value="fitness" />
         </intent>
     </shortcut>
+    <shortcut
+        android:shortcutId="sos"
+        android:enabled="true"
+        android:icon="@drawable/ic_sc_sos"
+        android:shortcutShortLabel="@string/sc_sos"
+        android:shortcutLongLabel="@string/sc_sos">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.mohamed.safi"
+            android:targetClass="com.mohamed.safi.MainActivity">
+            <extra android:name="route" android:value="sos" />
+        </intent>
+    </shortcut>
 </shortcuts>

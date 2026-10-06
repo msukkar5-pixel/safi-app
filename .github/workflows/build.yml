@@ -61,7 +61,9 @@ jobs:
           ls -la app/src/main/assets app/src/main/assets/fonts app/src/main/assets/hadith
 
       - name: Check live streams (radio / TV)
-        run: python3 tools/check_streams.py app/src/main/assets/media --prune || true
+        run: |
+          python3 tools/radios.py app/src/main/assets/media || true
+          python3 tools/check_streams.py app/src/main/assets/media --prune || true
 
       - name: Build
         run: |

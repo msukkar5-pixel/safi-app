@@ -42,6 +42,7 @@ fun AudiobooksScreen(onBack: () -> Unit) {
     var tab by remember { mutableIntStateOf(if (Library.shelf.isEmpty()) 1 else 0) }
     var q by remember { mutableStateOf("") }
     var lang by remember { mutableStateOf("ara") }
+    var topic by remember { mutableStateOf("islamic") }
     var page by remember { mutableIntStateOf(1) }
     var results by remember { mutableStateOf<List<AudioBook>>(emptyList()) }
     var total by remember { mutableIntStateOf(0) }
@@ -49,36 +50,43 @@ fun AudiobooksScreen(onBack: () -> Unit) {
     var err by remember { mutableStateOf<String?>(null) }
     var shelf by remember { mutableStateOf(Library.shelf) }
 
-    LaunchedEffect(tab, q, lang, page) {
+    LaunchedEffect(tab, q, lang, page, topic) {
         if (tab == 0) return@LaunchedEffect
         delay(400); loading = true; err = null
-        runCatching { Library.search("archive", q, lang, page) }
+        runCatching { Library.search("archive", q, lang, page, topic) }
             .onSuccess { (l, n) -> results = if (page == 1) l else results + l; total = n }
             .onFailure { err = it.message ?: "مفيش نت؟" }
         loading = false
     }
 
-    ScreenScaffold("الكتب الإسلامية المسموعة", onBack = onBack) { pad ->
+    ScreenScaffold("الكتب المسموعة", onBack = onBack) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
             TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
                 Tab(tab == 0, { tab = 0; shelf = Library.shelf }, text = { Text("مكتبتي") })
-                Tab(tab == 1, { tab = 1; page = 1 }, text = { Text("الكتب الإسلامية") })
+                Tab(tab == 1, { tab = 1; page = 1 }, text = { Text("تصفّح الكتب") })
             }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (tab == 0) {
-                    if (shelf.isEmpty()) item { EmptyState(Icons.Default.Headphones, "لسه مفيش كتب في مكتبتك. افتح «الكتب الإسلامية» واختار كتاب.") }
+                    if (shelf.isEmpty()) item { EmptyState(Icons.Default.Headphones, "لسه مفيش كتب في مكتبتك. افتح «تصفّح الكتب» واختار كتاب.") }
                     items(shelf, key = { "s" + it.id }) { bk ->
                         val p = Library.progress(bk.id)
                         BookRow(bk, if (p != null) "وقفت عند الفصل ${p.first + 1}" else null) { book = bk }
                     }
                     item {
-                        Text("كتب إسلامية بس (سيرة، أنبياء، صحابة، تفسير، حديث، فقه…) بلغات كتير، بتتشغّل من أرشيف الإنترنت. القرآن المسموع ليه قسم لوحده.",
+                        Text("كتب إسلامية وكتب نافعة في التاريخ وتطوير الذات والأسرة والصحة والعلوم وقصص الأطفال، بلغات كتير من أرشيف الإنترنت. أي كتاب فيه إلحاد أو طعن في الدين أو كتب أديان وفرق أخرى أو سحر أو روايات غرامية بيتشال تلقائياً. القرآن المسموع ليه قسم لوحده.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                     }
                 } else {
                     item {
                         OutlinedTextField(q, { q = it; page = 1 }, placeholder = { Text("اسم كتاب أو مؤلف أو موضوع") }, singleLine = true,
                             leadingIcon = { Icon(Icons.Default.Search, null) }, modifier = Modifier.fillMaxWidth())
+                    }
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(Library.topics.entries.toList()) { (k, name) ->
+                                FilterChip(topic == k, { topic = k; page = 1 }, label = { Text(name) })
+                            }
+                        }
                     }
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -89,7 +97,7 @@ fun AudiobooksScreen(onBack: () -> Unit) {
                     }
                     item {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(Library.suggestions[if (lang == "ara") "ara" else ""] ?: emptyList()) { s ->
+                            items(if (topic != "islamic") emptyList() else Library.suggestions[if (lang == "ara") "ara" else ""] ?: emptyList()) { s ->
                                 AssistChip(onClick = { q = if (q == s) "" else s; page = 1 }, label = { Text(s) },
                                     colors = if (q == s) AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.secondaryContainer) else AssistChipDefaults.assistChipColors())
                             }

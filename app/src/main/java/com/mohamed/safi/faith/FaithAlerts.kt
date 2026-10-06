@@ -62,8 +62,14 @@ object FaithAlerts {
     var preMin: Int get() = sp().getInt("pre_min", 15); set(v) = sp().edit { putInt("pre_min", v) }
     var prePrayers: Set<String> get() = sp().getStringSet("pre_set", PRAYERS.toSet()) ?: PRAYERS.toSet(); set(v) = sp().edit { putStringSet("pre_set", v) }
 
+    // ---- Ramadan: suhoor before Fajr and iftar before Maghrib (only on Ramadan days)
+    var suhoorOn: Boolean get() = sp().getBoolean("suhoor_on", false); set(v) = sp().edit { putBoolean("suhoor_on", v) }
+    var suhoorMin: Int get() = sp().getInt("suhoor_min", 45); set(v) = sp().edit { putInt("suhoor_min", v) }
+    var iftarOn: Boolean get() = sp().getBoolean("iftar_on", false); set(v) = sp().edit { putBoolean("iftar_on", v) }
+    var iftarMin: Int get() = sp().getInt("iftar_min", 15); set(v) = sp().edit { putInt("iftar_min", v) }
+
     // ---------------------------------------------------------------- scheduling
-    private val ids = listOf("morning", "evening", "sleep", "after", "wird", "wird_last", "pre")
+    private val ids = listOf("morning", "evening", "sleep", "after", "wird", "wird_last", "pre", "suhoor", "iftar")
     private fun code(id: String) = 8_900_000 + ids.indexOf(id)
 
     private fun prayerTimes(d: LocalDate): Map<String, LocalDateTime> = Prayer.compute(d).times.toMap()
@@ -87,8 +93,21 @@ object FaithAlerts {
             "wird" -> if (wirdOn) daily(wirdTime) to "" else null
             "wird_last" -> if (wirdOn && wirdLastOn) daily(wirdLastTime) to "" else null
             "pre" -> if (preOn && prePrayers.isNotEmpty()) relative(prePrayers, -preMin.toLong()) else null
+            "suhoor" -> if (suhoorOn) inRamadan("الفجر", -suhoorMin.toLong(), now) else null
+            "iftar" -> if (iftarOn) inRamadan("المغرب", -iftarMin.toLong(), now) else null
             else -> null
         }
+    }
+
+    /** The next [prayer] time shifted by [minutes], on a Ramadan day only. */
+    private fun inRamadan(prayer: String, minutes: Long, now: LocalDateTime): Pair<LocalDateTime, String>? {
+        for (off in 0L..400L) {
+            val d = now.toLocalDate().plusDays(off)
+            if (!Ramadan.isRamadan(d)) continue
+            val t = prayerTimes(d)[prayer]?.plusMinutes(minutes) ?: continue
+            if (t.isAfter(now)) return t to prayer
+        }
+        return null
     }
 
     private fun pi(ctx: Context, id: String, label: String = ""): PendingIntent =
@@ -148,6 +167,8 @@ object FaithAlerts {
                     actions = listOf(NotificationCompat.Action(R.drawable.ic_notify, com.mohamed.safi.ui.tr("قريته ✓"), done)),
                 )
             }
+            "suhoor" -> Notifier.show(ctx, code(id), Notifier.CH_PRAYER, "🍽️ وقت السحور", "الفجر بعد $suhoorMin دقيقة. تسحّر وانوِ الصيام", route = "ramadan")
+            "iftar" -> Notifier.show(ctx, code(id), Notifier.CH_PRAYER, "🌙 الفطار قرّب", "المغرب بعد $iftarMin دقيقة. وقت دعاء، وجهّز فطارك", route = "ramadan")
             "pre" -> Notifier.show(ctx, code(id), Notifier.CH_PRAYER, "🕌 صلاة ${label.ifBlank { "الجاية" }} بعد $preMin دقيقة", "استعد للصلاة واتوضّى", route = "prayer")
         }
     }
