@@ -209,6 +209,7 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"remember_memory","category":"tone|routine|goal|like|avoid|support|general","value":"the explicit fact the user asked you to remember"}
 - {"type":"forget_memory","id_or_category":"memory id or category"}
 - {"type":"set_brief","enabled":true,"hour":8}   (turn the optional morning brief on/off; hour 5-11)
+- {"type":"set_alert_policy","support_enabled":true,"voice_enabled":true,"quiet_from":22,"quiet_until":7,"cooldown_minutes":10}   (all optional; -1 disables quiet hours)
 
 Rules:
 - For navigate / play_music / open_app / call / whatsapp: just do it, reply in a few words. You cannot pick a contact by name: if he says "كلم أحمد" without a number, ask for the number.
@@ -222,6 +223,7 @@ Rules:
 - Never claim to hear, monitor, or share family conversations. The companion only uses data the user explicitly gives it inside the app.
 - FAMILY SHARED CARDS and STUDY records are user-controlled app data, not surveillance. Never infer private conversations, emotions, location, or wrongdoing from them; mention only the fields present.
 - The morning brief is opt-in and notification-based; never imply background listening or monitoring.
+- Respect the saved alert policy: do not suggest speaking or showing automatic spiritual support during quiet hours, and do not promise more frequent alerts than the saved cooldown.
 - If VERIFIED SPIRITUAL SUPPORT is present and the user explicitly describes distress, anger, fear, grief, guilt, gratitude, or sleep, offer the most relevant quoted item gently. Keep the source exactly as provided; if no item is present, say you do not have a verified match instead of inventing one.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
@@ -572,6 +574,22 @@ Rules:
                         if (a.has("hour")) prefs.briefHour = a.optInt("hour", prefs.briefHour).coerceIn(5, 11)
                         com.mohamed.safi.notify.DailyWorker.schedule(ctx, replace = true)
                         done += if (prefs.briefOn) "✓ الموجز الصباحي اتفعل الساعة ${prefs.briefHour}" else "✓ الموجز الصباحي اتقفل"
+                    }
+                    "set_alert_policy" -> {
+                        val quietFrom = if (a.has("quiet_from")) a.optInt("quiet_from").takeIf { it in -1..23 } else null
+                        val quietUntil = if (a.has("quiet_until")) a.optInt("quiet_until").takeIf { it in -1..23 } else null
+                        val cooldown = if (a.has("cooldown_minutes")) a.optInt("cooldown_minutes").takeIf { it in 1..120 } else null
+                        CompanionProfile.setAlertPolicy(
+                            supportOn = if (a.has("support_enabled")) a.optBoolean("support_enabled") else null,
+                            voiceOn = if (a.has("voice_enabled")) a.optBoolean("voice_enabled") else null,
+                            quietFrom = quietFrom, quietUntil = quietUntil, cooldownMinutes = cooldown,
+                        )
+                        val p = CompanionProfile.alertPolicy()
+                        if (!p.voiceOn) {
+                            SafiApp.prefs.emotionVoiceOn = false
+                            com.mohamed.safi.ai.EmotionVoiceService.stop(ctx)
+                        }
+                        done += "✓ ظبطت سياسة التنبيهات: ${if (p.supportOn) "الدعم شغال" else "الدعم مقفول"}، الهدوء ${p.quietFrom}:${p.quietUntil}"
                     }
                     "carpool_set", "carpool_off" -> {
                         val d = runCatching { LocalDate.parse(a.str("date").take(10)) }.getOrNull() ?: return@runCatching

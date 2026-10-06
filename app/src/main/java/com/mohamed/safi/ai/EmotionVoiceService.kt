@@ -28,7 +28,6 @@ import kotlin.math.sqrt
 class EmotionVoiceService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var recorder: AudioRecord? = null
-    private var lastSupportAt = 0L
     private var loudWindows = 0
 
     override fun onCreate() {
@@ -88,9 +87,9 @@ class EmotionVoiceService : Service() {
 
     private suspend fun triggerSupport() {
         val now = System.currentTimeMillis()
-        if (now - lastSupportAt < COOLDOWN_MS) return
-        lastSupportAt = now
+        if (!CompanionProfile.autoSupportAllowed("voice", now)) return
         val guidance = runCatching { SituationSupport.forMessage("صوت مرتفع، غضب وانفعال") }.getOrNull() ?: return
+        CompanionProfile.recordAutoSupport("voice", now)
         val text = SituationSupport.spokenGuidance(guidance)
         Speaker.init(this)
         Speaker.say(text)
@@ -109,7 +108,6 @@ class EmotionVoiceService : Service() {
 
     companion object {
         private const val NOTIF_ID = 48_200
-        private const val COOLDOWN_MS = 10 * 60 * 1000L
         fun start(ctx: Context) {
             if (!SafiApp.prefs.emotionVoiceOn) return
             if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) return

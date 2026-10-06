@@ -142,7 +142,8 @@ object Brief {
         if (prefs.lastBriefDay == today) return
         prefs.lastBriefDay = today
 
-        val lines = todayLines()
+        val allLines = todayLines()
+        val lines = if (com.mohamed.safi.ai.CompanionProfile.prefersConciseAlerts()) allLines.take(6) else allLines
         if (lines.isNotEmpty()) {
             Notifier.show(
                 ctx, 501, Notifier.CH_DAILY,
