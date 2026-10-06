@@ -191,6 +191,13 @@ fun AppRoot() {
     LaunchedEffect(pendingShare) {
         val text = pendingShare ?: return@LaunchedEffect
         UiBus.pendingShare.value = null
+        // an encrypted update from a family member, shared from WhatsApp or any app
+        if (text.contains(com.mohamed.safi.family.Family.PREFIX)) {
+            val from = com.mohamed.safi.family.Family.importCard(text.substring(text.indexOf(com.mohamed.safi.family.Family.PREFIX)).lineSequence().first())
+            toast(ctx, if (from != null) "وصل تحديث من $from" else "التحديث ده مش لعيلتك أو انضم للعيلة الأول")
+            runCatching { go(nav, "family") }
+            return@LaunchedEffect
+        }
         val res = withContext(Dispatchers.IO) { com.mohamed.safi.sms.SmsProcessor.processText(ctx, text) }
         if (res.added.isNotEmpty()) {
             val e = res.added.first()
@@ -304,6 +311,7 @@ fun AppRoot() {
             composable("tv") { TvScreen(back) }
             composable("kids") { KidsScreen(back, open) }
             composable("ramadan") { RamadanScreen(back, open) }
+            composable("family") { FamilyScreen(back) }
             composable("tool/{id}") { e -> DeenToolScreen(e.arguments?.getString("id") ?: "", back) }
         }
     }
