@@ -41,6 +41,8 @@ private val sections = listOf(
     ),
     "المعرفة" to listOf(
         Entry("library", "المكتبة", "الكتب والسير والأحاديث والمسموع", Icons.Default.LocalLibrary, Color(0xFF5D4037)),
+        Entry("ramadan", "رمضان", "اليوم والفطار والسحور والعشر الأواخر", Icons.Default.NightsStay, Color(0xFF3B4C8C)),
+        Entry("kids", "مدينة الخير (الأطفال)", "مهام ونجوم وشجرة الخير وألعاب", Icons.Default.ChildCare, Color(0xFF4FA3D9)),
         Entry("quiz", "مسابقة صافي", "أسئلة دينية وعامة ومراحل", Icons.Default.EmojiEvents, Color(0xFFB8860B)),
     ),
     "حياتي" to listOf(

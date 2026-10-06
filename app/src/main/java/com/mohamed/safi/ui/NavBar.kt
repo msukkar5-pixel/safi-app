@@ -43,6 +43,7 @@ object NavPrefs {
         NavItem("quranaudio", "القرآن المسموع", Icons.Default.Headphones),
         NavItem("radio", "الإذاعات", Icons.Default.Radio),
         NavItem("library", "المكتبة", Icons.Default.LocalLibrary),
+        NavItem("kids", "الأطفال", Icons.Default.ChildCare),
         NavItem("sleep", "قبل النوم", Icons.Default.Bedtime),
         NavItem("fitness", "الصحة", Icons.Default.FitnessCenter),
         NavItem("vehicle", "السيارة", Icons.Default.DirectionsCar),

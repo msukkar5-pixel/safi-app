@@ -302,6 +302,8 @@ fun AppRoot() {
             composable("sleep") { SleepScreen(back, open) }
             composable("radio") { RadioScreen(back) }
             composable("tv") { TvScreen(back) }
+            composable("kids") { KidsScreen(back, open) }
+            composable("ramadan") { RamadanScreen(back, open) }
             composable("tool/{id}") { e -> DeenToolScreen(e.arguments?.getString("id") ?: "", back) }
         }
     }
