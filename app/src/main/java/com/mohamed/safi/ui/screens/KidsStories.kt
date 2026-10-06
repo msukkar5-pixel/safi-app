@@ -183,12 +183,17 @@ fun StoryScene(spec: String, modifier: Modifier = Modifier) {
     val bg = parts[0]
     val figures = remember(spec) { graphemes(parts.getOrElse(1) { "" }) }
     val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "scene")
-    val phase by t.animateFloat(0f, (2 * Math.PI).toFloat(), androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2400, easing = androidx.compose.animation.core.LinearEasing)), label = "bob")
+    val phase: State<Float> = t.animateFloat(
+        initialValue = 0f, targetValue = 6.2832f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2400, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "bob",
+    )
     Box(modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(24.dp))) {
         androidx.compose.foundation.Canvas(Modifier.matchParentSize()) { drawScene(bg) }
         Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 22.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
             figures.forEachIndexed { i, e ->
-                val dy = (kotlin.math.sin(phase + i * 1.3f) * 4f).dp
+                val angle: Float = phase.value + i.toFloat() * 1.3f
+                val dy = (kotlin.math.sin(angle) * 4f).dp
                 RawText(e, fontSize = if (figures.size <= 2) 72.sp else if (figures.size <= 3) 60.sp else 50.sp, modifier = Modifier.offset(y = dy))
             }
         }
