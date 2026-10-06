@@ -206,6 +206,8 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
 - {"type":"remember_preference","topic":"short key such as reply_style or reminder_style","preference":"the user's explicit preference"}
 - {"type":"forget_preference","topic":"the exact saved preference key"}
+- {"type":"remember_memory","category":"tone|routine|goal|like|avoid|support|general","value":"the explicit fact the user asked you to remember"}
+- {"type":"forget_memory","id_or_category":"memory id or category"}
 - {"type":"set_brief","enabled":true,"hour":8}   (turn the optional morning brief on/off; hour 5-11)
 
 Rules:
@@ -216,9 +218,11 @@ Rules:
 - Relative dates ("بكرة", "الخميس الجاي", "آخر الشهر", "كمان ساعتين") must be converted using NOW. If no time given for a reminder, use 09:00.
 - If he says he paid something in cash, method "cash". Guess the best category yourself.
 - When the user explicitly says "افتكر/اتعود/خليك" about how to speak or help, save only that preference with remember_preference. When he says "انسَ/امسح تفضيلي", use forget_preference or clear the named preference; never save private conversation content as a preference.
+- For a personal fact or routine, save it only when the user explicitly asks to remember it; use remember_memory with the smallest useful wording. Never save inferred mood, health, family conversations, contacts, or sensitive secrets.
 - Never claim to hear, monitor, or share family conversations. The companion only uses data the user explicitly gives it inside the app.
 - FAMILY SHARED CARDS and STUDY records are user-controlled app data, not surveillance. Never infer private conversations, emotions, location, or wrongdoing from them; mention only the fields present.
 - The morning brief is opt-in and notification-based; never imply background listening or monitoring.
+- If VERIFIED SPIRITUAL SUPPORT is present and the user explicitly describes distress, anger, fear, grief, guilt, gratitude, or sleep, offer the most relevant quoted item gently. Keep the source exactly as provided; if no item is present, say you do not have a verified match instead of inventing one.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
 - If something essential is missing (e.g. amount), ask briefly and don't add the action.
@@ -268,7 +272,9 @@ Rules:
             }
             flush()
 
-            val system = SYSTEM + "\n\n=== USER DATA ===\n" + context()
+            val support = runCatching { com.mohamed.safi.faith.SituationSupport.forMessage(userText) }.getOrNull()
+            val system = SYSTEM + "\n\n=== USER DATA ===\n" + context() +
+                (support?.let { "\n\n=== VERIFIED SPIRITUAL SUPPORT ===\n" + com.mohamed.safi.faith.SituationSupport.prompt(it) } ?: "")
             val raw = Claude.call(system, msgs, SafiApp.prefs.model, 4096, json = true)
             val json = Claude.extractJson(raw)
             val reply = json?.optString("reply")?.trim()?.takeIf { it.isNotBlank() && it != "null" }
@@ -548,6 +554,17 @@ Rules:
                             CompanionProfile.forget(topic)
                             done += "✓ نسيت تفضيل: $topic"
                         }
+                    }
+                    "remember_memory" -> {
+                        val m = CompanionProfile.rememberMemory(a.str("category"), a.str("value"))
+                        if (m != null) done += "✓ حفظت في ملفك الشخصي: [${m.category}] ${m.value}"
+                    }
+                    "forget_memory" -> {
+                        val target = a.str("id_or_category")
+                        val removed = if (target.equals("all", true) || target == "الكل") {
+                            CompanionProfile.clear(); 1
+                        } else CompanionProfile.forgetMemory(target)
+                        if (removed > 0) done += "✓ اتمسحت الذاكرة المطلوبة" else done += "✗ ملقتش الذاكرة دي"
                     }
                     "set_brief" -> {
                         prefs.briefOn = a.optBoolean("enabled", true)

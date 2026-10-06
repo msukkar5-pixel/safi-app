@@ -437,15 +437,27 @@ private fun SttKeyBox() {
 private fun CompanionMemoryCard() {
     val ctx = LocalContext.current
     var snapshot by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.snapshot()) }
+    var memories by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.memories()) }
     AppCard {
         Text("رفيق يتعلم تفضيلاتك أنت فقط، وليس محادثاتك أو أصواتك.", fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
         Text("المحفوظ حاليًا:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
         Text(snapshot, style = MaterialTheme.typography.bodySmall)
+        memories.forEach { memory ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("[${memory.category}] ${memory.value}", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = {
+                    com.mohamed.safi.ai.CompanionProfile.forgetMemory(memory.id)
+                    memories = com.mohamed.safi.ai.CompanionProfile.memories()
+                    snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+                }) { Text("امسح") }
+            }
+        }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = {
             com.mohamed.safi.ai.CompanionProfile.clear()
             snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+            memories = com.mohamed.safi.ai.CompanionProfile.memories()
             toast(ctx, "اتمسحت تفضيلات رفيق فقط")
         }) { Text("امسح ذاكرة رفيق") }
         Text(
