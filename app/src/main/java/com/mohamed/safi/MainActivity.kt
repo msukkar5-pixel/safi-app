@@ -295,6 +295,7 @@ fun AppRoot() {
             composable("familylists") { FamilyListsScreen(back, open) }
             composable("mosques") { MosquesScreen(back) }
             composable("sos") { SosScreen(back) }
+            composable("dictionary") { DictionaryScreen(back, open) }
             composable("kidsetup") { KidSetupScreen(back) { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
             composable("expenses") { ExpensesScreen() }

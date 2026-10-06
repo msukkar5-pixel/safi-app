@@ -42,6 +42,7 @@ private val sections = listOf(
         Entry("shaarawy", "الشيخ الشعراوي", "خواطر بالسورة والموضوع", Icons.Default.VideoLibrary, Color(0xFFC62828)),
     ),
     "المعرفة" to listOf(
+        Entry("dictionary", "القاموس", "عربي ↔ إنجليزي ومعاني الكلمات من المعاجم", Icons.Default.Translate, Color(0xFF6D4C41)),
         Entry("library", "المكتبة", "الكتب والسير والأحاديث والمسموع", Icons.Default.LocalLibrary, Color(0xFF5D4037)),
         Entry("ramadan", "رمضان", "اليوم والفطار والسحور والعشر الأواخر", Icons.Default.NightsStay, Color(0xFF3B4C8C)),
         Entry("kids", "مدينة الخير (الأطفال)", "مهام ونجوم وشجرة الخير وألعاب", Icons.Default.ChildCare, Color(0xFF4FA3D9)),
