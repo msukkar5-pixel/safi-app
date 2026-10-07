@@ -1,1 +1,1052 @@
-[]
+[
+{
+"id": "mp3q_10902",
+"name": "آيات السكينة",
+"url": "https://backup.qurango.net/radio/sakeenah",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_4",
+"name": "أحمد الحواشي",
+"url": "https://backup.qurango.net/radio/ahmad_alhawashi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_100",
+"name": "أحمد الطرابلسي",
+"url": "https://qurango.net/radio/ahmed_altrabulsi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_3",
+"name": "أحمد العجمي",
+"url": "https://qurango.net/radio/ahmad_alajmy",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_99",
+"name": "أحمد خضر الطرابلسي",
+"url": "https://backup.qurango.net/radio/ahmad_khader_altarabulsi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_120",
+"name": "أحمد خليل شاهين",
+"url": "https://backup.qurango.net/radio/ahmad_shaheen",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_265",
+"name": "أحمد ديبان",
+"url": "https://backup.qurango.net/radio/ahmad_deban",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_5",
+"name": "أحمد صابر",
+"url": "https://backup.qurango.net/radio/ahmad_saber",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109075",
+"name": "أحمد طالب بن حميد",
+"url": "https://backup.qurango.net/radio/a_binhameed",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_102",
+"name": "أحمد عامر",
+"url": "https://qurango.net/radio/ahmed_amer",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_6",
+"name": "أحمد نعينع",
+"url": "https://backup.qurango.net/radio/ahmad_nauina",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_274",
+"name": "أذاعة محمد أبوسنينة",
+"url": "https://backup.qurango.net/radio/sneineh",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_10906",
+"name": "أذكار الصباح",
+"url": "https://backup.qurango.net/radio/athkar_sabah",
+"group": "الأذكار"
+},
+{
+"id": "mp3q_10907",
+"name": "أذكار المساء",
+"url": "https://backup.qurango.net/radio/athkar_masa",
+"group": "الأذكار"
+},
+{
+"id": "mp3q_7",
+"name": "أكرم العلاقمي",
+"url": "https://backup.qurango.net/radio/akram_alalaqmi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_1",
+"name": "إبراهيم الأخضر",
+"url": "https://backup.qurango.net/radio/ibrahim_alakdar",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_8",
+"name": "إدريس أبكر",
+"url": "https://qurango.net/radio/idrees_abkr",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109082",
+"name": "إذاعة القرآن الكريم - السعودية",
+"url": "https://stream.radiojar.com/0tpy1h0kxtzuv",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_91",
+"name": "ابراهيم الدوسري",
+"url": "https://backup.qurango.net/radio/ibrahim_aldosari",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_104",
+"name": "الدوكالي محمد العالم",
+"url": "https://backup.qurango.net/radio/addokali_mohammad_alalim",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_114",
+"name": "الرقية الشرعية",
+"url": "https://backup.qurango.net/radio/roqiah",
+"group": "الرقية"
+},
+{
+"id": "mp3q_9",
+"name": "الزين محمد أحمد",
+"url": "https://backup.qurango.net/radio/alzain_mohammad_ahmad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109083",
+"name": "الشمائل المحمدية",
+"url": "https://backup.qurango.net/radio/shmaeel",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_108",
+"name": "العامة - متنوعة لمختلف القراء",
+"url": "https://backup.qurango.net/radio/mix",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_11",
+"name": "العيون الكوشي",
+"url": "https://backup.qurango.net/radio/aloyoon_alkoshi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_106",
+"name": "الفاتح محمد الزبير",
+"url": "https://qurango.net/radio/alfateh_alzubair",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_113",
+"name": "الفتاوى العامة",
+"url": "https://backup.qurango.net/radio/fatwa",
+"group": "سيرة وفتاوى"
+},
+{
+"id": "mp3q_10",
+"name": "القارئ ياسين",
+"url": "https://backup.qurango.net/radio/alqaria_yassen",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_21115",
+"name": "المختصر في السيرة النبوية",
+"url": "https://qurango.net/radio/almukhtasar_fi_alsiyra",
+"group": "سيرة وفتاوى"
+},
+{
+"id": "mp3q_10904",
+"name": "المختصر في تفسير القرآن الكريم",
+"url": "https://qurango.net/radio/mukhtasartafsir",
+"group": "التفسير"
+},
+{
+"id": "mp3q_109077",
+"name": "بدر التركي",
+"url": "https://backup.qurango.net/radio/bader",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_217",
+"name": "بندر بليلة",
+"url": "https://backup.qurango.net/radio/bandar_balilah",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_123",
+"name": "تراتيل قصيرة متميزة-",
+"url": "https://backup.qurango.net/radio/tarateel",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109040",
+"name": "ترجمة معاني القرآن باللغة الأسبانية",
+"url": "https://backup.qurango.net/radio/translation_quran_spanish_afs",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109041",
+"name": "ترجمة معاني القرآن باللغة الألبانية",
+"url": "https://backup.qurango.net/radio/translation_quran_albanian",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109042",
+"name": "ترجمة معاني القرآن باللغة الألمانية",
+"url": "https://backup.qurango.net/radio/translation_quran_german",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109043",
+"name": "ترجمة معاني القرآن باللغة الأمازيغية",
+"url": "https://backup.qurango.net/radio/translation_quran_tamazight",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109044",
+"name": "ترجمة معاني القرآن باللغة الأوردية",
+"url": "https://backup.qurango.net/radio/translation_quran_urdu_sds_shur",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109045",
+"name": "ترجمة معاني القرآن باللغة الأوردية",
+"url": "https://backup.qurango.net/radio/translation_quran_urdu_minsh",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109039",
+"name": "ترجمة معاني القرآن باللغة الأوردية - عبدالباسط عبدالصمد",
+"url": "https://backup.qurango.net/radio/translation_quran_urdu_basit",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109046",
+"name": "ترجمة معاني القرآن باللغة الإنجليزية",
+"url": "https://backup.qurango.net/radio/translation_quran_english_basit",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109047",
+"name": "ترجمة معاني القرآن باللغة الإنجليزية",
+"url": "https://backup.qurango.net/radio/translation_quran_english_bsfr",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109048",
+"name": "ترجمة معاني القرآن باللغة الإنجليزية -ترجمة والك-",
+"url": "https://backup.qurango.net/radio/translation_quran_english_walk_basit",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109049",
+"name": "ترجمة معاني القرآن باللغة البرتغالية",
+"url": "https://backup.qurango.net/radio/translation_quran_portuguese",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109050",
+"name": "ترجمة معاني القرآن باللغة البوسنية",
+"url": "https://qurango.net/radio/translation_quran_bosnia",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109051",
+"name": "ترجمة معاني القرآن باللغة التركية",
+"url": "https://backup.qurango.net/radio/translation_quran_turkish",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109052",
+"name": "ترجمة معاني القرآن باللغة الروسية",
+"url": "https://backup.qurango.net/radio/translation_quran_Russia",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109053",
+"name": "ترجمة معاني القرآن باللغة الصينية",
+"url": "https://backup.qurango.net/radio/translation_quran_chinese",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109054",
+"name": "ترجمة معاني القرآن باللغة الفارسية",
+"url": "https://backup.qurango.net/radio/translation_quran_farsi",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109055",
+"name": "ترجمة معاني القرآن باللغة الفرنسية",
+"url": "https://backup.qurango.net/radio/translation_quran_french",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109056",
+"name": "ترجمة معاني القرآن باللغة الكردية",
+"url": "https://backup.qurango.net/radio/translation_quran_kurdish",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109057",
+"name": "ترجمة معاني القرآن باللغة الكورية",
+"url": "https://qurango.net/radio/translation_quran_Korean",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109058",
+"name": "ترجمة معاني القرآن باللغة المجرية",
+"url": "https://backup.qurango.net/radio/translation_quran_hungarian",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109062",
+"name": "ترجمة معاني القرآن باللغة الهوسا",
+"url": "https://backup.qurango.net/radio/Translation_Quran_Hausa",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_109059",
+"name": "ترجمة معاني القرآن باللغة اليونانية",
+"url": "https://backup.qurango.net/radio/translation_quran_greek",
+"group": "ترجمات"
+},
+{
+"id": "mp3q_116",
+"name": "تفسير القران الكريم--",
+"url": "https://backup.qurango.net/radio/tafseer",
+"group": "التفسير"
+},
+{
+"id": "mp3q_21117",
+"name": "تفسير القران الكريم-الخلاصة من تفسير الطبري",
+"url": "https://qurango.net/radio/tabri",
+"group": "التفسير"
+},
+{
+"id": "mp3q_109076",
+"name": "تفسير غريب القرآن",
+"url": "https://backup.qurango.net/radio/gareeb-quran",
+"group": "التفسير"
+},
+{
+"id": "mp3q_110",
+"name": "تكبيرات العيد",
+"url": "https://backup.qurango.net/radio/eid",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109",
+"name": "تلاوات خاشعة-",
+"url": "https://backup.qurango.net/radio/salma",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_12",
+"name": "توفيق الصايغ",
+"url": "https://qurango.net/radio/tawfeeq_assayegh",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_13",
+"name": "جمال شاكر عبدالله",
+"url": "https://qurango.net/radio/jamal_shaker_abdullah",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_93",
+"name": "جمعان العصيمي",
+"url": "https://backup.qurango.net/radio/jamaan_alosaimi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_89",
+"name": "حاتم فريد الواعر",
+"url": "https://backup.qurango.net/radio/hatem_fareed_alwaer",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_117",
+"name": "خالد الجليل",
+"url": "https://qurango.net/radio/khalid_aljileel",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_14",
+"name": "خالد القحطاني",
+"url": "https://backup.qurango.net/radio/khaled_alqahtani",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_86",
+"name": "خالد المهنا",
+"url": "https://backup.qurango.net/radio/khalid_almohana",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_15",
+"name": "خالد عبدالكافي",
+"url": "https://backup.qurango.net/radio/khalid_abdulkafi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_16",
+"name": "خليفة الطنيجي",
+"url": "https://backup.qurango.net/radio/khalifa_altunaiji",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109073",
+"name": "رياض الصالحين",
+"url": "https://backup.qurango.net/radio/riyad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_20",
+"name": "زكي داغستاني",
+"url": "https://backup.qurango.net/radio/zaki_daghistani",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_17",
+"name": "سعد الغامدي",
+"url": "https://backup.qurango.net/radio/saad_alghamdi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_18",
+"name": "سعود الشريم",
+"url": "https://backup.qurango.net/radio/saud_alshuraim",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_19",
+"name": "سهل ياسين",
+"url": "https://backup.qurango.net/radio/sahl_yassin",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_115",
+"name": "سورة البقرة - لعدد من القراء---",
+"url": "https://qurango.net/radio/albaqarah",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109060",
+"name": "سورة الملك",
+"url": "https://backup.qurango.net/radio/Surah_Al-Mulk",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_21",
+"name": "سيد رمضان",
+"url": "https://backup.qurango.net/radio/sayeed_ramadan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_2",
+"name": "شيخ أبو بكر الشاطري",
+"url": "https://backup.qurango.net/radio/shaik_abu_bakr_al_shatri",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_22",
+"name": "شيرزاد عبدالرحمن طاهر",
+"url": "https://backup.qurango.net/radio/shirazad_taher",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_23",
+"name": "صابر عبدالحكم",
+"url": "https://backup.qurango.net/radio/saber_abdulhakm",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109038",
+"name": "صالح الهبدان",
+"url": "https://qurango.net/radio/saleh_alhabdan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109067",
+"name": "صحيح البخاري",
+"url": "https://backup.qurango.net/radio/saheh-bokharee",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109066",
+"name": "صحيح مسلم",
+"url": "https://backup.qurango.net/radio/saheh-muslim",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_24",
+"name": "صلاح البدير",
+"url": "https://backup.qurango.net/radio/salah_albudair",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_25",
+"name": "صلاح الهاشم",
+"url": "https://qurango.net/radio/salah_alhashim",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_26",
+"name": "صلاح بو خاطر",
+"url": "https://backup.qurango.net/radio/slaah_bukhatir",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_10903",
+"name": "صور من حياة الصحابة والتابعين رضوان الله عليهم---",
+"url": "https://backup.qurango.net/radio/sahabah",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_107",
+"name": "طارق عبدالغني دعوب",
+"url": "https://backup.qurango.net/radio/tareq_abdulgani_daawob",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_87",
+"name": "عادل الكلباني",
+"url": "https://backup.qurango.net/radio/adel_alkhalbany",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_27",
+"name": "عادل ريان",
+"url": "https://backup.qurango.net/radio/adel_ryyan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_28",
+"name": "عبدالبارئ الثبيتي",
+"url": "https://qurango.net/radio/abdelbari_altoubayti",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_29",
+"name": "عبدالبارئ محمد",
+"url": "https://qurango.net/radio/abdulbari_mohammad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_30",
+"name": "عبدالباسط عبدالصمد",
+"url": "https://qurango.net/radio/abdulbasit_abdulsamad_mojawwad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_31",
+"name": "عبدالباسط عبدالصمد",
+"url": "https://qurango.net/radio/abdulbasit_abdulsamad_warsh",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_32",
+"name": "عبدالباسط عبدالصمد",
+"url": "https://backup.qurango.net/radio/abdulbasit_abdulsamad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_33",
+"name": "عبدالرحمن السديس",
+"url": "https://qurango.net/radio/abdulrahman_alsudaes",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_287",
+"name": "عبدالرحمن الشحات",
+"url": "https://backup.qurango.net/radio/a_alshahhat",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_111",
+"name": "عبدالرحمن الماجد",
+"url": "https://backup.qurango.net/radio/abdulrahman_almajed",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_39",
+"name": "عبدالرشيد صوفي",
+"url": "https://backup.qurango.net/radio/abdulrasheed_soufi_khalaf",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_40",
+"name": "عبدالرشيد صوفي",
+"url": "https://qurango.net/radio/abdulrasheed_soufi_assosi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_34",
+"name": "عبدالعزيز الأحمد",
+"url": "https://backup.qurango.net/radio/abdul_aziz_alahmad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_307",
+"name": "عبدالعزيز سحيم",
+"url": "https://backup.qurango.net/radio/a_sheim",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109074",
+"name": "عبدالله البعيجان",
+"url": "https://qurango.net/radio/buajan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_122",
+"name": "عبدالله الخلف",
+"url": "https://backup.qurango.net/radio/abdullah_alkhalaf",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_101",
+"name": "عبدالله الكندري",
+"url": "https://backup.qurango.net/radio/abdullah_alkandari",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_35",
+"name": "عبدالله المطرود",
+"url": "https://qurango.net/radio/abdullah_almattrod",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_121",
+"name": "عبدالله الموسى",
+"url": "https://backup.qurango.net/radio/abdullah_almousa",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_36",
+"name": "عبدالله بصفر",
+"url": "https://qurango.net/radio/abdullah_basfer",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_37",
+"name": "عبدالله خياط",
+"url": "https://backup.qurango.net/radio/abdullah_khayyat",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_38",
+"name": "عبدالله عواد الجهني",
+"url": "https://qurango.net/radio/abdullah_aljohany",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_41",
+"name": "عبدالمحسن الحارثي",
+"url": "https://backup.qurango.net/radio/abdulmohsin_alharthy",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_43",
+"name": "عبدالمحسن العبيكان",
+"url": "https://backup.qurango.net/radio/abdulmohsin_alobaikan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_42",
+"name": "عبدالمحسن القاسم",
+"url": "https://backup.qurango.net/radio/abdulmohsen_alqasim",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_44",
+"name": "عبدالهادي أحمد كناكري",
+"url": "https://backup.qurango.net/radio/abdulhadi_kanakeri",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_45",
+"name": "عبدالودود حنيف",
+"url": "https://qurango.net/radio/abdulwadood_haneef",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_47",
+"name": "علي الحذيفي",
+"url": "https://qurango.net/radio/ali_alhuthaifi_qalon",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_46",
+"name": "علي بن عبدالرحمن الحذيفي",
+"url": "https://qurango.net/radio/ali_alhuthaifi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_48",
+"name": "علي جابر",
+"url": "https://backup.qurango.net/radio/ali_jaber",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_49",
+"name": "علي حجاج السويسي",
+"url": "https://qurango.net/radio/ali_hajjaj_alsouasi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_50",
+"name": "عماد زهير حافظ",
+"url": "https://backup.qurango.net/radio/emad_hafez",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_51",
+"name": "عمر القزابري",
+"url": "https://qurango.net/radio/omar_alqazabri",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_52",
+"name": "فارس عباد",
+"url": "https://backup.qurango.net/radio/fares_abbad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109061",
+"name": "فضل شهر رمضان",
+"url": "https://backup.qurango.net/radio/ramadan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_21114",
+"name": "في ظلال السيرة النبوية - 400 حلقة عن سيرة نبينا محمد صلى الله عليه وسلم",
+"url": "https://backup.qurango.net/radio/fi_zilal_alsiyra",
+"group": "سيرة وفتاوى"
+},
+{
+"id": "mp3q_109069",
+"name": "قصص الأنبياء",
+"url": "https://backup.qurango.net/radio/alanbiya",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_21116",
+"name": "كتاب الاختيارات الفقهية في مسائل العبادات والمعاملات",
+"url": "https://qurango.net/radio/alaikhtiarat_alfiqhayh_bin_baz",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_139",
+"name": "ماجد الزامل",
+"url": "https://backup.qurango.net/radio/majed_alzamel",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_63",
+"name": "ماهر المعيقلي",
+"url": "https://backup.qurango.net/radio/maher",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_84",
+"name": "ماهر شخاشيرو",
+"url": "https://backup.qurango.net/radio/maher_shakhashero",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_66",
+"name": "محمد أيوب",
+"url": "https://qurango.net/radio/mohammed_ayyub",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_261",
+"name": "محمد أيوب - قراءة مميزة-",
+"url": "https://backup.qurango.net/radio/ayyoub2",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_275",
+"name": "محمد الأمين قنيوة",
+"url": "https://backup.qurango.net/radio/qeniwa",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_64",
+"name": "محمد الطبلاوي",
+"url": "https://qurango.net/radio/mohammad_altablaway",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_65",
+"name": "محمد اللحيدان",
+"url": "https://backup.qurango.net/radio/mohammed_allohaidan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_68",
+"name": "محمد جبريل",
+"url": "https://qurango.net/radio/mohammed_jibreel",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_98",
+"name": "محمد رشاد الشريف",
+"url": "https://backup.qurango.net/radio/mohammad_rashad_alshareef",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_67",
+"name": "محمد صالح عالم شاه",
+"url": "https://backup.qurango.net/radio/mohammad_saleh_alim_shah",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_69",
+"name": "محمد صديق المنشاوي",
+"url": "https://backup.qurango.net/radio/mohammed_siddiq_alminshawi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_70",
+"name": "محمد صديق المنشاوي",
+"url": "https://backup.qurango.net/radio/mohammed_siddiq_alminshawi_mojawwad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_72",
+"name": "محمد عبدالحكيم سعيد العبدالله",
+"url": "https://qurango.net/radio/mohammad_alabdullah_albizi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_73",
+"name": "محمد عبدالحكيم سعيد العبدالله",
+"url": "https://qurango.net/radio/mohammad_alabdullah_aldorai",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_71",
+"name": "محمد عبدالكريم",
+"url": "https://qurango.net/radio/mohammad_abdullkarem",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_105",
+"name": "محمد عبدالكريم",
+"url": "https://backup.qurango.net/radio/mohammad_abdullkarem_alasbahani",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_103",
+"name": "محمد عثمان خان",
+"url": "https://backup.qurango.net/radio/mohammed_osman_khan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_90",
+"name": "محمود الرفاعي",
+"url": "https://backup.qurango.net/radio/mahmood_al_rifai",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_85",
+"name": "محمود الشيمي",
+"url": "https://backup.qurango.net/radio/mahmood_alsheimy",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_74",
+"name": "محمود خليل الحصري",
+"url": "https://backup.qurango.net/radio/mahmoud_khalil_alhussary",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_75",
+"name": "محمود خليل الحصري",
+"url": "https://backup.qurango.net/radio/mahmoud_khalil_alhussary_mojawwad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_76",
+"name": "محمود خليل الحصري",
+"url": "https://qurango.net/radio/mahmoud_khalil_alhussary_warsh",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_77",
+"name": "محمود علي البنا",
+"url": "https://backup.qurango.net/radio/mahmoud_ali__albanna",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_78",
+"name": "محمود علي البنا",
+"url": "https://backup.qurango.net/radio/mahmoud_ali__albanna_mojawwad",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_79",
+"name": "مشاري العفاسي",
+"url": "https://backup.qurango.net/radio/mishary_alafasi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_80",
+"name": "مصطفى إسماعيل",
+"url": "https://backup.qurango.net/radio/mustafa_ismail",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_81",
+"name": "مصطفى اللاهوني",
+"url": "https://backup.qurango.net/radio/mustafa_allahoni",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_82",
+"name": "مصطفى رعد العزاوي",
+"url": "https://backup.qurango.net/radio/mustafa_raad_alazawy",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_97",
+"name": "معيض الحارثي",
+"url": "https://qurango.net/radio/moeedh_alharthi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_83",
+"name": "مفتاح السلطني",
+"url": "https://backup.qurango.net/radio/muftah_alsaltany_aldori_an_abi_amr",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_92",
+"name": "مفتاح السلطني",
+"url": "https://qurango.net/radio/muftah_alsaltany_aldorai",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_96",
+"name": "مفتاح السلطني",
+"url": "https://qurango.net/radio/muftah_alsaltany_ibn_thakwan_an_ibn_amr",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_88",
+"name": "موسى بلال",
+"url": "https://backup.qurango.net/radio/mousa_bilal",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_248",
+"name": "ناصر العصفور",
+"url": "https://backup.qurango.net/radio/nasser_alosfor",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_53",
+"name": "ناصر القطامي",
+"url": "https://backup.qurango.net/radio/nasser_alqatami",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_118",
+"name": "ناصر الماجد",
+"url": "https://backup.qurango.net/radio/nasser_almajed",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_54",
+"name": "نبيل الرفاعي",
+"url": "https://backup.qurango.net/radio/nabil_al_rifay",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_55",
+"name": "نعمة الحسان",
+"url": "https://qurango.net/radio/neamah_alhassan",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_56",
+"name": "هاني الرفاعي",
+"url": "https://qurango.net/radio/hani_arrifai",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_109078",
+"name": "هزاع البلوشي",
+"url": "https://backup.qurango.net/radio/hazza",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_119",
+"name": "هيثم الجدعاني",
+"url": "https://backup.qurango.net/radio/hitham_aljadani",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_57",
+"name": "وليد النائحي",
+"url": "https://qurango.net/radio/waleed_alnaehi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_58",
+"name": "ياسر الدوسري",
+"url": "https://qurango.net/radio/yasser_aldosari",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_59",
+"name": "ياسر القرشي",
+"url": "https://qurango.net/radio/yasser_alqurashi",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_60",
+"name": "ياسر المزروعي",
+"url": "https://backup.qurango.net/radio/yasser_almazroyee",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_61",
+"name": "يحيى حوا",
+"url": "https://qurango.net/radio/yahya_hawwa",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_62",
+"name": "يوسف الشويعي",
+"url": "https://qurango.net/radio/yousef_alshoaey",
+"group": "القرّاء"
+},
+{
+"id": "mp3q_95",
+"name": "يوسف بن نوح أحمد",
+"url": "https://backup.qurango.net/radio/yousef_bin_noah_ahmad",
+"group": "القرّاء"
+}
+]

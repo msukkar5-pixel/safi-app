@@ -84,8 +84,14 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.4.1")
     // on-device UI translation for languages the app does not ship (free, offline after a one-time model download)
     implementation("com.google.mlkit:translate:17.0.3")
+    // on-device Arabic/English document text recognition; recognition results remain on the phone
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     // family linking: draw the invite QR (zxing) and scan it with Google's scanner (no camera permission needed)
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("junit:junit:4.13.2")
 }

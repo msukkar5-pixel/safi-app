@@ -59,6 +59,7 @@ object Assistant {
         val debts = dao.openDebtsNow()
         val reminders = dao.activeRemindersNow().filter { it.time < System.currentTimeMillis() + 30L * 86_400_000L }
         val obligations = Obligations.forMonth(ym)
+        val companionPreferences = CompanionProfile.snapshot()
 
         fun byCat(list: List<Expense>) = list.filter { !it.isIncome }.groupBy { it.category }
             .mapValues { e -> e.value.sumOf { it.amountAed } }.entries.sortedByDescending { it.value }
@@ -67,6 +68,8 @@ object Assistant {
         return buildString {
             appendLine("NOW: ${now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm EEEE", java.util.Locale.US))} (${zone.id})")
             appendLine("USER: ${prefs.userName}, lives in UAE, family in Egypt. Default currency AED.")
+            appendLine("COMPANION PREFERENCES (explicitly saved by the user; use gently and only when relevant):")
+            appendLine(companionPreferences)
             appendLine("RATE: 1 AED = ${prefs.egpPerAed} EGP")
             appendLine("EXPENSE CATEGORIES: ${Cats.expense.joinToString(", ")}")
             appendLine("EGYPT TRANSFER CATEGORIES: ${prefs.transferCats.joinToString(", ")}")
@@ -123,14 +126,46 @@ object Assistant {
                 val lessons = x.lessonsNow()
                 if (lessons.isNotEmpty()) appendLine("KIDS LESSONS (EGP/month): " + lessons.joinToString("; ") { "${it.child} ${it.subject} ${it.teacher} ${fmt(it.monthlyFeeEgp)}" })
             }
+            runCatching {
+                val family = com.mohamed.safi.family.Family
+                if (family.joined) {
+                    appendLine("FAMILY SHARED CARDS (only fields each member explicitly enabled; no conversations/audio):")
+                    family.members().forEach { m ->
+                        appendLine("- ${m.name} (${m.role})" + listOfNotNull(
+                            m.status?.takeIf { it.isNotBlank() }?.let { "status=$it" },
+                            m.prayers?.let { "prayers=$it/5" }, m.wird?.let { "wird=$it" },
+                            m.kids?.let { "kids=$it" }, m.city?.let { "city=$it" },
+                        ).joinToString("; ").let { if (it.isBlank()) "" else ": $it" })
+                    }
+                    val familyIds = (family.members().map { it.id } + family.myId).toSet()
+                    val familyEvents = com.mohamed.safi.quiz.Challenge.localUpdates().count { it.participantId in familyIds }
+                    appendLine("FAMILY SHARED CHALLENGE PROGRESS: $familyEvents verified local/imported events")
+                }
+            }
+            runCatching {
+                val students = com.mohamed.safi.study.Study.students()
+                if (students.isNotEmpty()) {
+                    appendLine("STUDY (local family-linked records):")
+                    students.forEach { st ->
+                        val open = com.mohamed.safi.study.Study.openHomework(st.id).take(8)
+                        val exams = com.mohamed.safi.study.Study.exams(st.id).take(5)
+                        val todayLessons = com.mohamed.safi.study.Study.lessonsOn(st.id, LocalDate.now(zone))
+                        appendLine("- ${st.name}: open homework=" + (open.joinToString(", ") { "${it.subject}${if (it.due.isBlank()) "" else " due ${it.due}"}" }.ifBlank { "none" }) +
+                            "; today lessons=" + (todayLessons.joinToString(", ") { "${it.subject} ${it.time}" }.ifBlank { "none" }) +
+                            "; next exams=" + (exams.joinToString(", ") { "${it.subject} ${it.date}" }.ifBlank { "none" }))
+                    }
+                }
+            }
             val today = Brief.todayLines()
             if (today.isNotEmpty()) appendLine("DUE SOON:\n" + today.joinToString("\n"))
         }
     }
 
     private val SYSTEM = """
-You are "${com.mohamed.safi.AppName.v}", the personal assistant inside the user's own Android app. The user (name: ${com.mohamed.safi.SafiApp.prefs.userName.ifBlank { "unknown" }}) is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
+You are "${com.mohamed.safi.AppName.v}", a warm personal companion inside the user's own Android app. The user (name: ${com.mohamed.safi.SafiApp.prefs.userName.ifBlank { "unknown" }}) is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
 Reply in the same language/dialect the user used (Egyptian Arabic by default; English, Hindi, Urdu, French… if he writes in them). Short and direct, warm but no fluff. Use Western digits for numbers.
+Sound natural and human in conversation without claiming to be a human. Be a steady, warm friend: listen first, validate the feeling in one honest sentence, then help with one useful next step only if it is wanted. Do not turn every feeling into a task, sermon, diagnosis, or reminder. Ask at most one clarifying question at a time. Use the user's name sparingly and only when it feels natural.
+Use saved companion memories only when relevant, never invent memories, and never imply that you are watching, listening, or remembering something the user did not explicitly save. If a user shares a recurring feeling, trigger, relationship detail, or comfort preference that could help later, gently ask whether they want you to remember it; use remember_memory ONLY after a clear yes or an explicit "افتكر" request. Categories can include feeling, relationship, comfort, tone, routine, goal, like, avoid, support, and general.
 
 You can read his data (given below) and take actions. ALWAYS answer with ONE JSON object only, no text outside it:
 {"reply": "what you say to Mohamed", "actions": [ ... ]}
@@ -163,13 +198,19 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
 - {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
 - {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
-- {"type":"open_screen","screen":"dictionary|sos|mosques|familylists|hifz|kidstv|study|kidsetup|app_guide|social|family|kids|ramadan|radio|tv|sleep|hisn|manasik|umrah|hajj|ruqyah|quiz|prayertracker|islamiccalendar|asmahusna|alerts|vitals|finance|vehicle|quran|quranaudio|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"open_screen","screen":"search|dictionary|sos|mosques|familylists|hifz|kidstv|study|kidsetup|app_guide|social|family|kids|ramadan|radio|tv|sleep|hisn|manasik|umrah|hajj|ruqyah|quiz|prayertracker|islamiccalendar|asmahusna|alerts|vitals|finance|vehicle|quran|quranaudio|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
 - {"type":"add_diary","text":"the diary text exactly as he said it, cleaned punctuation only","mood":"one emoji or empty"}   (when he says سجّل في مذكراتي / اكتب في المذكرات)
 - {"type":"add_document","title":"","owner":"","expiry":"YYYY-MM-DD"}
 - {"type":"add_medication","name":"","dose":"","times":"08:00, 20:00","with_food":"قبل الأكل|بعد الأكل|مع الأكل|","reason":"","end":"YYYY-MM-DD or empty"}
 - {"type":"wird_done"}   (he finished today's Quran wird)
 - {"type":"shaarawy","query":"surah or topic"}   (open Sheikh Shaarawy videos on YouTube)
 - {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
+- {"type":"remember_preference","topic":"short key such as reply_style or reminder_style","preference":"the user's explicit preference"}
+- {"type":"forget_preference","topic":"the exact saved preference key"}
+- {"type":"remember_memory","category":"tone|routine|goal|like|avoid|support|feeling|relationship|comfort|general","value":"the explicit fact the user asked you to remember"}
+- {"type":"forget_memory","id_or_category":"memory id or category"}
+- {"type":"set_brief","enabled":true,"hour":8}   (turn the optional morning brief on/off; hour 5-11)
+- {"type":"set_alert_policy","support_enabled":true,"voice_enabled":true,"quiet_from":22,"quiet_until":7,"cooldown_minutes":10}   (all optional; -1 disables quiet hours)
 
 Rules:
 - For navigate / play_music / open_app / call / whatsapp: just do it, reply in a few words. You cannot pick a contact by name: if he says "كلم أحمد" without a number, ask for the number.
@@ -178,7 +219,16 @@ Rules:
 - "استلفت من X" = i_owe. "سلفت X" / "X مستلف مني" = owed_to_me. Create a reminder automatically comes with add_debt when there is a due date (the app does it).
 - Relative dates ("بكرة", "الخميس الجاي", "آخر الشهر", "كمان ساعتين") must be converted using NOW. If no time given for a reminder, use 09:00.
 - If he says he paid something in cash, method "cash". Guess the best category yourself.
+- When the user explicitly says "افتكر/اتعود/خليك" about how to speak or help, save only that preference with remember_preference. When he says "انسَ/امسح تفضيلي", use forget_preference or clear the named preference; never save private conversation content as a preference.
+- For a personal fact or routine, save it only when the user explicitly asks to remember it; use remember_memory with the smallest useful wording. Never save inferred mood, health, family conversations, contacts, or sensitive secrets.
+- Never claim to hear, monitor, or share family conversations. The companion only uses data the user explicitly gives it inside the app.
+- FAMILY SHARED CARDS and STUDY records are user-controlled app data, not surveillance. Never infer private conversations, emotions, location, or wrongdoing from them; mention only the fields present.
+- The morning brief is opt-in and notification-based; never imply background listening or monitoring.
+- Respect the saved alert policy: do not suggest speaking or showing automatic spiritual support during quiet hours, and do not promise more frequent alerts than the saved cooldown.
+- If VERIFIED SPIRITUAL SUPPORT is present and the user explicitly describes distress, anger, fear, grief, guilt, gratitude, or sleep, offer the most relevant quoted item gently. Keep the source exactly as provided; if no item is present, say you do not have a verified match instead of inventing one.
+- If VERIFIED SPIRITUAL SUPPORT includes CRISIS SAFETY, prioritize immediate safety: be warm and direct, ask the user to move away from means of harm, not remain alone, and contact a trusted person now. Include {"type":"open_screen","screen":"sos"}. Do not shame, debate, moralize, or leave the user with religious content alone.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
+- For delete_expense, never delete on the first request. State the exact expense and ask for a separate clear confirmation. The app itself will hold the proposed deletion until the user confirms it.
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
 - If something essential is missing (e.g. amount), ask briefly and don't add the action.
 - Confirm what you did in reply in one short line. Never invent data you don't have.
@@ -201,6 +251,33 @@ Rules:
         _busy.value = true
         return try {
             dao.insertChat(ChatMsg(role = "user", text = userText))
+            AssistantApproval.pending()?.let { pending ->
+                when {
+                    AssistantApproval.isConfirm(userText) -> {
+                        val done = execute(ctx, pending.actions)
+                        AssistantApproval.clear()
+                        val reply = if (done.isEmpty()) "ملقتش العملية دي دلوقتي، فمش اتعمل حذف." else "تمام، نفّذت العملية المؤكدة."
+                        dao.insertChat(ChatMsg(role = "assistant", text = reply, actions = done.joinToString("\n")))
+                        return Result(reply, done)
+                    }
+                    AssistantApproval.isCancel(userText) -> {
+                        AssistantApproval.clear()
+                        val reply = "تمام، ألغيت العملية المقترحة ومفيش حاجة اتمسحت."
+                        dao.insertChat(ChatMsg(role = "assistant", text = reply))
+                        return Result(reply, emptyList())
+                    }
+                    else -> AssistantApproval.clear()
+                }
+            }
+            val support = runCatching { com.mohamed.safi.faith.SituationSupport.forMessage(userText) }.getOrNull()
+            val destination = AppGuide.match(userText)
+            if (!Claude.hasKey) {
+                val reply = LocalCompanion.reply(userText)
+                if (destination != null && AppGuide.wantsOpen(userText)) com.mohamed.safi.ui.UiBus.pendingRoute.value = destination.route
+                if (support?.selfHarmSignal == true) com.mohamed.safi.ui.UiBus.pendingRoute.value = "sos"
+                dao.insertChat(ChatMsg(role = "assistant", text = reply))
+                return Result(reply, emptyList())
+            }
 
             // Build alternating history ending with this user message.
             // Past assistant turns are replayed in the JSON shape so the model keeps answering in JSON.
@@ -227,16 +304,47 @@ Rules:
             }
             flush()
 
-            val system = SYSTEM + "\n\n=== USER DATA ===\n" + context()
+            val system = SYSTEM + "\n\n=== USER DATA ===\n" + context() +
+                "\n\n=== APP NAVIGATION AND HOW-TO ===\n" + AppGuide.prompt() +
+                "\nIf the user asks how to use an app feature, explain only verified in-app steps from this list. If they explicitly ask to open/go to a matching section, include open_screen for its route." +
+                (support?.let { "\n\n=== VERIFIED SPIRITUAL SUPPORT ===\n" + com.mohamed.safi.faith.SituationSupport.prompt(it) } ?: "")
             val raw = Claude.call(system, msgs, SafiApp.prefs.model, 4096, json = true)
             val json = Claude.extractJson(raw)
-            val reply = json?.optString("reply")?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+            val modelReply = json?.optString("reply")?.trim()?.takeIf { it.isNotBlank() && it != "null" }
                 ?: replyFromBroken(raw)
                 ?: (if (json != null) "تمام" else raw.trim())
+            val supportedReply = support?.let { com.mohamed.safi.faith.SituationSupport.automaticAddition(modelReply, it) } ?: modelReply
+            val reply = if (destination != null && AppGuide.asksHow(userText) && !supportedReply.contains(destination.title)) {
+                "$supportedReply\n\n${destination.steps}"
+            } else supportedReply
             val actions = json?.optJSONArray("actions") ?: JSONArray()
-            val done = execute(ctx, actions)
-            dao.insertChat(ChatMsg(role = "assistant", text = reply, actions = done.joinToString("\n")))
-            Result(reply, done)
+            if (destination != null && AppGuide.wantsOpen(userText)) {
+                val alreadyOpening = (0 until actions.length()).any { i ->
+                    actions.optJSONObject(i)?.let { it.optString("type") == "open_screen" && it.optString("screen") == destination.route } == true
+                }
+                if (!alreadyOpening) actions.put(JSONObject().put("type", "open_screen").put("screen", destination.route))
+            }
+            if (support?.selfHarmSignal == true) {
+                val hasSos = (0 until actions.length()).any { i ->
+                    actions.optJSONObject(i)?.let { it.optString("type") == "open_screen" && it.optString("screen") == "sos" } == true
+                }
+                if (!hasSos) actions.put(JSONObject().put("type", "open_screen").put("screen", "sos"))
+            }
+            val immediate = JSONArray()
+            val deferred = JSONArray()
+            for (i in 0 until actions.length()) {
+                val action = actions.optJSONObject(i) ?: continue
+                if (action.optString("type") == "delete_expense") deferred.put(action) else immediate.put(action)
+            }
+            val approvalSummary = if (deferred.length() > 0) {
+                val target = deferred.optJSONObject(0)?.optLong("id")?.let { dao.expense(it) }
+                target?.let { "مسح مصروف ${money(it.amount, it.currency)} — ${it.category}" } ?: "مسح مصروف"
+            } else ""
+            if (deferred.length() > 0) AssistantApproval.offer(deferred, approvalSummary)
+            val finalReply = if (approvalSummary.isNotBlank()) "$reply\n\n$approvalSummary. لم يتم الحذف بعد — اكتب «تأكيد» لو عايز تنفّذه أو «إلغاء» لو غيرت رأيك." else reply
+            val done = execute(ctx, immediate)
+            dao.insertChat(ChatMsg(role = "assistant", text = finalReply, actions = done.joinToString("\n")))
+            Result(finalReply, done)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -489,6 +597,57 @@ Rules:
                             com.mohamed.safi.extra.ExtraDb.dao.upsertGoal(g.copy(saved = (g.saved + amt).coerceAtLeast(0.0)))
                             done += "✓ ${g.name}: ${money(g.saved + amt, g.currency)} من ${money(g.target, g.currency)}"
                         }
+                    }
+                    "remember_preference" -> {
+                        val topic = a.str("topic")
+                        val preference = a.str("preference")
+                        if (topic.isNotBlank() && preference.isNotBlank()) {
+                            CompanionProfile.remember(topic, preference)
+                            done += "✓ هفتكر تفضيلك: $topic"
+                        }
+                    }
+                    "forget_preference" -> {
+                        val topic = a.str("topic")
+                        if (topic.equals("all", ignoreCase = true) || topic == "الكل" || topic == "كل التفضيلات") {
+                            CompanionProfile.clearMemories()
+                            done += "✓ نسيت كل تفضيلات رفيق المحفوظة"
+                        } else if (topic.isNotBlank()) {
+                            CompanionProfile.forget(topic)
+                            done += "✓ نسيت تفضيل: $topic"
+                        }
+                    }
+                    "remember_memory" -> {
+                        val m = CompanionProfile.rememberMemory(a.str("category"), a.str("value"))
+                        if (m != null) done += "✓ حفظت في ملفك الشخصي: [${m.category}] ${m.value}"
+                    }
+                    "forget_memory" -> {
+                        val target = a.str("id_or_category")
+                        val removed = if (target.equals("all", true) || target == "الكل") {
+                            CompanionProfile.clearMemories(); 1
+                        } else CompanionProfile.forgetMemory(target)
+                        if (removed > 0) done += "✓ اتمسحت الذاكرة المطلوبة" else done += "✗ ملقتش الذاكرة دي"
+                    }
+                    "set_brief" -> {
+                        prefs.briefOn = a.optBoolean("enabled", true)
+                        if (a.has("hour")) prefs.briefHour = a.optInt("hour", prefs.briefHour).coerceIn(5, 11)
+                        com.mohamed.safi.notify.DailyWorker.schedule(ctx, replace = true)
+                        done += if (prefs.briefOn) "✓ الموجز الصباحي اتفعل الساعة ${prefs.briefHour}" else "✓ الموجز الصباحي اتقفل"
+                    }
+                    "set_alert_policy" -> {
+                        val quietFrom = if (a.has("quiet_from")) a.optInt("quiet_from").takeIf { it in -1..23 } else null
+                        val quietUntil = if (a.has("quiet_until")) a.optInt("quiet_until").takeIf { it in -1..23 } else null
+                        val cooldown = if (a.has("cooldown_minutes")) a.optInt("cooldown_minutes").takeIf { it in 1..120 } else null
+                        CompanionProfile.setAlertPolicy(
+                            supportOn = if (a.has("support_enabled")) a.optBoolean("support_enabled") else null,
+                            voiceOn = if (a.has("voice_enabled")) a.optBoolean("voice_enabled") else null,
+                            quietFrom = quietFrom, quietUntil = quietUntil, cooldownMinutes = cooldown,
+                        )
+                        val p = CompanionProfile.alertPolicy()
+                        if (!p.supportOn || !p.voiceOn) {
+                            SafiApp.prefs.emotionVoiceOn = false
+                            com.mohamed.safi.ai.EmotionVoiceService.stop(ctx)
+                        }
+                        done += "✓ ظبطت سياسة التنبيهات: ${if (p.supportOn) "الدعم شغال" else "الدعم مقفول"}، الهدوء ${p.quietFrom}:${p.quietUntil}"
                     }
                     "carpool_set", "carpool_off" -> {
                         val d = runCatching { LocalDate.parse(a.str("date").take(10)) }.getOrNull() ?: return@runCatching

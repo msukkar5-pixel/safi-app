@@ -59,16 +59,30 @@ fun ReportsScreen(onBack: () -> Unit, embedded: Boolean = false) {
             item {
                 val ctx = androidx.compose.ui.platform.LocalContext.current
                 var pdfBusy by remember { mutableStateOf(false) }
-                OutlinedButton(onClick = {
-                    pdfBusy = true
-                    scope.launch {
-                        try { com.mohamed.safi.extra.MonthReport.share(ctx, com.mohamed.safi.extra.MonthReport.build(ctx, ym)) }
-                        catch (e: Exception) { com.mohamed.safi.ui.toast(ctx, e.message ?: "فشل") }
-                        pdfBusy = false
+                var csvBusy by remember { mutableStateOf(false) }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        pdfBusy = true
+                        scope.launch {
+                            try { com.mohamed.safi.extra.MonthReport.share(ctx, com.mohamed.safi.extra.MonthReport.build(ctx, ym)) }
+                            catch (e: Exception) { com.mohamed.safi.ui.toast(ctx, e.message ?: "فشل") }
+                            pdfBusy = false
+                        }
+                    }, enabled = !pdfBusy, modifier = Modifier.fillMaxWidth()) {
+                        if (pdfBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else { Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(6.dp)); Text("تقرير الشهر PDF") }
                     }
-                }, enabled = !pdfBusy, modifier = Modifier.fillMaxWidth()) {
-                    if (pdfBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else { Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(6.dp)); Text("تقرير الشهر PDF") }
+                    OutlinedButton(onClick = {
+                        csvBusy = true
+                        scope.launch {
+                            try { com.mohamed.safi.extra.FinanceCsv.share(ctx, com.mohamed.safi.extra.FinanceCsv.build(ctx, ym)) }
+                            catch (e: Exception) { com.mohamed.safi.ui.toast(ctx, e.message ?: "فشل") }
+                            csvBusy = false
+                        }
+                    }, enabled = !csvBusy, modifier = Modifier.fillMaxWidth()) {
+                        if (csvBusy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else { Icon(Icons.Default.TableChart, null); Spacer(Modifier.width(6.dp)); Text("تصدير CSV للتحليل") }
+                    }
                 }
             }
             item {

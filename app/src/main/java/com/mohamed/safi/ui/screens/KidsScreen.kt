@@ -72,6 +72,7 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
             "wudu" -> WuduGame(kid) { game = null }
             "quiz" -> KidsQuiz(kid) { game = null }
             "stories" -> KidsStoriesScreen(kid) { game = null }
+            "youth" -> YouthClubScreen(kid, onDone = { game = null }, onRoute = open, onStories = { game = "stories" })
             "kidbooks" -> ScreenScaffold("مكتبة الأطفال", onBack = { game = null }) { pad ->
                 androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     item { Text("كتب دينية أصيلة مناسبة للأطفال: الأربعون النووية، التجويد، أصول الدين، الصلاة، والشمائل والسيرة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
@@ -112,6 +113,7 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
             }
             if (kid != null) {
                 item { KidHeader(kid) }
+                item { SeasonJourneyCard(kid) }
                 if (isRamadan() && kid.fasting) item { FastCard(kid) }
                 item { Text("مهام النهارده", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = KidGreen) }
                 item { TaskGrid(kid) }
@@ -125,7 +127,8 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
                         KidTile("📚", "مكتبة الأطفال", Modifier.weight(1f)) { game = "kidbooks" }
                     }
                 }
-                item { DailyKidsCard { game = it } }
+                if (kid.age >= 10) item { YouthClubCard(kid) { game = "youth" } }
+                item { DailyKidsCard(kid) { game = it } }
                 item { Text("ألعاب وقصص", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = KidGreen) }
                 item {
                     Surface(onClick = { game = "stories" }, shape = RoundedCornerShape(22.dp), color = Color(0xFFFFE9B8), modifier = Modifier.fillMaxWidth()) {
@@ -140,7 +143,7 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
                     }
                 }
                 item { Text("كل الألعاب", fontWeight = FontWeight.Bold, color = Color(0xFF3B3125)) }
-                KidData.allGames(com.mohamed.safi.SafiApp.instance).chunked(3).forEach { row ->
+                KidData.allGames(com.mohamed.safi.SafiApp.instance, kid.age).chunked(3).forEach { row ->
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             row.forEach { e -> KidTile(e.icon, e.title, Modifier.weight(1f)) { game = e.id } }
@@ -154,6 +157,50 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
         }
     }
     if (askPin) PinDialog(onDismiss = { askPin = false }) { ok -> askPin = false; if (ok) parent = true }
+}
+
+@Composable
+private fun SeasonJourneyCard(kid: Kid) {
+    @Suppress("UNUSED_VARIABLE") val live = Kids.version.intValue
+    val available = SeasonJourney.available(kid.age)
+    val done = SeasonJourney.done(kid.id)
+    val points = SeasonJourney.points(kid.id)
+    val rank = SeasonJourney.rank(kid.id)
+    val next = SeasonJourney.ranks.firstOrNull { it.minStars > points }
+    Surface(shape = RoundedCornerShape(24.dp), color = Color(0xFF263D6B), contentColor = Color.White, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(rank.icon, fontSize = 34.sp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("رحلة أثر الشهرية", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                    Text("${rank.title} • $points نجمة موسمية", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .82f))
+                }
+                Text("${done.size}/${available.size}", fontWeight = FontWeight.Bold, color = Gold)
+            }
+            if (next != null) {
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(progress = { (points.toFloat() / next.minStars).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape), color = Gold, trackColor = Color.White.copy(alpha = .25f), drawStopIndicator = {})
+                Text("فاضل ${(next.minStars - points).coerceAtLeast(0)} نجمة على ${next.icon} ${next.title}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .82f), modifier = Modifier.padding(top = 4.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            available.take(4).forEach { mission ->
+                val complete = mission.id in done
+                Surface(onClick = { SeasonJourney.toggle(kid.id, mission) }, shape = RoundedCornerShape(14.dp), color = if (complete) Positive.copy(alpha = .78f) else Color.White.copy(alpha = .12f), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (complete) "✅" else mission.icon)
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(mission.title, fontWeight = FontWeight.SemiBold)
+                            Text(mission.detail, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .82f), maxLines = 1)
+                        }
+                        Text("+${mission.stars}⭐", style = MaterialTheme.typography.labelSmall, color = Gold)
+                    }
+                }
+            }
+            Text("مهمات الموسم اختيارية وتتجدد كل شهر. المشاركة في تحدي العيلة تظل بإذن ولي الأمر فقط.", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .74f), modifier = Modifier.padding(top = 6.dp))
+        }
+    }
 }
 
 @Composable
@@ -177,6 +224,87 @@ private fun KidHeader(kid: Kid) {
                 Text("⭐", fontSize = 26.sp)
                 Text("$stars", fontWeight = FontWeight.Bold, fontSize = 22.sp)
             }
+        }
+    }
+}
+
+@Composable
+private fun YouthClubCard(kid: Kid, onClick: () -> Unit) {
+    val done = Kids.youthDoneOn(kid.id).size
+    Surface(onClick = onClick, shape = RoundedCornerShape(24.dp), color = Color(0xFF182B50), contentColor = Color.White, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("🚀", fontSize = 38.sp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("نادي التحدي", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                Text("مهمات ومشاريع وقصص قرارات ومسارات أذكى لسن ${kid.age}", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .82f))
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$done/${Kids.youthMissions.size}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Gold)
+                Text("اليوم", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .72f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun YouthClubScreen(kid: Kid, onDone: () -> Unit, onRoute: (String) -> Unit, onStories: () -> Unit) {
+    @Suppress("UNUSED_VARIABLE") val live = Kids.version.intValue
+    val done = Kids.youthDoneOn(kid.id)
+    ScreenScaffold("نادي التحدي", onBack = onDone) { pad ->
+        LazyColumn(Modifier.fillMaxSize().background(Color(0xFFF6F8FC)).padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item {
+                Surface(shape = RoundedCornerShape(24.dp), color = Color(0xFF182B50), contentColor = Color.White) {
+                    Column(Modifier.padding(18.dp)) {
+                        Text("مساحتك الكبيرة يا ${kid.name}", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                        Text("مش سباق درجات ولا واجبات زيادة: اختار من مهماتك اليومية، ابنِ عادة، وجرب تحديات فيها تفكير وإبداع.", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = .86f))
+                    }
+                }
+            }
+            item { SectionTitle("مهمات اليوم") }
+            items(Kids.youthMissions, key = { it.id }) { mission ->
+                val isDone = mission.id in done
+                AppCard(onClick = { Kids.toggleYouthMission(kid.id, mission) }, color = if (isDone) Positive.copy(alpha = .12f) else MaterialTheme.colorScheme.surfaceContainerLow) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (isDone) "✅" else mission.icon, fontSize = 28.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(mission.title, fontWeight = FontWeight.Bold)
+                            Text(mission.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Text("+${mission.stars} ⭐", color = Gold, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            item { SectionTitle("اختار مغامرتك") }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    ModeTile("🏆", "مسابقة أثر", "أسئلة صعبة وأوضاع تنافس", Modifier.weight(1f)) { onRoute("quiz") }
+                    ModeTile("📖", "قصص قرارات", "مواقف أكبر سنًا", Modifier.weight(1f)) { onStories() }
+                }
+            }
+            item {
+                ModeTile("🎯", "جلسة دراسة ذكية", "خطط وراجع تقدمك من غير ضغط", Modifier.fillMaxWidth()) { onRoute("study") }
+            }
+            item {
+                Text("كل التقدم محفوظ على هذا الجهاز. مشاركة إنجاز بسيط مع العائلة تظل اختيارية من إعدادات العائلة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModeTile(icon: String, title: String, sub: String, modifier: Modifier, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(20.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD9E1EF))) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 28.sp)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold)
+                Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Icon(Icons.Default.ChevronLeft, null, tint = MaterialTheme.colorScheme.outline)
         }
     }
 }
@@ -618,13 +746,13 @@ private fun TaskPicker(kid: Kid, onDone: () -> Unit) {
 
 /** "Today's game and story": in Ramadan, game n and story n on day n (30 of each); the rest of the year it rotates daily. */
 @Composable
-private fun DailyKidsCard(onOpen: (String) -> Unit) {
+private fun DailyKidsCard(kid: Kid, onOpen: (String) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val today = LocalDate.now(zone)
     val inR = isRamadan(today)
     val n = if (inR) com.mohamed.safi.faith.Ramadan.day(today) else (today.toEpochDay() % 30).toInt() + 1
-    val games = remember { KidData.allGames(ctx) }
-    val stories = remember { kidStoryIds(ctx) }
+    val games = remember(kid.age) { KidData.allGames(ctx, kid.age) }
+    val stories = remember(kid.age) { kidStoryIds(ctx, kid.age) }
     val g = games.getOrNull((n - 1) % games.size.coerceAtLeast(1)) ?: return
     val st = stories.getOrNull((n - 1) % stories.size.coerceAtLeast(1))
     Surface(shape = RoundedCornerShape(22.dp), color = Color(0xFF1A2A4F), modifier = Modifier.fillMaxWidth()) {

@@ -24,6 +24,8 @@ object Notifier {
     const val CH_DAILY = "daily"
     const val CH_LOC = "location"
     const val CH_PRAYER = "prayer"
+    const val CH_FAMILY_SYNC = "family_sync"
+    const val CH_EMOTION_VOICE = "emotion_voice"
 
     fun createChannels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java) ?: return
@@ -55,6 +57,12 @@ object Notifier {
         )
         nm.createNotificationChannel(
             NotificationChannel(CH_LOC, "تسجيل الأماكن", NotificationManager.IMPORTANCE_MIN),
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_FAMILY_SYNC, "مزامنة العيلة", NotificationManager.IMPORTANCE_LOW),
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_EMOTION_VOICE, "مساعد النبرة الصوتية", NotificationManager.IMPORTANCE_LOW),
         )
     }
 

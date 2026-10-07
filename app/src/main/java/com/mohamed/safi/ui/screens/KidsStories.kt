@@ -34,9 +34,10 @@ private val SGreen = Color(0xFF2E9D5B)
 
 /** Short value stories (with a question at the end) and choose-your-path stories, from assets/kids/stories.json in ar/en/ur. */
 /** (id, icon, title) of every kids story in the calendar order: value and choice stories mixed. */
-fun kidStoryIds(ctx: android.content.Context): List<Triple<String, String, String>> {
+fun kidStoryIds(ctx: android.content.Context, age: Int = 7): List<Triple<String, String, String>> {
     val all = KidStories.load(ctx)
     fun list(k: String) = all.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
+        .filter { it.optInt("minAge", 3) <= age }
         .map { Triple(it.optString("id"), it.optString("icon"), KidStories.t(it.optJSONObject("title"))) }
     val v = ArrayDeque(list("stories")); val c = ArrayDeque(list("choice"))
     val out = ArrayList<Triple<String, String, String>>()
@@ -68,15 +69,15 @@ fun KidsStoriesScreen(kid: Kid, startId: String? = null, onDone: () -> Unit) {
     open?.let { s -> BackHandler { if (direct) onDone() else open = null }; ValueStory(kid, s) { if (direct) onDone() else open = null }; return }
     choice?.let { s -> BackHandler { if (direct) onDone() else choice = null }; ChoiceStory(kid, s) { if (direct) onDone() else choice = null }; return }
     BackHandler { onDone() }
-    val stories = all.optJSONArray("stories")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
-    val choices = all.optJSONArray("choice")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
+    val stories = all.optJSONArray("stories")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty().filter { it.optInt("minAge", 3) <= kid.age }
+    val choices = all.optJSONArray("choice")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty().filter { it.optInt("minAge", 3) <= kid.age }
     ScreenScaffold("قصص مدينة الخير", onBack = onDone) { pad ->
         LazyColumn(Modifier.fillMaxSize().background(SBg).padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { Text("اختار إنت النهاية", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = SGreen) }
             items(choices) { s -> StoryRow(s, true) { choice = s } }
             item { Text("قصص وعِبر", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = SGreen) }
             items(stories) { s -> StoryRow(s, false) { open = s } }
-            item { Text("قصص تربوية قصيرة من تأليف صافي، مش أحاديث ولا قصص حقيقية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
+            item { Text("قصص تربوية قصيرة من تأليف ${com.mohamed.safi.AppName.v}، مش أحاديث ولا قصص حقيقية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) }
         }
     }
 }
@@ -90,7 +91,8 @@ private fun StoryRow(s: JSONObject, interactive: Boolean, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 RawText(KidStories.t(s.optJSONObject("title")), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = SInk)
-                Text(if (interactive) "قصة بتختار فيها إنت" else "قصة وسؤال في الآخر", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                val ageLabel = s.optInt("minAge", 3).takeIf { it >= 9 }?.let { " • لسن $it+" }.orEmpty()
+                Text((if (interactive) "قصة بتختار فيها إنت" else "قصة وسؤال في الآخر") + ageLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
             if (read) RawText("⭐", fontSize = 22.sp)
         }

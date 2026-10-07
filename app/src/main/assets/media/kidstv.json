@@ -1,32 +1,20 @@
 [
  {
-  "id": "spacetoon",
-  "name": "سبيستون",
-  "desc": "كرتون وأنمي مدبلج بالعربي",
-  "urls": ["https://live-uae-next.spacetoongo.com/ST_MENA_NEXT/hls/r9p2hjipmw2kl.m3u8"]
- },
- {
-  "id": "ajyal",
-  "name": "قناة أجيال",
-  "desc": "قناة أطفال فلسطينية: برامج وأناشيد وكرتون",
-  "urls": ["http://htvajyal.mada.ps:8888/ajyal/index.m3u8", "http://htvmada.mada.ps:8888/ajyal/index.m3u8"]
- },
- {
   "id": "atfal_mawaheb",
   "name": "أطفال ومواهب",
   "desc": "برامج ومواهب للأطفال من السعودية",
-  "urls": ["https://5aafcc5de91f1.streamlock.net/atfal1.com/atfal2/playlist.m3u8", "https://5d658d7e9f562.streamlock.net/atfal1.com/atfal2/playlist.m3u8"]
- },
- {
-  "id": "koogi",
-  "name": "كوجي",
-  "desc": "برامج وكرتون للأطفال من مصر",
-  "urls": ["https://5d658d7e9f562.streamlock.net/koogi.tv/koogi.smil/playlist.m3u8"]
+  "urls": [
+   "https://5aafcc5de91f1.streamlock.net/atfal1.com/atfal2/playlist.m3u8"
+  ],
+  "url": "https://5aafcc5de91f1.streamlock.net/atfal1.com/atfal2/playlist.m3u8"
  },
  {
   "id": "ch4teen_doc",
   "name": "Ch4Teen وثائقي",
   "desc": "أفلام وثائقية للأطفال والمراهقين من الكويت",
-  "urls": ["https://ch14.tv/live/ch4teendoc/playlist.m3u8"]
+  "urls": [
+   "https://ch14.tv/live/ch4teendoc/playlist.m3u8"
+  ],
+  "url": "https://ch14.tv/live/ch4teendoc/playlist.m3u8"
  }
 ]

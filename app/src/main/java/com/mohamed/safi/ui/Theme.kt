@@ -9,12 +9,17 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.mohamed.safi.R
+import com.mohamed.safi.SafiApp
 
 // "Khushu" palette: deep emerald, antique gold, warm parchment / quiet night
 val Brand = Color(0xFF0E5A4A)
@@ -28,6 +33,12 @@ val Warn = Color(0xFFC08A2E)
 
 /** Classical Arabic face for titles and reading. */
 val Amiri = FontFamily(Font(R.font.amiri_regular, FontWeight.Normal), Font(R.font.amiri_bold, FontWeight.Bold))
+
+/** Lightweight in-memory signal used when the user changes visual accessibility settings. */
+object UiAccessibility {
+    val version = mutableIntStateOf(0)
+    fun refresh() { version.intValue++ }
+}
 
 private val Light = lightColorScheme(
     primary = Brand,
@@ -86,6 +97,9 @@ private val Dark = darkColorScheme(
 
 @Composable
 fun SafiTheme(content: @Composable () -> Unit) {
+    @Suppress("UNUSED_VARIABLE") val accessibilityVersion = UiAccessibility.version.intValue
+    val density = LocalDensity.current
+    val preferences = SafiApp.prefs
     val base = Typography()
     val type = base.copy(
         headlineLarge = base.headlineLarge.copy(fontFamily = Amiri, fontWeight = FontWeight.Bold),
@@ -93,14 +107,21 @@ fun SafiTheme(content: @Composable () -> Unit) {
         headlineSmall = base.headlineSmall.copy(fontFamily = Amiri, fontWeight = FontWeight.Bold),
         titleLarge = base.titleLarge.copy(fontFamily = Amiri, fontWeight = FontWeight.Bold),
     )
-    MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) Dark else Light,
-        typography = type,
-        shapes = Shapes(
-            small = RoundedCornerShape(10.dp),
-            medium = RoundedCornerShape(16.dp),
-            large = RoundedCornerShape(20.dp),
-        ),
-        content = content,
-    )
+    val original = if (isSystemInDarkTheme()) Dark else Light
+    val colors = if (preferences.highContrast) original.copy(
+        outline = if (isSystemInDarkTheme()) Color(0xFFE9E5DA) else Color(0xFF2A2925),
+        outlineVariant = if (isSystemInDarkTheme()) Color(0xFFBFC8C1) else Color(0xFF666157),
+    ) else original
+    CompositionLocalProvider(LocalDensity provides Density(density.density, if (preferences.largeText) 1.20f else density.fontScale)) {
+        MaterialTheme(
+            colorScheme = colors,
+            typography = type,
+            shapes = Shapes(
+                small = RoundedCornerShape(10.dp),
+                medium = RoundedCornerShape(16.dp),
+                large = RoundedCornerShape(20.dp),
+            ),
+            content = content,
+        )
+    }
 }

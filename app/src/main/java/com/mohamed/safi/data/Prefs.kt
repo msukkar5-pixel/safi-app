@@ -17,8 +17,8 @@ class Prefs(context: Context) {
 
     var userName: String get() = s("userName", ""); set(v) = putS("userName", v)
 
-    /** Name the user gave the app / assistant. */
-    var appName: String get() = s("appName", "صافي").ifBlank { "صافي" }; set(v) = putS("appName", v.trim())
+    /** Name the user gave the app / assistant. Existing custom names remain unchanged. */
+    var appName: String get() = s("appName", "أثر").ifBlank { "أثر" }; set(v) = putS("appName", v.trim())
 
     // AI provider (any): anthropic | openai | gemini | deepseek | groq | openrouter | custom
     var aiProvider: String get() = s("aiProvider", "anthropic"); set(v) = putS("aiProvider", v)
@@ -66,9 +66,20 @@ class Prefs(context: Context) {
 
     // Security / daily brief
     var lockOn: Boolean get() = b("lockOn", false); set(v) = putB("lockOn", v)
+    var briefOn: Boolean get() = b("briefOn", true); set(v) = putB("briefOn", v)
     var briefHour: Int get() = i("briefHour", 8); set(v) = putI("briefHour", v)
+    var familySyncOn: Boolean get() = b("familySyncOn", true); set(v) = putB("familySyncOn", v)
+    /** Optional on-device voice-signal helper; raw audio is never stored or uploaded. */
+    var emotionVoiceOn: Boolean get() = b("emotionVoiceOn", false); set(v) = putB("emotionVoiceOn", v)
     var lastMonthlySummary: String get() = s("lastMonthly", ""); set(v) = putS("lastMonthly", v)
     var lastBriefDay: String get() = s("lastBriefDay", ""); set(v) = putS("lastBriefDay", v)
+
+    /** Chosen during first-run setup. It changes recommendations only; it never grants data access. */
+    var userRole: String get() = s("userRole", "personal"); set(v) = putS("userRole", v)
+    var userAgeBand: String get() = s("userAgeBand", "adult"); set(v) = putS("userAgeBand", v)
+    /** Accessibility controls stay on-device and apply to the complete Compose interface. */
+    var largeText: Boolean get() = b("largeText", false); set(v) = putB("largeText", v)
+    var highContrast: Boolean get() = b("highContrast", false); set(v) = putB("highContrast", v)
 
     // Car
     var odometer: Int get() = i("odometer", 0); set(v) = putI("odometer", v)

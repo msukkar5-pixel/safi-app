@@ -34,7 +34,11 @@ object Backup {
         runCatching { com.mohamed.safi.health.HealthDb.get().openHelper.writableDatabase.query("PRAGMA wal_checkpoint(FULL)").use { it.moveToFirst() } }
     }
 
-    private fun stripKey(xml: String) = xml.replace(Regex("<string name=\"(apiKey|key_[a-z]+)\">.*?</string>", RegexOption.DOT_MATCHES_ALL), "")
+    /** Secrets stay device-bound: AI keys and the family AES key never enter a portable backup. */
+    private fun stripKey(xml: String) = xml.replace(
+        Regex("<string name=\"(apiKey|key_[a-z]+|key_family)\">.*?</string>", RegexOption.DOT_MATCHES_ALL),
+        "",
+    )
 
     fun write(ctx: Context, out: OutputStream) {
         checkpoint()

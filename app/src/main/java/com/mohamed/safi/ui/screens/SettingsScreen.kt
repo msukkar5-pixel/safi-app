@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.mohamed.safi.SafiApp
 import com.mohamed.safi.ai.Claude
 import com.mohamed.safi.data.Fx
@@ -39,6 +41,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     var rateUpdated by remember { mutableLongStateOf(prefs.rateUpdated) }
     var cats by remember { mutableStateOf(prefs.transferCats.joinToString("، ")) }
     var lockOn by remember { mutableStateOf(prefs.lockOn) }
+    var briefOn by remember { mutableStateOf(prefs.briefOn) }
     var briefHour by remember { mutableIntStateOf(prefs.briefHour) }
     var interval by remember { mutableIntStateOf(prefs.locationIntervalMin) }
 
@@ -69,6 +72,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Icon(Icons.Default.ChevronLeft, null)
                 }
             }
+            SectionTitle("الوضوح والوصول")
+            AccessibilityCard()
             SectionTitle("لغة التطبيق")
             AppCard {
                 val scope = rememberCoroutineScope()
@@ -104,6 +109,12 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             SectionTitle("اسم التطبيق")
             AppNameCard()
+
+            SectionTitle("رفيق وذاكرته")
+            CompanionMemoryCard()
+
+            SectionTitle("الدعم التلقائي")
+            CompanionAlertPolicyCard()
 
             SectionTitle("العملة وتحويلات مصر")
             AppCard {
@@ -175,6 +186,14 @@ fun SettingsScreen(onBack: () -> Unit) {
             AppCard {
                 OutlinedTextField(name, { name = it }, label = { Text("اسمك") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("الموجز الصباحي")
+                        Text("المواعيد والالتزامات والدروس والواجبات المشتركة فقط", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    }
+                    Switch(briefOn, { briefOn = it; prefs.briefOn = it; DailyWorker.schedule(ctx, replace = true) })
+                }
+                Spacer(Modifier.height(8.dp))
                 ChoiceField("ملخص الصبح الساعة", briefHour.toString(), (5..11).map { it.toString() }, display = { "$it الصبح" }) {
                     briefHour = it.toInt(); prefs.briefHour = briefHour; DailyWorker.schedule(ctx, replace = true)
                 }
@@ -200,6 +219,33 @@ fun SettingsScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
             )
+        }
+    }
+}
+
+
+@Composable
+private fun AccessibilityCard() {
+    val prefs = SafiApp.prefs
+    var largeText by remember { mutableStateOf(prefs.largeText) }
+    var highContrast by remember { mutableStateOf(prefs.highContrast) }
+    AppCard {
+        Text("واجهة مريحة لكل الأعمار", fontWeight = FontWeight.Bold)
+        Text("الخيارات دي تغير شكل النص والتباين على هذا الهاتف فقط، من غير ما تمس البيانات أو إعدادات باقي العيلة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("نص أكبر")
+                Text("يزود حجم الكتابة في التطبيق", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(largeText, { largeText = it; prefs.largeText = it; UiAccessibility.refresh() })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("تباين أعلى")
+                Text("حدود ونصوص أوضح في الإضاءة الضعيفة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(highContrast, { highContrast = it; prefs.highContrast = it; UiAccessibility.refresh() })
         }
     }
 }
@@ -345,11 +391,11 @@ private fun AppNameCard() {
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
-                prefs.appName = name.trim().ifBlank { "صافي" }
+                prefs.appName = name.trim().ifBlank { "أثر" }
                 toast(ctx, "اتغير الاسم. اقفل التطبيق وافتحه علشان يظهر في كل مكان.")
             }) { Text("حفظ") }
             OutlinedButton(onClick = {
-                prefs.appName = name.trim().ifBlank { "صافي" }
+                prefs.appName = name.trim().ifBlank { "أثر" }
                 com.mohamed.safi.AppName.pinShortcut(ctx)
             }) { Text("أيقونة بالاسم ده") }
         }
@@ -363,6 +409,16 @@ private fun AppNameCard() {
 
 @Composable
 private fun VoiceSettingsCard() {
+    val ctx = LocalContext.current
+    var voiceOn by remember { mutableStateOf(SafiApp.prefs.emotionVoiceOn) }
+    val requestMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            com.mohamed.safi.ai.CompanionProfile.setAlertPolicy(supportOn = true, voiceOn = true)
+            SafiApp.prefs.emotionVoiceOn = true
+            voiceOn = true
+            com.mohamed.safi.ai.EmotionVoiceService.start(ctx)
+        } else toast(ctx, "لازم إذن الميكروفون لتشغيل مساعد النبرة")
+    }
     var lang by remember { mutableStateOf(com.mohamed.safi.ui.VoicePrefs.lang) }
     var engine by remember { mutableStateOf(com.mohamed.safi.ui.VoicePrefs.engine) }
     val canAi = com.mohamed.safi.ui.VoicePrefs.aiCanTranscribe()
@@ -389,6 +445,17 @@ private fun VoiceSettingsCard() {
         }
         if (engine == "ai") SttKeyBox()
         Text("المساعد بيرد بنفس اللغة اللي بتكلمه بيها.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("مساعد النبرة الصوتية", fontWeight = FontWeight.SemiBold)
+                Text("يحلل ارتفاع الصوت محليًا فقط، ثم يقول ذكرًا أو دعاءً مناسبًا. لا يحفظ ولا يرفع أي تسجيل. الميزة مغلقة افتراضيًا.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(voiceOn, {
+                if (it) requestMic.launch(android.Manifest.permission.RECORD_AUDIO)
+                else { voiceOn = false; SafiApp.prefs.emotionVoiceOn = false; com.mohamed.safi.ai.EmotionVoiceService.stop(ctx) }
+            })
+        }
     }
 }
 
@@ -418,5 +485,139 @@ private fun SttKeyBox() {
             if (prov == "gemini") "مفتاح Gemini بيتعمل من حساب جوجل في دقيقة، وفيه استخدام مجاني بحدود يومية." else if (prov == "groq") "Groq فيه استخدام مجاني بحدود يومية." else "OpenAI بالدفع حسب الاستخدام.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
         )
+    }
+}
+
+@Composable
+private fun CompanionMemoryCard() {
+    val ctx = LocalContext.current
+    var snapshot by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.snapshot()) }
+    var memories by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.memories()) }
+    var category by remember { mutableStateOf("tone") }
+    var memoryValue by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<com.mohamed.safi.ai.CompanionProfile.Memory?>(null) }
+    AppCard {
+        Text("رفيق يتعلم تفضيلاتك أنت فقط، وليس محادثاتك أو أصواتك.", fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        Text("المحفوظ حاليًا:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Text(snapshot, style = MaterialTheme.typography.bodySmall)
+        memories.forEach { memory ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("[${memory.category}] ${memory.value}", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { editing = memory }) { Text("عدّل") }
+                TextButton(onClick = {
+                    com.mohamed.safi.ai.CompanionProfile.forgetMemory(memory.id)
+                    memories = com.mohamed.safi.ai.CompanionProfile.memories()
+                    snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+                }) { Text("امسح") }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("أضف حاجة تحب رفيق يفتكرها", fontWeight = FontWeight.SemiBold)
+        ChoiceField("النوع", category, listOf("tone", "routine", "goal", "like", "avoid", "support", "feeling", "relationship", "comfort", "general"), display = {
+            when (it) {
+                "tone" -> "أسلوب الكلام"
+                "routine" -> "روتين"
+                "goal" -> "هدف"
+                "like" -> "حاجة بحبها"
+                "avoid" -> "حاجة أتجنبها"
+                "support" -> "طريقة دعم مفضلة"
+                "feeling" -> "شعور وسياق مهم"
+                "relationship" -> "علاقة مهمة"
+                "comfort" -> "حاجة بتهدّيني"
+                else -> "معلومة عامة"
+            }
+        }) { category = it }
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(memoryValue, { memoryValue = it.take(300) }, label = { Text("مثلاً: قبل الامتحان بقلق وبيساعدني أقسّم المهمة") }, modifier = Modifier.fillMaxWidth())
+        TextButton(onClick = {
+            val memory = com.mohamed.safi.ai.CompanionProfile.rememberMemory(category, memoryValue)
+            if (memory == null) toast(ctx, "اكتب حاجة الأول")
+            else {
+                memoryValue = ""
+                memories = com.mohamed.safi.ai.CompanionProfile.memories()
+                snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+                toast(ctx, "اتحفظت في ملف رفيق")
+            }
+        }, enabled = memoryValue.isNotBlank()) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(4.dp)); Text("أضف للذاكرة") }
+        OutlinedButton(onClick = {
+            com.mohamed.safi.ai.CompanionProfile.clearMemories()
+            snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+            memories = com.mohamed.safi.ai.CompanionProfile.memories()
+            toast(ctx, "اتمسحت تفضيلات رفيق فقط")
+        }) { Text("امسح ذاكرة رفيق") }
+        Text(
+            "تقدر تحفظ أسلوب الكلام، هدف، مشاعر متكررة، علاقة مهمة، أو طريقة دعم مناسبة. رفيق لا يحفظ أي كلام أو صوت تلقائيًا؛ وبيانات المصاريف والمحادثات والملفات لا تُمسح من هذا الزر.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+        )
+    }
+    editing?.let { memory ->
+        var updatedCategory by remember(memory.id) { mutableStateOf(memory.category) }
+        var updatedValue by remember(memory.id) { mutableStateOf(memory.value) }
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text("تعديل ذكرى رفيق") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ChoiceField("النوع", updatedCategory, listOf("tone", "routine", "goal", "like", "avoid", "support", "feeling", "relationship", "comfort", "general")) { updatedCategory = it }
+                    OutlinedTextField(updatedValue, { updatedValue = it.take(300) }, label = { Text("التفصيل") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = { Button(onClick = {
+                com.mohamed.safi.ai.CompanionProfile.updateMemory(memory.id, updatedCategory, updatedValue)
+                memories = com.mohamed.safi.ai.CompanionProfile.memories()
+                snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+                editing = null
+            }, enabled = updatedValue.isNotBlank()) { Text("حفظ") } },
+            dismissButton = { TextButton(onClick = { editing = null }) { Text("إلغاء") } },
+        )
+    }
+}
+
+@Composable
+private fun CompanionAlertPolicyCard() {
+    val ctx = LocalContext.current
+    var policy by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.alertPolicy()) }
+    fun save(
+        support: Boolean? = null,
+        voice: Boolean? = null,
+        from: Int? = null,
+        until: Int? = null,
+        cooldown: Int? = null,
+    ) {
+        com.mohamed.safi.ai.CompanionProfile.setAlertPolicy(support, voice, from, until, cooldown)
+        policy = com.mohamed.safi.ai.CompanionProfile.alertPolicy()
+        if (!policy.supportOn || !policy.voiceOn) {
+            SafiApp.prefs.emotionVoiceOn = false
+            com.mohamed.safi.ai.EmotionVoiceService.stop(ctx)
+        }
+    }
+    val hours = listOf(-1) + (0..23).toList()
+    fun hourLabel(value: String) = value.toIntOrNull()?.let { if (it < 0) "بدون ساعات هدوء" else "${it}:00" } ?: value
+    AppCard {
+        Text("دعم رفيق التلقائي", fontWeight = FontWeight.SemiBold)
+        Text("يتحكم في الدعم الهادئ الناتج من تفاعل المستخدم أو من مساعد النبرة الاختياري. لا يحفظ مشاعرك ولا صوتك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("الدعم التلقائي")
+                Text("يسمح للمساعد باقتراح دعم مناسب في الحالات الواضحة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(policy.supportOn, { save(support = it) })
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("النطق التلقائي")
+                Text("لو اتقفل، خدمة الميكروفون تتوقف فورًا", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(policy.voiceOn, { save(voice = it) })
+        }
+        Spacer(Modifier.height(8.dp))
+        ChoiceField("الهدوء يبدأ", policy.quietFrom.toString(), hours.map { it.toString() }, display = ::hourLabel) { save(from = it.toIntOrNull() ?: -1) }
+        Spacer(Modifier.height(6.dp))
+        ChoiceField("الهدوء ينتهي", policy.quietUntil.toString(), hours.map { it.toString() }, display = ::hourLabel) { save(until = it.toIntOrNull() ?: -1) }
+        Spacer(Modifier.height(6.dp))
+        ChoiceField("أقل فاصل بين الدعم", policy.cooldownMinutes.toString(), listOf("5", "10", "20", "30", "60"), display = { "$it دقيقة" }) { save(cooldown = it.toIntOrNull() ?: 10) }
     }
 }

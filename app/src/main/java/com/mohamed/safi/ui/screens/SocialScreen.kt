@@ -50,7 +50,7 @@ fun SocialScreen(onBack: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 AppCard {
-                    Text("كل يوم صافي بيجهّز منشور من نصوص موثّقة جوه التطبيق: آية من المصحف، أو حديث من صحيح البخاري ومسلم، أو دعاء من حصن المسلم.", style = MaterialTheme.typography.bodySmall)
+                    Text("كل يوم ${com.mohamed.safi.AppName.v} بيجهّز منشور من نصوص موثّقة جوه التطبيق: آية من المصحف، أو حديث من صحيح البخاري ومسلم، أو دعاء من حصن المسلم.", style = MaterialTheme.typography.bodySmall)
                     Text("بيتنشر تلقائي على: قناة تيليجرام، صفحة فيسبوك، وX. وباقي التطبيقات (إنستجرام، واتساب، تيك توك، بروفايل فيسبوك الشخصي) بضغطة واحدة من الإشعار، لأنها مش بتسمح لأي تطبيق ينشر نيابة عنك.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
             }

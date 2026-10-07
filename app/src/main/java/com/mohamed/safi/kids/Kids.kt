@@ -45,6 +45,11 @@ object Kids {
         KidTask("read", "قرأت قصة أو كتاب", "📚", 2, Growth.BRANCH, 4),
         KidTask("water", "مارميتش أكل ولا ميه (من غير إسراف)", "💧", 1, Growth.FRUIT, 4),
         KidTask("sorry", "اعتذرت لما غلطت", "🌈", 2, Growth.FRUIT, 4),
+        KidTask("exercise", "تحركت أو مارست رياضة", "🏃", 2, Growth.BRANCH, 8),
+        KidTask("skill", "اتعلمت مهارة أو معلومة جديدة", "💡", 3, Growth.LIGHT, 10),
+        KidTask("plan", "خططت لمذاكرتي أو يومي", "🗓️", 2, Growth.BRANCH, 10),
+        KidTask("digital_kind", "استخدمت الموبايل باحترام ومسؤولية", "📱", 2, Growth.FRUIT, 10),
+        KidTask("project", "اشتغلت على مشروع أو صناعة مفيدة", "🛠️", 3, Growth.FLOWER, 11),
     )
     val avatars = listOf("👦", "👧", "🧒", "🌙", "⭐", "🦁", "🐱", "🐼", "🦋", "🌸", "🚀", "⚽")
 
@@ -116,6 +121,34 @@ object Kids {
     /** Days this month with at least one task, for the passport. */
     fun activeDays(kid: String, ym: YearMonth = YearMonth.now(zone)): Int = (1..ym.lengthOfMonth()).count { doneOn(kid, ym.atDay(it)).isNotEmpty() }
 
+    // ---------------------------------------------------------------- youth club (10–14)
+    data class YouthMission(val id: String, val title: String, val detail: String, val icon: String, val stars: Int)
+    val youthMissions = listOf(
+        YouthMission("read_focus", "قراءة مركزة", "اقرأ 20 دقيقة واكتب لنفسك فكرة واحدة اتعلمتها.", "📚", 3),
+        YouthMission("smart_study", "جلسة مذاكرة", "25 دقيقة من غير مشتتات ثم استراحة قصيرة.", "🎯", 3),
+        YouthMission("move", "تحدي الحركة", "امشِ أو تمرّن 20 دقيقة واهتم بجسمك.", "🏃", 2),
+        YouthMission("family_help", "سند البيت", "اعمل مساعدة حقيقية في البيت من غير ما حد يطلبها.", "🤝", 3),
+        YouthMission("make", "اصنع أو اكتب", "ارسم، صمّم، اكتب فكرة، أو أصلح حاجة بسيطة.", "🛠️", 3),
+        YouthMission("good_message", "أثر طيب", "ابعت أو قل كلمة تشجيع صادقة لشخص محتاجها.", "💬", 2),
+        YouthMission("science", "تجربة علمية", "جرّب تجربة آمنة من البيت أو اشرح ظاهرة علمية بكلامك.", "🧪", 4),
+        YouthMission("logic", "لغز ومنطق", "حل لغزًا أو مسألة تفكير، ثم اشرح طريقك للحل.", "🧩", 3),
+        YouthMission("history", "رحلة في التاريخ", "تعرف على حدث أو شخصية، واكتب سؤالًا فضوليًا عنه.", "🏛️", 3),
+        YouthMission("digital_safe", "أمانك الرقمي", "راجع إعداد خصوصية أو قاعدة احترام قبل أي مشاركة أونلاين.", "🛡️", 3),
+        YouthMission("team_project", "مشروع فريق", "اعمل مع أخ أو صديق على فكرة مفيدة بدون استعجال أو مقارنة.", "🏗️", 4),
+        YouthMission("reading_club", "نادي القراءة", "اقرأ فصلًا أو مقالًا، واختار جملة أو فكرة تستحق الاحتفاظ بها.", "📘", 3),
+    )
+    private fun youthDayKey(kid: String, d: LocalDate) = "youth_${kid}_$d"
+    fun youthDoneOn(kid: String, d: LocalDate = LocalDate.now(zone)): Set<String> = sp().getStringSet(youthDayKey(kid, d), emptySet()) ?: emptySet()
+    /** Marks a youth mission; the same mission can be undone on the same day. */
+    fun toggleYouthMission(kid: String, mission: YouthMission, d: LocalDate = LocalDate.now(zone)): Int {
+        val done = youthDoneOn(kid, d)
+        val on = mission.id !in done
+        val delta = if (on) mission.stars else -mission.stars
+        sp().edit { putStringSet(youthDayKey(kid, d), if (on) done + mission.id else done - mission.id) }
+        addStars(kid, delta)
+        return delta
+    }
+
     // ---------------------------------------------------------------- games and Ramadan fasting (parent-enabled)
     /** Stories give stars once a day each, so re-reading is welcome but can't farm stars. */
     fun storyRead(id: String) = sp().contains("story_$id")
@@ -155,7 +188,13 @@ object Kids {
     /** Kids' TV channels the parent chose to hide. */
     var hiddenChannels: Set<String> get() = sp().getStringSet("tv_hidden", emptySet()) ?: emptySet(); set(v) { sp().edit { putStringSet("tv_hidden", v) }; bump() }
 
-    fun addStars(kid: String, n: Int) { sp().edit { putInt("stars_$kid", stars(kid) + n) }; bump() }
+    fun addStars(kid: String, n: Int) {
+        val before = stars(kid)
+        val after = (before + n).coerceAtLeast(0)
+        sp().edit { putInt("stars_$kid", after) }
+        bump()
+        if (after / 5 > before / 5) runCatching { com.mohamed.safi.quiz.Challenge.recordFamilyActivity("kids", 5) }
+    }
 
     /** 0 = none, 1 = suhoor, 2 = until noon, 3 = full day. Only shown when the parent enabled fasting for this child. */
     fun fast(kid: String, d: LocalDate = LocalDate.now(zone)) = sp().getInt("fast_${kid}_$d", 0)

@@ -69,6 +69,7 @@ object Wird {
         lastDoneDay = today()
         val end = todayRange().last
         if (end >= TOTAL_PAGES) { khatmas += 1; nextPage = 1 } else nextPage = end + 1
+        runCatching { com.mohamed.safi.quiz.Challenge.recordFamilyActivity("wird", pagesPerDay.coerceIn(1, 20)) }
     }
 
     fun undo() {

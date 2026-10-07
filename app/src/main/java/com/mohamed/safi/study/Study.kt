@@ -94,6 +94,7 @@ object Study {
     fun addSession(sid: String, subject: String, start: Long, minutes: Int) {
         if (minutes <= 0) return
         put("sessions", JSONObject().put("id", newId()).put("sid", sid).put("subject", subject).put("start", start).put("min", minutes))
+        if (minutes >= 20) runCatching { com.mohamed.safi.quiz.Challenge.recordFamilyActivity("study", (minutes / 10).coerceIn(2, 12)) }
     }
     private fun dayOf(ms: Long) = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
     fun minutesOn(sid: String, d: LocalDate) = sessions(sid).filter { dayOf(it.start) == d }.sumOf { it.minutes }

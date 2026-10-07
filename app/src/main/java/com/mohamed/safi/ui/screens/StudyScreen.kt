@@ -337,7 +337,7 @@ private fun SyncCard(open: (String) -> Unit, kidPhone: Boolean) {
             Text("اربطوا موبايلاتكم من «ربط العيلة» عشان ولي الأمر يشوف الدروس والواجبات والمذاكرة، وأي حد فيكم يضيف.", style = MaterialTheme.typography.bodySmall)
             if (!kidPhone) TextButton(onClick = { open("family") }) { Text("ربط العيلة") }
         } else {
-            Text("على نفس الواي فاي بيتحدّث لوحده وانت فاتح الشاشة دي. برّا البيت: ابعت التحديث بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع صافي.", style = MaterialTheme.typography.bodySmall)
+            Text("على نفس الواي فاي بيتحدّث لوحده وانت فاتح الشاشة دي. برّا البيت: ابعت التحديث بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = {
                 scope.launch {
                     val card = Family.myCard()

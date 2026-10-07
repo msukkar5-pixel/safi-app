@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
 class DailyWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         runCatching { Fx.refresh() }
-        runCatching { Brief.morning(applicationContext) }
+        if (SafiApp.prefs.briefOn) runCatching { Brief.morning(applicationContext) }
         runCatching { com.mohamed.safi.faith.Prayer.refreshLocation(applicationContext); com.mohamed.safi.faith.Prayer.schedule(applicationContext) }
         runCatching { com.mohamed.safi.data.Carpool.schedule(applicationContext) }
         runCatching { com.mohamed.safi.widget.SafiWidget.updateAll(applicationContext) }
@@ -115,6 +115,24 @@ object Brief {
         ).forEach { (name, t) ->
             if (t > 0 && daysUntil(t) <= 30) lines += "• $name — ${dueText(t)} (${shortDate(t)})"
         }
+        runCatching {
+            val students = com.mohamed.safi.study.Study.students()
+            students.forEach { st ->
+                val todayLessons = com.mohamed.safi.study.Study.lessonsOn(st.id, LocalDate.now(zone))
+                val open = com.mohamed.safi.study.Study.openHomework(st.id)
+                    .filter { it.due.isBlank() || it.due <= LocalDate.now(zone).plusDays(1).toString() }
+                if (todayLessons.isNotEmpty()) lines += "• ${st.name}: دروس النهارده ${todayLessons.joinToString("، ") { "${it.subject} ${it.time}" }}"
+                if (open.isNotEmpty()) lines += "• ${st.name}: واجبات قريبة ${open.joinToString("، ") { it.subject }}"
+                val nextExam = com.mohamed.safi.study.Study.exams(st.id).firstOrNull()
+                if (nextExam != null) lines += "• ${st.name}: الامتحان الجاي ${nextExam.subject} — ${nextExam.date}"
+            }
+        }
+        runCatching {
+            val family = com.mohamed.safi.family.Family
+            if (family.joined) family.members().filter { !it.status.isNullOrBlank() }.forEach { m ->
+                lines += "• ${m.name}: ${m.status}"
+            }
+        }
         return lines
     }
 
@@ -124,7 +142,8 @@ object Brief {
         if (prefs.lastBriefDay == today) return
         prefs.lastBriefDay = today
 
-        val lines = todayLines()
+        val allLines = todayLines()
+        val lines = if (com.mohamed.safi.ai.CompanionProfile.prefersConciseAlerts()) allLines.take(6) else allLines
         if (lines.isNotEmpty()) {
             Notifier.show(
                 ctx, 501, Notifier.CH_DAILY,
