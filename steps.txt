@@ -1,0 +1,396 @@
+screen 1080x2400
+locale ar-AE tz Etc/UTC
+Performing Streamed Install
+Success
+
+[0] ['launch']
+[1] ['wait', 2]
+[2] ['shot', 'splash_2s']
+  shot results/001_splash_2s.jpg
+[3] ['wait', 6]
+[4] ['shot', 'splash_8s']
+  shot results/002_splash_8s.jpg
+[5] ['tap', 'آمين', True]
+[6] ['wait', 2]
+[7] ['shot', 'after_amen']
+  shot results/003_after_amen.jpg
+[8] ['tapxy', 0.5, 0.36]
+[9] ['type', 'Sokar']
+[10] ['hidekb']
+[11] ['scroll']
+[12] ['tap', 'يلا نبدأ']
+[13] ['wait', 3]
+[14] ['shot', 'home']
+  shot results/004_home.jpg
+[15] ['scroll']
+[16] ['shot', 'home_2']
+  shot results/005_home_2.jpg
+[17] ['scroll']
+[18] ['shot', 'home_3']
+  shot results/006_home_3.jpg
+[19] ['route', 'finance']
+[20] ['wait', 4]
+[21] ['shot', 'finance']
+  shot results/007_finance.jpg
+[22] ['tap', 'سجّل']
+[23] ['wait', 2]
+[24] ['shot', 'finance_add_sheet']
+  shot results/008_finance_add_sheet.jpg
+[25] ['back']
+[26] ['tap', 'تحويلات مصر']
+  (text not found: تحويلات مصر)
+[27] ['wait', 2]
+[28] ['shot', 'finance_transfers']
+  shot results/009_finance_transfers.jpg
+[29] ['tap', 'التقارير']
+  (text not found: التقارير)
+[30] ['wait', 2]
+[31] ['shot', 'finance_reports']
+  shot results/010_finance_reports.jpg
+[32] ['back']
+[33] ['route', 'vehicle']
+[34] ['wait', 4]
+[35] ['shot', 'vehicle']
+  shot results/011_vehicle.jpg
+[36] ['tap', 'العربية والصيانة']
+[37] ['wait', 2]
+[38] ['shot', 'vehicle_car']
+  shot results/012_vehicle_car.jpg
+[39] ['tap', 'خطط وتعديلات']
+[40] ['wait', 2]
+[41] ['shot', 'vehicle_plans']
+  shot results/013_vehicle_plans.jpg
+[42] ['back']
+[43] ['route', 'documents']
+[44] ['wait', 3]
+[45] ['shot', 'documents']
+  shot results/014_documents.jpg
+[46] ['back']
+[47] ['route', 'alerts']
+[48] ['wait', 3]
+[49] ['shot', 'alerts']
+  shot results/015_alerts.jpg
+[50] ['scroll']
+[51] ['shot', 'alerts_2']
+  shot results/016_alerts_2.jpg
+[52] ['back']
+[53] ['route', 'vitals']
+[54] ['wait', 4]
+[55] ['shot', 'vitals']
+  shot results/017_vitals.jpg
+[56] ['back']
+[57] ['route', 'prayertracker']
+[58] ['wait', 3]
+[59] ['shot', 'prayertracker']
+  shot results/018_prayertracker.jpg
+[60] ['back']
+[61] ['route', 'islamiccalendar']
+[62] ['wait', 3]
+[63] ['shot', 'islamiccalendar']
+  shot results/019_islamiccalendar.jpg
+[64] ['back']
+[65] ['route', 'asmahusna']
+[66] ['wait', 3]
+[67] ['shot', 'asmahusna']
+  shot results/020_asmahusna.jpg
+[68] ['back']
+[69] ['route', 'quiz']
+[70] ['wait', 3]
+[71] ['shot', 'quiz_home']
+  shot results/021_quiz_home.jpg
+[72] ['tap', 'تحدي سريع']
+[73] ['wait', 3]
+[74] ['shot', 'quiz_q1']
+  shot results/022_quiz_q1.jpg
+[75] ['tapxy', 0.5, 0.62]
+[76] ['wait', 2]
+[77] ['shot', 'quiz_answered']
+  shot results/023_quiz_answered.jpg
+[78] ['back']
+[79] ['tap', 'اخرج']
+[80] ['wait', 2]
+[81] ['back']
+[82] ['route', 'library']
+[83] ['wait', 3]
+[84] ['shot', 'library_hub']
+  shot results/024_library_hub.jpg
+[85] ['back']
+[86] ['route', 'more']
+[87] ['wait', 2]
+[88] ['shot', 'more_new']
+  shot results/025_more_new.jpg
+[89] ['scroll']
+[90] ['shot', 'more_new2']
+  shot results/026_more_new2.jpg
+[91] ['tap', 'كل الأذكار']
+  (text not found: كل الأذكار)
+[92] ['wait', 2]
+[93] ['shot', 'azkar_from_home']
+  shot results/027_azkar_from_home.jpg
+[94] ['back']
+[95] ['route', 'library']
+[96] ['wait', 5]
+[97] ['shot', 'library']
+  shot results/028_library.jpg
+[98] ['scroll']
+[99] ['shot', 'library_2']
+  shot results/029_library_2.jpg
+[100] ['route', 'book/qisas']
+[101] ['wait', 15]
+[102] ['shot', 'qisas_main']
+  shot results/030_qisas_main.jpg
+[103] ['tap', 'المجلد 1', True]
+[104] ['wait', 3]
+[105] ['shot', 'qisas_toc']
+  shot results/031_qisas_toc.jpg
+[106] ['tapxy', 0.5, 0.25]
+[107] ['wait', 4]
+[108] ['shot', 'qisas_read']
+  shot results/032_qisas_read.jpg
+[109] ['back']
+[110] ['back']
+[111] ['back']
+[112] ['route', 'book/uae_portal']
+[113] ['wait', 12]
+[114] ['shot', 'uae_book']
+  shot results/033_uae_book.jpg
+[115] ['tapxy', 0.5, 0.55]
+[116] ['wait', 4]
+[117] ['shot', 'uae_read']
+  shot results/034_uae_read.jpg
+[118] ['back']
+[119] ['back']
+[120] ['route', 'book/egypt_ancient']
+[121] ['wait', 25]
+[122] ['shot', 'egypt_ancient']
+  shot results/035_egypt_ancient.jpg
+[123] ['back']
+[124] ['route', 'book/mbr_life']
+[125] ['wait', 10]
+[126] ['shot', 'mbr_life']
+  shot results/036_mbr_life.jpg
+[127] ['tapxy', 0.5, 0.55]
+[128] ['wait', 4]
+[129] ['shot', 'mbr_read']
+  shot results/037_mbr_read.jpg
+[130] ['back']
+[131] ['back']
+[132] ['route', 'stories']
+[133] ['wait', 4]
+[134] ['shot', 'stories']
+  shot results/038_stories.jpg
+[135] ['scroll']
+[136] ['shot', 'stories_2']
+  shot results/039_stories_2.jpg
+[137] ['tap', 'عليه السلام']
+[138] ['wait', 3]
+[139] ['shot', 'story_adam']
+  shot results/040_story_adam.jpg
+[140] ['tap', 'اقرأها كاملة']
+[141] ['wait', 12]
+[142] ['shot', 'story_adam_book']
+  shot results/041_story_adam_book.jpg
+[143] ['back']
+[144] ['back']
+[145] ['route', 'history']
+[146] ['wait', 4]
+[147] ['shot', 'history_egypt']
+  shot results/042_history_egypt.jpg
+[148] ['scroll']
+[149] ['shot', 'history_egypt_2']
+  shot results/043_history_egypt_2.jpg
+[150] ['tap', 'تاريخ الإمارات']
+  (text not found: تاريخ الإمارات)
+[151] ['wait', 3]
+[152] ['shot', 'history_uae']
+  shot results/044_history_uae.jpg
+[153] ['back']
+[154] ['route', 'bidaya']
+[155] ['wait', 4]
+[156] ['shot', 'bidaya']
+  shot results/045_bidaya.jpg
+[157] ['tap', 'المجلد 1', True]
+[158] ['wait', 3]
+[159] ['tapxy', 0.5, 0.2]
+[160] ['wait', 4]
+[161] ['shot', 'bidaya_read']
+  shot results/046_bidaya_read.jpg
+[162] ['back']
+[163] ['back']
+[164] ['back']
+[165] ['route', 'audiobooks']
+[166] ['wait', 8]
+[167] ['shot', 'audio_arabic']
+  shot results/047_audio_arabic.jpg
+[168] ['shot', 'audio_islamic_ar']
+  shot results/048_audio_islamic_ar.jpg
+[169] ['tap', 'English', True]
+[170] ['wait', 8]
+[171] ['shot', 'audio_islamic_en']
+  shot results/049_audio_islamic_en.jpg
+[172] ['tapxy', 0.5, 0.42]
+[173] ['wait', 8]
+[174] ['shot', 'audio_book']
+  shot results/050_audio_book.jpg
+[175] ['tap', 'تشغيل']
+  (text not found: تشغيل)
+[176] ['wait', 10]
+[177] ['shot', 'audio_playing']
+  shot results/051_audio_playing.jpg
+[178] ['back']
+[179] ['back']
+[180] ['route', 'quranaudio']
+[181] ['wait', 8]
+[182] ['shot', 'quranaudio']
+  shot results/052_quranaudio.jpg
+[183] ['tapxy', 0.5, 0.45]
+[184] ['wait', 4]
+[185] ['shot', 'quranaudio_reciter']
+  shot results/053_quranaudio_reciter.jpg
+[186] ['tapxy', 0.5, 0.5]
+[187] ['wait', 4]
+[188] ['shot', 'quranaudio_surahs']
+  shot results/054_quranaudio_surahs.jpg
+[189] ['tapxy', 0.5, 0.55]
+[190] ['wait', 10]
+[191] ['shot', 'quranaudio_playing']
+  shot results/055_quranaudio_playing.jpg
+[192] ['back']
+[193] ['back']
+[194] ['back']
+[195] ['route', 'assistant']
+[196] ['wait', 3]
+[197] ['shot', 'assistant']
+  shot results/056_assistant.jpg
+[198] ['route', 'more']
+[199] ['wait', 2]
+[200] ['shot', 'more']
+  shot results/057_more.jpg
+[201] ['route', 'azkar']
+[202] ['wait', 2]
+[203] ['shot', 'azkar']
+  shot results/058_azkar.jpg
+[204] ['back']
+[205] ['route', 'wird']
+[206] ['wait', 2]
+[207] ['shot', 'wird']
+  shot results/059_wird.jpg
+[208] ['back']
+[209] ['route', 'quran']
+[210] ['wait', 3]
+[211] ['shot', 'quran']
+  shot results/060_quran.jpg
+[212] ['back']
+[213] ['route', 'manasik']
+[214] ['wait', 3]
+[215] ['shot', 'manasik']
+  shot results/061_manasik.jpg
+[216] ['scroll']
+[217] ['shot', 'manasik_2']
+  shot results/062_manasik_2.jpg
+[218] ['back']
+[219] ['route', 'umrah']
+[220] ['wait', 3]
+[221] ['shot', 'umrah']
+  shot results/063_umrah.jpg
+[222] ['scroll']
+[223] ['shot', 'umrah_2']
+  shot results/064_umrah_2.jpg
+[224] ['tap', 'الطواف خطوة بخطوة']
+[225] ['wait', 2]
+[226] ['shot', 'umrah_tawaf']
+  shot results/065_umrah_tawaf.jpg
+[227] ['scroll']
+[228] ['shot', 'umrah_tawaf_2']
+  shot results/066_umrah_tawaf_2.jpg
+[229] ['back']
+[230] ['back']
+[231] ['route', 'hajj']
+[232] ['wait', 3]
+[233] ['shot', 'hajj']
+  shot results/067_hajj.jpg
+[234] ['tap', 'يوم عرفة — ٩ ذو الحجة']
+  (text not found: يوم عرفة — ٩ ذو الحجة)
+[235] ['wait', 2]
+[236] ['shot', 'hajj_arafah']
+  shot results/068_hajj_arafah.jpg
+[237] ['back']
+[238] ['back']
+[239] ['route', 'ruqyah']
+[240] ['wait', 3]
+[241] ['shot', 'ruqyah']
+  shot results/069_ruqyah.jpg
+[242] ['back']
+[243] ['route', 'hisn']
+[244] ['wait', 3]
+[245] ['shot', 'hisn']
+  shot results/070_hisn.jpg
+[246] ['tapxy', 0.5, 0.62]
+[247] ['wait', 2]
+[248] ['shot', 'hisn_chapter']
+  shot results/071_hisn_chapter.jpg
+[249] ['back']
+[250] ['back']
+[251] ['route', 'tool/tawaf']
+[252] ['wait', 2]
+[253] ['shot', 'tool_tawaf']
+  shot results/072_tool_tawaf.jpg
+[254] ['tap', 'دوس لما تخلّصه']
+[255] ['wait', 1]
+[256] ['shot', 'tool_tawaf_1']
+  shot results/073_tool_tawaf_1.jpg
+[257] ['back']
+[258] ['route', 'tool/sai']
+[259] ['wait', 2]
+[260] ['shot', 'tool_sai']
+  shot results/074_tool_sai.jpg
+[261] ['back']
+[262] ['route', 'tool/rami']
+[263] ['wait', 2]
+[264] ['shot', 'tool_rami']
+  shot results/075_tool_rami.jpg
+[265] ['back']
+[266] ['route', 'tool/hajjplan']
+[267] ['wait', 2]
+[268] ['shot', 'tool_hajjplan']
+  shot results/076_tool_hajjplan.jpg
+[269] ['back']
+[270] ['route', 'sleep']
+[271] ['wait', 4]
+[272] ['shot', 'sleep']
+  shot results/077_sleep.jpg
+[273] ['scroll']
+[274] ['shot', 'sleep_2']
+  shot results/078_sleep_2.jpg
+[275] ['back']
+[276] ['route', 'radio']
+[277] ['wait', 5]
+[278] ['shot', 'radio']
+  shot results/079_radio.jpg
+[279] ['back']
+[280] ['route', 'tv']
+[281] ['wait', 3]
+[282] ['shot', 'tv']
+  shot results/080_tv.jpg
+[283] ['back']
+[284] ['route', 'hisn/29']
+[285] ['wait', 3]
+[286] ['shot', 'hisn_sleep']
+  shot results/081_hisn_sleep.jpg
+[287] ['back']
+[288] ['route', 'kids']
+[289] ['wait', 3]
+[290] ['shot', 'kids']
+  shot results/082_kids.jpg
+[291] ['back']
+[292] ['route', 'ramadan']
+[293] ['wait', 3]
+[294] ['shot', 'ramadan']
+  shot results/083_ramadan.jpg
+[295] ['back']
+[296] ['route', 'family']
+[297] ['wait', 3]
+[298] ['shot', 'family']
+  shot results/084_family.jpg
+[299] ['back']
+DONE crashes=0
