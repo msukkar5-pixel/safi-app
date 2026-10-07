@@ -28,6 +28,7 @@ data class MemberCard(
     val id: String, val name: String, val role: String, val at: Long,
     val prayers: Int? = null, val wird: String? = null, val kids: String? = null, val city: String? = null, val status: String? = null,
     val khRound: Int = 0, val khMine: Set<Int> = emptySet(), val khDone: Set<Int> = emptySet(),
+    val access: String = "member",
 )
 
 /**
@@ -60,6 +61,16 @@ object Family {
     val myId: String get() = sp().getString("me", null) ?: java.util.UUID.randomUUID().toString().take(10).also { sp().edit { putString("me", it) } }
     var myName: String get() = sp().getString("name", "").orEmpty(); set(v) { sp().edit { putString("name", v) }; bump() }
     var myRole: String get() = sp().getString("role", "").orEmpty(); set(v) { sp().edit { putString("role", v) }; bump() }
+    /** owner | parent | youth | child. This governs local management actions, not what data is shared. */
+    var myAccess: String get() = sp().getString("access", "member").orEmpty().ifBlank { "member" }; set(v) { sp().edit { putString("access", v) }; bump() }
+    val canManageFamily get() = myAccess in setOf("owner", "parent")
+    val lastSyncAt: Long get() = sp().getLong("last_sync_at", 0L)
+
+    fun accessForRole(role: String): String = when (role) {
+        "أب", "أم", "جد", "جدة" -> "parent"
+        "ابن", "ابنة", "أخ", "أخت" -> "youth"
+        else -> "member"
+    }
 
     // what I share — all off by default
     var sharePrayers: Boolean get() = sp().getBoolean("s_pr", false); set(v) { sp().edit { putBoolean("s_pr", v) }; bump() }
@@ -85,7 +96,7 @@ object Family {
 
     private fun key(): ByteArray? = sp().getString("key_family", null)?.let { Base64.decode(it, Base64.NO_WRAP) }
 
-    fun create(name: String, role: String) {
+    fun create(name: String, role: String, access: String = "owner") {
         val k = ByteArray(32).also { SecureRandom().nextBytes(it) }
         val fid = ByteArray(6).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(java.util.Locale.US, it) }
         val me = myId
@@ -94,14 +105,14 @@ object Family {
             putString("fid", fid)
             putStringSet(APPROVED, setOf(me))
         }
-        myName = name; myRole = role
+        myName = name; myRole = role; myAccess = access
     }
 
     fun isInvite(t: String) = t.trim().startsWith(QR_PREFIX)
     fun isCard(t: String) = t.trim().startsWith(PREFIX)
 
     /** Name, role and id only: enough for the other phone to add me right away. */
-    private fun intro() = JSONObject().put("id", myId).put("name", myName).put("role", myRole).put("at", System.currentTimeMillis())
+    private fun intro() = JSONObject().put("id", myId).put("name", myName).put("role", myRole).put("access", myAccess).put("at", System.currentTimeMillis())
         .put("khr", khRound).put("khm", khMine.joinToString(",")).put("khd", khDone.joinToString(","))
 
     /** A 10-minute, one-time invite: the pairing reply must carry the same nonce before this phone accepts it. */
@@ -121,7 +132,7 @@ object Family {
         return PREFIX + familyId + ":" + encrypt(reply.toString())
     }
 
-    fun join(qr: String, name: String, role: String): Boolean {
+    fun join(qr: String, name: String, role: String, access: String = accessForRole(role)): Boolean {
         if (!isInvite(qr)) return false
         val parts = qr.trim().removePrefix(QR_PREFIX).split(":", limit = 3)
         if (parts.size < 2 || parts[1].isBlank()) return false
@@ -145,7 +156,7 @@ object Family {
             putStringSet(APPROVED, approved)
             putString(PENDING_INVITE, inviteNonce)
         }
-        myName = name; myRole = role
+        myName = name; myRole = role; myAccess = access
         // the inviter's introduction travels inside the QR
         inviter?.let { store(it, allowNewMember = true) }
         return true
@@ -180,7 +191,7 @@ object Family {
 
     /** My card, with only what I chose to share. */
     suspend fun myCard(): String {
-        val o = JSONObject().put("id", myId).put("name", myName).put("role", myRole).put("at", System.currentTimeMillis())
+        val o = JSONObject().put("id", myId).put("name", myName).put("role", myRole).put("access", myAccess).put("at", System.currentTimeMillis())
         if (sharePrayers) runCatching {
             val log = com.mohamed.safi.faith.PrayerLog.dao().dayNow(com.mohamed.safi.faith.PrayerLog.key(LocalDate.now(zone)))
             o.put("prayers", (0..4).count { i -> (log?.status(i) ?: 0).let { st -> st != 0 && st != com.mohamed.safi.faith.PrayerStatus.MISSED } })
@@ -205,7 +216,10 @@ object Family {
         if (fid != familyId) return null
         val json = decrypt(t.substringAfter(":")) ?: return null
         val o = runCatching { JSONObject(json) }.getOrNull() ?: return null
-        return if (store(o)) o.optString("name") else null
+        return if (store(o)) {
+            sp().edit { putLong("last_sync_at", System.currentTimeMillis()) }
+            o.optString("name")
+        } else null
     }
 
     /** Explicit approval used only after the creator scans the new member's reply QR. */
@@ -279,7 +293,7 @@ object Family {
             o.optString("id"), o.optString("name"), o.optString("role"), o.optLong("at"),
             if (o.has("prayers")) o.optInt("prayers") else null, o.optString("wird").ifBlank { null }, o.optString("kids").ifBlank { null },
             o.optString("city").ifBlank { null }, o.optString("status").ifBlank { null },
-            o.optInt("khr", 0), ints(o.optString("khm")), ints(o.optString("khd")),
+            o.optInt("khr", 0), ints(o.optString("khm")), ints(o.optString("khd")), o.optString("access", "member"),
         )
     }.sortedByDescending { it.at }
 

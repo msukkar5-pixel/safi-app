@@ -164,7 +164,8 @@ object Assistant {
     private val SYSTEM = """
 You are "${com.mohamed.safi.AppName.v}", a warm personal companion inside the user's own Android app. The user (name: ${com.mohamed.safi.SafiApp.prefs.userName.ifBlank { "unknown" }}) is Egyptian, lives and works in the UAE, spends mostly by card in AED, and sends money to his family in Egypt in EGP.
 Reply in the same language/dialect the user used (Egyptian Arabic by default; English, Hindi, Urdu, French… if he writes in them). Short and direct, warm but no fluff. Use Western digits for numbers.
-Sound natural and human in conversation without claiming to be a human. Do not turn every feeling into a task. If the user is upset, respond gently and offer one small next step. Ask at most one clarifying question at a time. Use saved companion preferences only when relevant, and never invent memories.
+Sound natural and human in conversation without claiming to be a human. Be a steady, warm friend: listen first, validate the feeling in one honest sentence, then help with one useful next step only if it is wanted. Do not turn every feeling into a task, sermon, diagnosis, or reminder. Ask at most one clarifying question at a time. Use the user's name sparingly and only when it feels natural.
+Use saved companion memories only when relevant, never invent memories, and never imply that you are watching, listening, or remembering something the user did not explicitly save. If a user shares a recurring feeling, trigger, relationship detail, or comfort preference that could help later, gently ask whether they want you to remember it; use remember_memory ONLY after a clear yes or an explicit "افتكر" request. Categories can include feeling, relationship, comfort, tone, routine, goal, like, avoid, support, and general.
 
 You can read his data (given below) and take actions. ALWAYS answer with ONE JSON object only, no text outside it:
 {"reply": "what you say to Mohamed", "actions": [ ... ]}
@@ -197,7 +198,7 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_supplement","name":"","dose":"","times":"08:00,21:00","note":""}
 - {"type":"carpool_set","date":"YYYY-MM-DD","driver":"member name"}   (one-day swap)
 - {"type":"carpool_off","date":"YYYY-MM-DD"}   (holiday, nobody drives)
-- {"type":"open_screen","screen":"dictionary|sos|mosques|familylists|hifz|kidstv|study|kidsetup|app_guide|social|family|kids|ramadan|radio|tv|sleep|hisn|manasik|umrah|hajj|ruqyah|quiz|prayertracker|islamiccalendar|asmahusna|alerts|vitals|finance|vehicle|quran|quranaudio|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
+- {"type":"open_screen","screen":"search|dictionary|sos|mosques|familylists|hifz|kidstv|study|kidsetup|app_guide|social|family|kids|ramadan|radio|tv|sleep|hisn|manasik|umrah|hajj|ruqyah|quiz|prayertracker|islamiccalendar|asmahusna|alerts|vitals|finance|vehicle|quran|quranaudio|wird|library|stories|bidaya|history|audiobooks|shaarawy|healthrecords|azkar|hadith|diary|prayer|fitness|carpool|documents|savings|lessons|zakat|bills|debts|transfers|reports|car|places|schedule|expenses"}
 - {"type":"add_diary","text":"the diary text exactly as he said it, cleaned punctuation only","mood":"one emoji or empty"}   (when he says سجّل في مذكراتي / اكتب في المذكرات)
 - {"type":"add_document","title":"","owner":"","expiry":"YYYY-MM-DD"}
 - {"type":"add_medication","name":"","dose":"","times":"08:00, 20:00","with_food":"قبل الأكل|بعد الأكل|مع الأكل|","reason":"","end":"YYYY-MM-DD or empty"}
@@ -206,7 +207,7 @@ Available actions (use exact keys; omit optional keys you don't know):
 - {"type":"add_saving","goal":"goal name","amount":0}   (money he put aside toward an existing goal)
 - {"type":"remember_preference","topic":"short key such as reply_style or reminder_style","preference":"the user's explicit preference"}
 - {"type":"forget_preference","topic":"the exact saved preference key"}
-- {"type":"remember_memory","category":"tone|routine|goal|like|avoid|support|general","value":"the explicit fact the user asked you to remember"}
+- {"type":"remember_memory","category":"tone|routine|goal|like|avoid|support|feeling|relationship|comfort|general","value":"the explicit fact the user asked you to remember"}
 - {"type":"forget_memory","id_or_category":"memory id or category"}
 - {"type":"set_brief","enabled":true,"hour":8}   (turn the optional morning brief on/off; hour 5-11)
 - {"type":"set_alert_policy","support_enabled":true,"voice_enabled":true,"quiet_from":22,"quiet_until":7,"cooldown_minutes":10}   (all optional; -1 disables quiet hours)
@@ -227,6 +228,7 @@ Rules:
 - If VERIFIED SPIRITUAL SUPPORT is present and the user explicitly describes distress, anger, fear, grief, guilt, gratitude, or sleep, offer the most relevant quoted item gently. Keep the source exactly as provided; if no item is present, say you do not have a verified match instead of inventing one.
 - If VERIFIED SPIRITUAL SUPPORT includes CRISIS SAFETY, prioritize immediate safety: be warm and direct, ask the user to move away from means of harm, not remain alone, and contact a trusted person now. Include {"type":"open_screen","screen":"sos"}. Do not shame, debate, moralize, or leave the user with religious content alone.
 - For questions (كام صرفت، مطلوب مني إيه، فين صرفت) compute from the data and answer with numbers; actions = [].
+- For delete_expense, never delete on the first request. State the exact expense and ask for a separate clear confirmation. The app itself will hold the proposed deletion until the user confirms it.
 - "مطلوب مني إيه الشهر ده" → list OBLIGATIONS THIS MONTH with total in AED and EGP items with their AED value.
 - If something essential is missing (e.g. amount), ask briefly and don't add the action.
 - Confirm what you did in reply in one short line. Never invent data you don't have.
@@ -249,6 +251,33 @@ Rules:
         _busy.value = true
         return try {
             dao.insertChat(ChatMsg(role = "user", text = userText))
+            AssistantApproval.pending()?.let { pending ->
+                when {
+                    AssistantApproval.isConfirm(userText) -> {
+                        val done = execute(ctx, pending.actions)
+                        AssistantApproval.clear()
+                        val reply = if (done.isEmpty()) "ملقتش العملية دي دلوقتي، فمش اتعمل حذف." else "تمام، نفّذت العملية المؤكدة."
+                        dao.insertChat(ChatMsg(role = "assistant", text = reply, actions = done.joinToString("\n")))
+                        return Result(reply, done)
+                    }
+                    AssistantApproval.isCancel(userText) -> {
+                        AssistantApproval.clear()
+                        val reply = "تمام، ألغيت العملية المقترحة ومفيش حاجة اتمسحت."
+                        dao.insertChat(ChatMsg(role = "assistant", text = reply))
+                        return Result(reply, emptyList())
+                    }
+                    else -> AssistantApproval.clear()
+                }
+            }
+            val support = runCatching { com.mohamed.safi.faith.SituationSupport.forMessage(userText) }.getOrNull()
+            val destination = AppGuide.match(userText)
+            if (!Claude.hasKey) {
+                val reply = LocalCompanion.reply(userText)
+                if (destination != null && AppGuide.wantsOpen(userText)) com.mohamed.safi.ui.UiBus.pendingRoute.value = destination.route
+                if (support?.selfHarmSignal == true) com.mohamed.safi.ui.UiBus.pendingRoute.value = "sos"
+                dao.insertChat(ChatMsg(role = "assistant", text = reply))
+                return Result(reply, emptyList())
+            }
 
             // Build alternating history ending with this user message.
             // Past assistant turns are replayed in the JSON shape so the model keeps answering in JSON.
@@ -275,25 +304,47 @@ Rules:
             }
             flush()
 
-            val support = runCatching { com.mohamed.safi.faith.SituationSupport.forMessage(userText) }.getOrNull()
             val system = SYSTEM + "\n\n=== USER DATA ===\n" + context() +
+                "\n\n=== APP NAVIGATION AND HOW-TO ===\n" + AppGuide.prompt() +
+                "\nIf the user asks how to use an app feature, explain only verified in-app steps from this list. If they explicitly ask to open/go to a matching section, include open_screen for its route." +
                 (support?.let { "\n\n=== VERIFIED SPIRITUAL SUPPORT ===\n" + com.mohamed.safi.faith.SituationSupport.prompt(it) } ?: "")
             val raw = Claude.call(system, msgs, SafiApp.prefs.model, 4096, json = true)
             val json = Claude.extractJson(raw)
             val modelReply = json?.optString("reply")?.trim()?.takeIf { it.isNotBlank() && it != "null" }
                 ?: replyFromBroken(raw)
                 ?: (if (json != null) "تمام" else raw.trim())
-            val reply = support?.let { com.mohamed.safi.faith.SituationSupport.automaticAddition(modelReply, it) } ?: modelReply
+            val supportedReply = support?.let { com.mohamed.safi.faith.SituationSupport.automaticAddition(modelReply, it) } ?: modelReply
+            val reply = if (destination != null && AppGuide.asksHow(userText) && !supportedReply.contains(destination.title)) {
+                "$supportedReply\n\n${destination.steps}"
+            } else supportedReply
             val actions = json?.optJSONArray("actions") ?: JSONArray()
+            if (destination != null && AppGuide.wantsOpen(userText)) {
+                val alreadyOpening = (0 until actions.length()).any { i ->
+                    actions.optJSONObject(i)?.let { it.optString("type") == "open_screen" && it.optString("screen") == destination.route } == true
+                }
+                if (!alreadyOpening) actions.put(JSONObject().put("type", "open_screen").put("screen", destination.route))
+            }
             if (support?.selfHarmSignal == true) {
                 val hasSos = (0 until actions.length()).any { i ->
                     actions.optJSONObject(i)?.let { it.optString("type") == "open_screen" && it.optString("screen") == "sos" } == true
                 }
                 if (!hasSos) actions.put(JSONObject().put("type", "open_screen").put("screen", "sos"))
             }
-            val done = execute(ctx, actions)
-            dao.insertChat(ChatMsg(role = "assistant", text = reply, actions = done.joinToString("\n")))
-            Result(reply, done)
+            val immediate = JSONArray()
+            val deferred = JSONArray()
+            for (i in 0 until actions.length()) {
+                val action = actions.optJSONObject(i) ?: continue
+                if (action.optString("type") == "delete_expense") deferred.put(action) else immediate.put(action)
+            }
+            val approvalSummary = if (deferred.length() > 0) {
+                val target = deferred.optJSONObject(0)?.optLong("id")?.let { dao.expense(it) }
+                target?.let { "مسح مصروف ${money(it.amount, it.currency)} — ${it.category}" } ?: "مسح مصروف"
+            } else ""
+            if (deferred.length() > 0) AssistantApproval.offer(deferred, approvalSummary)
+            val finalReply = if (approvalSummary.isNotBlank()) "$reply\n\n$approvalSummary. لم يتم الحذف بعد — اكتب «تأكيد» لو عايز تنفّذه أو «إلغاء» لو غيرت رأيك." else reply
+            val done = execute(ctx, immediate)
+            dao.insertChat(ChatMsg(role = "assistant", text = finalReply, actions = done.joinToString("\n")))
+            Result(finalReply, done)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

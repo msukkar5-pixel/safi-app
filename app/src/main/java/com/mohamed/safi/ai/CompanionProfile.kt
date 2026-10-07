@@ -101,6 +101,27 @@ object CompanionProfile {
         return m
     }
 
+    /** Revises an existing user-approved memory while preserving its identity and original date. */
+    @Synchronized
+    fun updateMemory(id: String, category: String, value: String): Boolean {
+        val c = clean(category, 40).ifBlank { "general" }
+        val v = clean(value, 300)
+        if (id.isBlank() || v.isBlank()) return false
+        val old = memoriesJson()
+        var updated = false
+        val next = JSONArray()
+        for (i in 0 until old.length()) {
+            val o = old.optJSONObject(i) ?: continue
+            if (o.optString("id") == id) {
+                o.put("category", c).put("value", v)
+                updated = true
+            }
+            next.put(o)
+        }
+        if (updated) prefs().edit { putString(MEMORIES, next.toString()) }
+        return updated
+    }
+
     @Synchronized
     fun forget(topic: String) {
         val cleanTopic = clean(topic, 60)

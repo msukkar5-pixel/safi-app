@@ -74,6 +74,13 @@ class Prefs(context: Context) {
     var lastMonthlySummary: String get() = s("lastMonthly", ""); set(v) = putS("lastMonthly", v)
     var lastBriefDay: String get() = s("lastBriefDay", ""); set(v) = putS("lastBriefDay", v)
 
+    /** Chosen during first-run setup. It changes recommendations only; it never grants data access. */
+    var userRole: String get() = s("userRole", "personal"); set(v) = putS("userRole", v)
+    var userAgeBand: String get() = s("userAgeBand", "adult"); set(v) = putS("userAgeBand", v)
+    /** Accessibility controls stay on-device and apply to the complete Compose interface. */
+    var largeText: Boolean get() = b("largeText", false); set(v) = putB("largeText", v)
+    var highContrast: Boolean get() = b("highContrast", false); set(v) = putB("highContrast", v)
+
     // Car
     var odometer: Int get() = i("odometer", 0); set(v) = putI("odometer", v)
     var carName: String get() = s("carName", "عربيتي"); set(v) = putS("carName", v)

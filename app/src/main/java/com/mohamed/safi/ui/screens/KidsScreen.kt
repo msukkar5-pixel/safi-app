@@ -113,6 +113,7 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
             }
             if (kid != null) {
                 item { KidHeader(kid) }
+                item { SeasonJourneyCard(kid) }
                 if (isRamadan() && kid.fasting) item { FastCard(kid) }
                 item { Text("مهام النهارده", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp, color = KidGreen) }
                 item { TaskGrid(kid) }
@@ -156,6 +157,50 @@ fun KidsScreen(onBack: () -> Unit, open: (String) -> Unit) {
         }
     }
     if (askPin) PinDialog(onDismiss = { askPin = false }) { ok -> askPin = false; if (ok) parent = true }
+}
+
+@Composable
+private fun SeasonJourneyCard(kid: Kid) {
+    @Suppress("UNUSED_VARIABLE") val live = Kids.version.intValue
+    val available = SeasonJourney.available(kid.age)
+    val done = SeasonJourney.done(kid.id)
+    val points = SeasonJourney.points(kid.id)
+    val rank = SeasonJourney.rank(kid.id)
+    val next = SeasonJourney.ranks.firstOrNull { it.minStars > points }
+    Surface(shape = RoundedCornerShape(24.dp), color = Color(0xFF263D6B), contentColor = Color.White, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(rank.icon, fontSize = 34.sp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("رحلة أثر الشهرية", fontFamily = Amiri, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                    Text("${rank.title} • $points نجمة موسمية", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .82f))
+                }
+                Text("${done.size}/${available.size}", fontWeight = FontWeight.Bold, color = Gold)
+            }
+            if (next != null) {
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(progress = { (points.toFloat() / next.minStars).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape), color = Gold, trackColor = Color.White.copy(alpha = .25f), drawStopIndicator = {})
+                Text("فاضل ${(next.minStars - points).coerceAtLeast(0)} نجمة على ${next.icon} ${next.title}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .82f), modifier = Modifier.padding(top = 4.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            available.take(4).forEach { mission ->
+                val complete = mission.id in done
+                Surface(onClick = { SeasonJourney.toggle(kid.id, mission) }, shape = RoundedCornerShape(14.dp), color = if (complete) Positive.copy(alpha = .78f) else Color.White.copy(alpha = .12f), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (complete) "✅" else mission.icon)
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(mission.title, fontWeight = FontWeight.SemiBold)
+                            Text(mission.detail, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .82f), maxLines = 1)
+                        }
+                        Text("+${mission.stars}⭐", style = MaterialTheme.typography.labelSmall, color = Gold)
+                    }
+                }
+            }
+            Text("مهمات الموسم اختيارية وتتجدد كل شهر. المشاركة في تحدي العيلة تظل بإذن ولي الأمر فقط.", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .74f), modifier = Modifier.padding(top = 6.dp))
+        }
+    }
 }
 
 @Composable

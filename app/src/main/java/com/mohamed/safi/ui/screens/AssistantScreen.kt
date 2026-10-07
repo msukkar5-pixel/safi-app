@@ -29,6 +29,11 @@ import com.mohamed.safi.ui.*
 import kotlinx.coroutines.launch
 
 private val suggestions = listOf(
+    "روح للمسابقة",
+    "إزاي أعمل تحدي عائلي؟",
+    "افتح الورد اليومي",
+    "إزاي أضيف مستند؟",
+    "افتح مدينة الخير",
     "مطلوب مني إيه الشهر ده؟",
     "صرفت 45 درهم كاش على الغدا",
     "حولت لماما 5000 جنيه",
@@ -58,6 +63,7 @@ fun AssistantScreen() {
     val busy by Assistant.busy.collectAsState()
     var confirmClear by remember { mutableStateOf(false) }
     var handoff by remember { mutableStateOf(false) }
+    var correctUnderstanding by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val pending by UiBus.pendingVoice.collectAsState()
     var tts by remember { mutableStateOf(com.mohamed.safi.apps.Apps.ttsOn(ctx)) }
@@ -67,10 +73,6 @@ fun AssistantScreen() {
     fun send(text: String) {
         val t = text.trim()
         if (t.isEmpty() || Assistant.busy.value) return
-        if (!Claude.hasKey) {
-            toast(ctx, "اربط ذكاء اصطناعي من الإعدادات الأول")
-            return
-        }
         input = ""
         val appCtx = ctx.applicationContext
         // App-level scope: leaving the chat must not cancel the request or lose its actions.
@@ -102,6 +104,7 @@ fun AssistantScreen() {
     ScreenScaffold(
         "${com.mohamed.safi.AppName.v}",
         actions = {
+            IconButton(onClick = { correctUnderstanding = true }) { Icon(Icons.Default.Psychology, "صحّح فهم رفيق") }
             IconButton(onClick = { handoff = true }) { Icon(Icons.Default.OpenInNew, "اسأل في تطبيق اشتراكك") }
             IconButton(onClick = {
                 tts = !tts
@@ -128,12 +131,15 @@ fun AssistantScreen() {
                             Spacer(Modifier.height(12.dp))
                             Text("قولّي أي حاجة", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             Text(
-                                "سجّل مصروف، حوّل، فكّرني، صحّيني، استلفت، أو اسألني عن فلوسك.",
+                                "اسأل، نظّم يومك، احفظ تفضيلك، أو افتح مهمة مناسبة لك.",
                                 color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyMedium,
                             )
                             if (!Claude.hasKey) {
                                 Spacer(Modifier.height(10.dp))
-                                Text("⚠️ اربط أي ذكاء اصطناعي من الإعدادات (Claude، ChatGPT، Gemini…)", color = Warn)
+                                Text("🔒 الوضع المحلي شغال بلا إنترنت: وردك، موجز يومك، دعم أساسي، وذاكرة صريحة. اربط ذكاء متصل للأسئلة المفتوحة وتنفيذ الأوامر المعقدة.", color = Positive, style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                Spacer(Modifier.height(10.dp))
+                                Text("☁️ متصل بـ ${Claude.providerLabel} — بياناتك تستخدم فقط لإجابة هذه المحادثة.", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
                             }
                             Spacer(Modifier.height(16.dp))
                             val memories = com.mohamed.safi.ai.CompanionProfile.memories()
@@ -235,6 +241,30 @@ fun AssistantScreen() {
         ConfirmDialog("مسح المحادثة؟", "البيانات اللي اتسجلت هتفضل زي ما هي، بس الكلام بس اللي هيتمسح.", "امسح", { confirmClear = false }) {
             scope.launch { dao.clearChat() }
         }
+    }
+    if (correctUnderstanding) {
+        var correction by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { correctUnderstanding = false },
+            title = { Text("صحّح فهم رفيق عنك") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("المحفوظ هو فقط ما وافقت عليه. اكتب تصحيحًا أو تفضيلًا جديدًا، مثل: «لا تذكرني بعد ٩ مساءً».", style = MaterialTheme.typography.bodySmall)
+                    val known = com.mohamed.safi.ai.CompanionProfile.memories()
+                    if (known.isNotEmpty()) Text("المحفوظ حاليًا: " + known.take(3).joinToString(" • ") { it.value }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    OutlinedTextField(correction, { correction = it.take(300) }, label = { Text("التصحيح أو التفضيل") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    com.mohamed.safi.ai.CompanionProfile.rememberMemory("تصحيح صريح", correction)
+                    correction = ""
+                    correctUnderstanding = false
+                    toast(ctx, "اتحفظ محليًا. تقدر تعدله أو تمسحه من الإعدادات.")
+                }, enabled = correction.trim().length >= 3) { Text("احفظ") }
+            },
+            dismissButton = { TextButton(onClick = { correctUnderstanding = false }) { Text("إلغاء") } },
+        )
     }
 }
 

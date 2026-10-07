@@ -14,6 +14,8 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -188,11 +190,14 @@ fun PermRow(icon: ImageVector, title: String, desc: String, ok: Boolean, onGrant
 }
 
 @Composable
-fun WelcomeScreen(onKid: () -> Unit = {}, onDone: () -> Unit) {
+@OptIn(ExperimentalLayoutApi::class)
+fun WelcomeScreen(onKid: () -> Unit = {}, onDone: (String) -> Unit) {
     val prefs = SafiApp.prefs
     val ctx = LocalContext.current
     var name by remember { mutableStateOf(prefs.userName) }
     var appName by remember { mutableStateOf(prefs.appName) }
+    var role by remember { mutableStateOf(prefs.userRole) }
+    var ageBand by remember { mutableStateOf(prefs.userAgeBand) }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp),
     ) {
@@ -206,6 +211,39 @@ fun WelcomeScreen(onKid: () -> Unit = {}, onDone: () -> Unit) {
         OutlinedTextField(name, { name = it }, label = { Text("اسمك") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(appName, { appName = it }, label = { Text("سمّي مساعدك (اختياري)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        SectionTitle("هتستخدم أثر إزاي؟")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(
+                "personal" to "👤 لنفسي",
+                "parent" to "👨‍👩‍👧 ولي أمر",
+                "youth" to "🚀 ناشئ",
+                "child" to "🌳 طفل",
+            ).forEach { (id, label) ->
+                FilterChip(selected = role == id, onClick = {
+                    role = id
+                    if (id == "child") ageBand = "child" else if (id == "youth") ageBand = "youth"
+                }, label = { Text(label) })
+            }
+        }
+        if (role in setOf("parent", "personal")) {
+            Text("الاختيار ده يحدد الاقتراحات فقط؛ لا يفتح بياناتك أو يشارك أي شيء تلقائيًا.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        }
+        if (role != "child" && role != "youth") {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
+                listOf("adult" to "بالغ", "youth" to "ناشئ", "child" to "طفل").forEach { (id, label) ->
+                    FilterChip(selected = ageBand == id, onClick = { ageBand = id }, label = { Text(label) })
+                }
+            }
+        }
+        AppCard(color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.padding(top = 4.dp)) {
+            val next = when (role) {
+                "parent" -> "هتبدأ بإنشاء عيلة أو تجهيز موبايل طفل، وبعدها تختار بالضبط اللي يتشارك."
+                "youth" -> "هتبدأ من نادي التحدي: مسارات معرفة، قصص قرار، مشاريع، ودوري أسبوعي."
+                "child" -> "هتبدأ بإعداد وضع الطفل البسيط؛ ولي الأمر يختار الأقسام والرقم السري."
+                else -> "هتبدأ بلوحة يومك، المساعد، والاختصارات اللي تناسبك."
+            }
+            Text(next, style = MaterialTheme.typography.bodySmall)
+        }
         SectionTitle("الصلاحيات")
         PermissionsList()
         Spacer(Modifier.height(20.dp))
@@ -213,12 +251,19 @@ fun WelcomeScreen(onKid: () -> Unit = {}, onDone: () -> Unit) {
             onClick = {
                 prefs.userName = name.trim()
                 prefs.appName = appName.trim().ifBlank { "أثر" }
+                prefs.userRole = role
+                prefs.userAgeBand = ageBand
                 prefs.onboarded = true
                 if (LocationService.hasPermission(ctx)) {
                     prefs.locationOn = true
                     runCatching { LocationService.start(ctx) }
                 }
-                onDone()
+                onDone(when (role) {
+                    "parent" -> "family"
+                    "youth" -> "kids"
+                    "child" -> "kidsetup"
+                    else -> "home"
+                })
             },
             modifier = Modifier.fillMaxWidth().height(52.dp),
         ) { Text("يلا نبدأ", fontWeight = FontWeight.Bold) }

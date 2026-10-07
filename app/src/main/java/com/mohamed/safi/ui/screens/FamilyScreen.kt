@@ -35,6 +35,14 @@ private fun roleEmoji(r: String) = when (r) {
     "ابن", "أخ" -> "👦"; "ابنة", "بنت", "أخت" -> "👧"; else -> "🙂"
 }
 
+private fun accessLabel(access: String) = when (access) {
+    "owner" -> "مالك العيلة"
+    "parent" -> "ولي أمر"
+    "youth" -> "ناشئ"
+    "child" -> "طفل"
+    else -> "عضو"
+}
+
 private fun qrBitmap(text: String, size: Int = 640): Bitmap {
     val m = com.google.zxing.qrcode.QRCodeWriter().encode(text, com.google.zxing.BarcodeFormat.QR_CODE, size, size)
     val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
@@ -55,6 +63,7 @@ fun FamilyScreen(onBack: () -> Unit) {
     var showReply by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<com.mohamed.safi.family.MemberCard?>(null) }
     var syncOn by remember { mutableStateOf(com.mohamed.safi.SafiApp.prefs.familySyncOn) }
+    val manager = Family.canManageFamily
     val newcomer = Family.joinedName.value
     LaunchedEffect(newcomer) {
         if (newcomer != null) { toast(ctx, "اتضاف للعيلة: $newcomer"); Family.joinedName.value = null; showQr = false }
@@ -111,10 +120,10 @@ fun FamilyScreen(onBack: () -> Unit) {
             }
             item {
                 GoldCard {
-                    Text("أنا: ${Family.myName} (${tr(Family.myRole)})", fontWeight = FontWeight.Bold)
+                    Text("أنا: ${Family.myName} (${tr(Family.myRole)}) • ${accessLabel(Family.myAccess)}", fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalButton(onClick = { showQr = true }) { Icon(Icons.Default.QrCode, null); Spacer(Modifier.width(4.dp)); Text("ضيف فرد") }
+                        if (manager) FilledTonalButton(onClick = { showQr = true }) { Icon(Icons.Default.QrCode, null); Spacer(Modifier.width(4.dp)); Text("ضيف فرد") }
                         FilledTonalButton(onClick = {
                             scope.launch {
                                 val card = Family.myCard()
@@ -123,6 +132,8 @@ fun FamilyScreen(onBack: () -> Unit) {
                         }) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(4.dp)); Text("ابعت تحديثي") }
                     }
                     Text("بعد اعتماد الموبايل مرة واحدة، التحديث بيتبادل لوحده على نفس الواي فاي حتى لو قفلت الشاشة طالما المزامنة المستمرة مفعلة. برا البيت: ابعت تحديثك بواتساب، واللي يستلمه يعمل «مشاركة» للرسالة مع ${com.mohamed.safi.AppName.v}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    Text(if (Family.lastSyncAt > 0) "آخر تحديث مستلم: ${dateStr(Family.lastSyncAt)}" else "لسه مفيش تحديث مستلم من جهاز عائلي تاني.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    if (!manager) Text("إضافة أو اعتماد جهاز جديد متاحة لمالك العيلة أو ولي الأمر فقط.", style = MaterialTheme.typography.bodySmall, color = Warn)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("المزامنة المستمرة", fontWeight = FontWeight.SemiBold)
@@ -142,7 +153,7 @@ fun FamilyScreen(onBack: () -> Unit) {
             if (members.isEmpty()) item { EmptyState(Icons.Default.Groups, "لسه محدش اتضاف. اضغط «ضيف فرد» وخلّيه يمسح الكود، وهيظهر هنا بصفته.") }
             items(members, key = { it.id }) { m ->
                 val role = Family.label(m.id) ?: m.role
-                AppCard(onClick = { editing = m }) {
+                AppCard(onClick = if (manager) ({ editing = m }) else null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(42.dp).clip(RoundedCornerShape(21.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                             Text(roleEmoji(role), fontSize = 22.sp)
@@ -150,9 +161,9 @@ fun FamilyScreen(onBack: () -> Unit) {
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             androidx.compose.material3.Text(m.name, fontWeight = FontWeight.Bold)
-                            Text("${tr(role)} • ${dateStr(m.at)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            Text("${tr(role)} • ${accessLabel(m.access)} • ${dateStr(m.at)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                         }
-                        Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
+                        if (manager) Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
                     }
                     m.status?.let { androidx.compose.material3.Text("💬 $it", modifier = Modifier.padding(top = 4.dp)) }
                     m.prayers?.let { Text("🕌 صلّى النهارده: $it من ٥") }
@@ -169,6 +180,19 @@ fun FamilyScreen(onBack: () -> Unit) {
                         Column(Modifier.weight(1f)) {
                             Text("لستة العيلة", fontWeight = FontWeight.Bold)
                             Text("المشتريات وأعياد الميلاد والمواعيد، متشاركة بينكم", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        }
+                        Icon(Icons.Default.ChevronLeft, null)
+                    }
+                }
+            }
+            item {
+                AppCard(onClick = { UiBus.pendingRoute.value = "settings" }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Backup, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("نسخة إنقاذ للجهاز", fontWeight = FontWeight.Bold)
+                            Text("احفظ بياناتك في ملف قبل تغيير الهاتف. مفتاح العيلة السري لا يخرج في النسخة؛ أعد الاقتران بأمان على الهاتف الجديد.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                         }
                         Icon(Icons.Default.ChevronLeft, null)
                     }
@@ -253,6 +277,7 @@ fun FamilyScreen(onBack: () -> Unit) {
     setup?.let { mode ->
         var name by remember { mutableStateOf("") }
         var role by remember { mutableStateOf(roles.first()) }
+        var access by remember { mutableStateOf(if (mode == "create") "owner" else "parent") }
         AlertDialog(
             onDismissRequest = { setup = null },
             title = { Text(if (mode == "create") "عيلة جديدة" else "الانضمام للعيلة") },
@@ -261,13 +286,21 @@ fun FamilyScreen(onBack: () -> Unit) {
                     OutlinedTextField(name, { name = it.take(20) }, label = { Text("اسمك اللي العيلة هتشوفه") }, singleLine = true)
                     @OptIn(ExperimentalLayoutApi::class)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { roles.forEach { r -> FilterChip(role == r, { role = r }, label = { Text(r) }) } }
+                    Text("نوع الحساب", fontWeight = FontWeight.SemiBold)
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("owner", "parent", "youth", "child").forEach { a ->
+                            FilterChip(access == a, { access = a }, label = { Text(accessLabel(a)) }, enabled = mode != "create" || a == "owner")
+                        }
+                    }
+                    Text("الصلاحية تحدد أدوات الإدارة فقط؛ لا تفتح مشاركة بيانات تلقائية.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                 }
             },
             confirmButton = {
                 Button(onClick = {
                     val n = name.ifBlank { tr(role) }
-                    if (mode == "create") { Family.create(n, role); com.mohamed.safi.family.FamilySyncService.start(ctx); setup = null }
-                    else if (Family.join(scanned.orEmpty(), n, role)) { com.mohamed.safi.family.FamilySyncService.start(ctx); setup = null; showReply = true }
+                    if (mode == "create") { Family.create(n, role, access); com.mohamed.safi.family.FamilySyncService.start(ctx); setup = null }
+                    else if (Family.join(scanned.orEmpty(), n, role, access)) { com.mohamed.safi.family.FamilySyncService.start(ctx); setup = null; showReply = true }
                 else { toast(ctx, "الكود ده مش كود عيلة ${com.mohamed.safi.AppName.v}"); setup = null }
                 }) { Text("تمام") }
             },

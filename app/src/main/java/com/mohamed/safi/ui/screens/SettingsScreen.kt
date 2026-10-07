@@ -72,6 +72,8 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Icon(Icons.Default.ChevronLeft, null)
                 }
             }
+            SectionTitle("الوضوح والوصول")
+            AccessibilityCard()
             SectionTitle("لغة التطبيق")
             AppCard {
                 val scope = rememberCoroutineScope()
@@ -217,6 +219,33 @@ fun SettingsScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
             )
+        }
+    }
+}
+
+
+@Composable
+private fun AccessibilityCard() {
+    val prefs = SafiApp.prefs
+    var largeText by remember { mutableStateOf(prefs.largeText) }
+    var highContrast by remember { mutableStateOf(prefs.highContrast) }
+    AppCard {
+        Text("واجهة مريحة لكل الأعمار", fontWeight = FontWeight.Bold)
+        Text("الخيارات دي تغير شكل النص والتباين على هذا الهاتف فقط، من غير ما تمس البيانات أو إعدادات باقي العيلة.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("نص أكبر")
+                Text("يزود حجم الكتابة في التطبيق", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(largeText, { largeText = it; prefs.largeText = it; UiAccessibility.refresh() })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("تباين أعلى")
+                Text("حدود ونصوص أوضح في الإضاءة الضعيفة", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
+            Switch(highContrast, { highContrast = it; prefs.highContrast = it; UiAccessibility.refresh() })
         }
     }
 }
@@ -466,6 +495,7 @@ private fun CompanionMemoryCard() {
     var memories by remember { mutableStateOf(com.mohamed.safi.ai.CompanionProfile.memories()) }
     var category by remember { mutableStateOf("tone") }
     var memoryValue by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<com.mohamed.safi.ai.CompanionProfile.Memory?>(null) }
     AppCard {
         Text("رفيق يتعلم تفضيلاتك أنت فقط، وليس محادثاتك أو أصواتك.", fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
@@ -474,6 +504,7 @@ private fun CompanionMemoryCard() {
         memories.forEach { memory ->
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Text("[${memory.category}] ${memory.value}", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { editing = memory }) { Text("عدّل") }
                 TextButton(onClick = {
                     com.mohamed.safi.ai.CompanionProfile.forgetMemory(memory.id)
                     memories = com.mohamed.safi.ai.CompanionProfile.memories()
@@ -483,7 +514,7 @@ private fun CompanionMemoryCard() {
         }
         Spacer(Modifier.height(8.dp))
         Text("أضف حاجة تحب رفيق يفتكرها", fontWeight = FontWeight.SemiBold)
-        ChoiceField("النوع", category, listOf("tone", "routine", "goal", "like", "avoid", "support", "general"), display = {
+        ChoiceField("النوع", category, listOf("tone", "routine", "goal", "like", "avoid", "support", "feeling", "relationship", "comfort", "general"), display = {
             when (it) {
                 "tone" -> "أسلوب الكلام"
                 "routine" -> "روتين"
@@ -491,11 +522,14 @@ private fun CompanionMemoryCard() {
                 "like" -> "حاجة بحبها"
                 "avoid" -> "حاجة أتجنبها"
                 "support" -> "طريقة دعم مفضلة"
+                "feeling" -> "شعور وسياق مهم"
+                "relationship" -> "علاقة مهمة"
+                "comfort" -> "حاجة بتهدّيني"
                 else -> "معلومة عامة"
             }
         }) { category = it }
         Spacer(Modifier.height(6.dp))
-        OutlinedTextField(memoryValue, { memoryValue = it.take(300) }, label = { Text("مثلاً: بحب الرد المختصر") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(memoryValue, { memoryValue = it.take(300) }, label = { Text("مثلاً: قبل الامتحان بقلق وبيساعدني أقسّم المهمة") }, modifier = Modifier.fillMaxWidth())
         TextButton(onClick = {
             val memory = com.mohamed.safi.ai.CompanionProfile.rememberMemory(category, memoryValue)
             if (memory == null) toast(ctx, "اكتب حاجة الأول")
@@ -513,8 +547,29 @@ private fun CompanionMemoryCard() {
             toast(ctx, "اتمسحت تفضيلات رفيق فقط")
         }) { Text("امسح ذاكرة رفيق") }
         Text(
-            "تقدر تقول لرفيق: افتكر إني بحب الرد المختصر، أو انسَ تفضيل الرد المختصر. بيانات المصاريف والمحادثات والملفات لا تُمسح من هذا الزر.",
+            "تقدر تحفظ أسلوب الكلام، هدف، مشاعر متكررة، علاقة مهمة، أو طريقة دعم مناسبة. رفيق لا يحفظ أي كلام أو صوت تلقائيًا؛ وبيانات المصاريف والمحادثات والملفات لا تُمسح من هذا الزر.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline,
+        )
+    }
+    editing?.let { memory ->
+        var updatedCategory by remember(memory.id) { mutableStateOf(memory.category) }
+        var updatedValue by remember(memory.id) { mutableStateOf(memory.value) }
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text("تعديل ذكرى رفيق") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ChoiceField("النوع", updatedCategory, listOf("tone", "routine", "goal", "like", "avoid", "support", "feeling", "relationship", "comfort", "general")) { updatedCategory = it }
+                    OutlinedTextField(updatedValue, { updatedValue = it.take(300) }, label = { Text("التفصيل") }, minLines = 2, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = { Button(onClick = {
+                com.mohamed.safi.ai.CompanionProfile.updateMemory(memory.id, updatedCategory, updatedValue)
+                memories = com.mohamed.safi.ai.CompanionProfile.memories()
+                snapshot = com.mohamed.safi.ai.CompanionProfile.snapshot()
+                editing = null
+            }, enabled = updatedValue.isNotBlank()) { Text("حفظ") } },
+            dismissButton = { TextButton(onClick = { editing = null }) { Text("إلغاء") } },
         )
     }
 }

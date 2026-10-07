@@ -288,7 +288,9 @@ fun AppRoot() {
         val back: () -> Unit = { nav.popBackStack() }
         val open: (String) -> Unit = { nav.navigate(it) }
         NavHost(nav, startDestination = if (com.mohamed.safi.kids.KidMode.on) "kidhome" else if (SafiApp.prefs.onboarded) "home" else "welcome", modifier = Modifier.padding(pad).consumeWindowInsets(pad)) {
-            composable("welcome") { WelcomeScreen(onKid = { nav.navigate("kidsetup") }) { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } } }
+            composable("welcome") { WelcomeScreen(onKid = { nav.navigate("kidsetup") }) { destination ->
+                nav.navigate(destination) { popUpTo("welcome") { inclusive = true } }
+            } }
             composable("kidhome") { KidHomeScreen(open) }
             composable("study") { StudyScreen(back, open) }
             composable("hifz") { HifzScreen(back) }
@@ -298,6 +300,7 @@ fun AppRoot() {
             composable("dictionary") { DictionaryScreen(back, open) }
             composable("kidsetup") { KidSetupScreen(back) { nav.navigate("kidhome") { popUpTo(0) { inclusive = true } } } }
             composable("home") { HomeScreen(open) }
+            composable("search") { AppSearchScreen(back, open) }
             composable("expenses") { ExpensesScreen() }
             composable("finance") { FinanceScreen(null, open) }
             composable("vehicle") { VehicleScreen(back, open) }
@@ -365,6 +368,7 @@ fun AppRoot() {
 }
 
 private fun go(nav: NavHostController, route: String) {
+    com.mohamed.safi.data.AppShortcuts.record(route)
     if (route in NavPrefs.routes()) {
         nav.navigate(route) {
             popUpTo("home") { saveState = true }

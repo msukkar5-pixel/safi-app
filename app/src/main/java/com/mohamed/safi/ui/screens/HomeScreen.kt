@@ -33,6 +33,9 @@ import java.time.YearMonth
 fun HomeScreen(open: (String) -> Unit) {
     val dao = SafiApp.db.dao()
     val prefs = SafiApp.prefs
+    @Suppress("UNUSED_VARIABLE") val shortcutsVersion = AppShortcuts.version.intValue
+    val favoriteRoutes = AppShortcuts.favorites
+    val recentRoutes = AppShortcuts.recent
     val ym = YearMonth.now(zone)
     val (from, to) = remember(ym) { monthRange(ym) }
     val (pFrom, _) = remember(ym) { monthRange(ym.minusMonths(1)) }
@@ -81,6 +84,20 @@ fun HomeScreen(open: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { HomeHeader(greet + (prefs.userName.takeIf { it.isNotBlank() }?.let { " يا $it" } ?: ""), open) }
+        item {
+            AppCard(onClick = { open("search") }, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("ابحث في أثر", fontWeight = FontWeight.SemiBold)
+                        Text("مسابقات، أطفال، عيلة، ورد، دراسة، إعدادات…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    }
+                    Icon(Icons.Default.ChevronLeft, null, tint = MaterialTheme.colorScheme.outline)
+                }
+            }
+        }
+        if (favoriteRoutes.isNotEmpty() || recentRoutes.isNotEmpty()) item { QuickAccessCard(favoriteRoutes, recentRoutes, open) }
 
         if (!perms.essentialsOk) {
             item {
@@ -120,6 +137,34 @@ fun HomeScreen(open: (String) -> Unit) {
     ReceiptHost(receipt)
     if (adding) ExpenseEditor(existing = null) { adding = false }
     editing?.let { e -> ExpenseEditor(existing = e) { editing = null } }
+}
+
+private val shortcutNames = mapOf(
+    "assistant" to "رفيق", "quiz" to "المسابقات", "kids" to "مدينة الخير", "family" to "العيلة",
+    "study" to "الدراسة", "wird" to "الورد", "quran" to "القرآن", "azkar" to "الأذكار",
+    "finance" to "المال", "schedule" to "الجدول", "radio" to "الراديو", "settings" to "الإعدادات",
+)
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun QuickAccessCard(favorites: List<String>, recent: List<String>, open: (String) -> Unit) {
+    val fav = favorites.mapNotNull { route -> shortcutNames[route]?.let { route to it } }.take(4)
+    val used = recent.filter { route -> route !in favorites }.mapNotNull { route -> shortcutNames[route]?.let { route to it } }.take(4)
+    AppCard {
+        if (fav.isNotEmpty()) {
+            Text("مفضلاتك", fontWeight = FontWeight.Bold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 6.dp)) {
+                fav.forEach { (route, name) -> AssistChip(onClick = { open(route) }, label = { Text("★ $name") }) }
+            }
+        }
+        if (used.isNotEmpty()) {
+            if (fav.isNotEmpty()) Spacer(Modifier.height(8.dp))
+            Text("فتحت مؤخرًا", fontWeight = FontWeight.Bold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 6.dp)) {
+                used.forEach { (route, name) -> AssistChip(onClick = { open(route) }, label = { Text(name) }) }
+            }
+        }
+    }
 }
 
 @Composable

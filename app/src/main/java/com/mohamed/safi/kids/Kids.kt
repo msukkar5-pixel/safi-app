@@ -130,6 +130,12 @@ object Kids {
         YouthMission("family_help", "سند البيت", "اعمل مساعدة حقيقية في البيت من غير ما حد يطلبها.", "🤝", 3),
         YouthMission("make", "اصنع أو اكتب", "ارسم، صمّم، اكتب فكرة، أو أصلح حاجة بسيطة.", "🛠️", 3),
         YouthMission("good_message", "أثر طيب", "ابعت أو قل كلمة تشجيع صادقة لشخص محتاجها.", "💬", 2),
+        YouthMission("science", "تجربة علمية", "جرّب تجربة آمنة من البيت أو اشرح ظاهرة علمية بكلامك.", "🧪", 4),
+        YouthMission("logic", "لغز ومنطق", "حل لغزًا أو مسألة تفكير، ثم اشرح طريقك للحل.", "🧩", 3),
+        YouthMission("history", "رحلة في التاريخ", "تعرف على حدث أو شخصية، واكتب سؤالًا فضوليًا عنه.", "🏛️", 3),
+        YouthMission("digital_safe", "أمانك الرقمي", "راجع إعداد خصوصية أو قاعدة احترام قبل أي مشاركة أونلاين.", "🛡️", 3),
+        YouthMission("team_project", "مشروع فريق", "اعمل مع أخ أو صديق على فكرة مفيدة بدون استعجال أو مقارنة.", "🏗️", 4),
+        YouthMission("reading_club", "نادي القراءة", "اقرأ فصلًا أو مقالًا، واختار جملة أو فكرة تستحق الاحتفاظ بها.", "📘", 3),
     )
     private fun youthDayKey(kid: String, d: LocalDate) = "youth_${kid}_$d"
     fun youthDoneOn(kid: String, d: LocalDate = LocalDate.now(zone)): Set<String> = sp().getStringSet(youthDayKey(kid, d), emptySet()) ?: emptySet()
